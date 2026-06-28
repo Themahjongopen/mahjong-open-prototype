@@ -127,6 +127,7 @@ Two brand-wide wording changes. Apply to **all user-facing copy** (site + portal
 - Add a `min_players` (or `min_registrations`) field to `seasons`/`cities` to support the refund-if-not-met rule; add a `registration_closes_at` (start + 14 days) concept.
 - Keep Stripe as provider (already assumed) but the actual checkout is still to be built — flag as a dependency for go-live.
 - Implement the **welcome email** as the post-registration action (see §8).
+- **Registration flow / auth (recommended):** keep the **password off the initial register page** — that page collects player info + payment only. Recommend **passwordless / magic-link login** (Supabase email link) given the client's "simplicity / user-friendly" priority and broad-age audience; alternative is a **"set your password" link in the welcome email** after payment. Account credentials come *after* registration/payment, not on the first screen. Finalize the auth method in Stage 2 (Supabase auth config). **Open decision — confirm with client.**
 
 ---
 
@@ -309,6 +310,7 @@ Apply to `supabase/migrations/` (new migration, don't edit 001 in place once liv
 - "Member directory" vs. "no public profiles": assumed **logged-in-only roster**. Confirm visibility.
 - Waivers/terms at registration: client unsure — build as an optional, toggleable acceptance step.
 - Whether `week_number` should be fully removed or retained purely for reporting.
+- **Registration password / login method** — recommend **passwordless magic-link** (or "set password" via welcome email after payment); the password should **not** be on the initial register page. Confirm the client's preference before building auth in Stage 2.
 
 ---
 
