@@ -135,7 +135,14 @@ export default function RegisterModal({ open, onClose }: RegisterModalProps) {
         const data = await res.json();
         throw new Error(data.error || "Registration failed. Please try again.");
       }
-      setStep("success");
+
+      const data = await res.json();
+
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error("Payment checkout was not returned.");
+      }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
     } finally {
