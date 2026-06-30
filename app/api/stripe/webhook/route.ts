@@ -110,6 +110,12 @@ export async function POST(request: Request) {
       const SITE_URL = "https://themahjongopen.com";
       // Stable asset host for the logo image (works now and after the domain connects).
       const ASSET_BASE = "https://mahjong-open-prototype-pi.vercel.app";
+      // Paste the rulebook link here when the client provides it. While it's empty,
+      // the rulebook section is hidden automatically (no broken link goes out).
+      const RULEBOOK_URL = "";
+      const rulebookBlock = RULEBOOK_URL
+        ? `<tr><td style="padding:6px 40px 4px 40px;font-family:Helvetica,Arial,sans-serif;"><p style="margin:0;font-size:15px;line-height:1.65;color:#3a4a4f;">New to the game or want a refresher? <a href="${RULEBOOK_URL}" style="color:#c60e31;font-weight:bold;text-decoration:underline;">Read the official rulebook</a> so you&rsquo;re ready for your first table.</p></td></tr>`
+        : "";
 
       const html = `<!DOCTYPE html>
 <html lang="en">
@@ -151,11 +157,12 @@ export async function POST(request: Request) {
                 <p style="margin:0;font-size:15px;line-height:1.65;color:#3a4a4f;">The player portal opens before the series begins. We&rsquo;ll email your access details and the full schedule as soon as it&rsquo;s ready &mdash; keep an eye on your inbox.</p>
               </td>
             </tr>
+            ${rulebookBlock}
             <tr>
               <td align="center" style="padding:24px 40px 36px 40px;">
                 <table role="presentation" cellpadding="0" cellspacing="0">
                   <tr>
-                    <td align="center" style="background-color:#c60e31;border-radius:999px;">
+                    <td align="center" style="background-color:#ec466e;border-radius:999px;">
                       <a href="${SITE_URL}" style="display:inline-block;padding:13px 32px;font-family:Helvetica,Arial,sans-serif;font-size:15px;color:#ffffff;text-decoration:none;font-weight:bold;">Visit The Mahjong Open</a>
                     </td>
                   </tr>
@@ -164,7 +171,7 @@ export async function POST(request: Request) {
             </tr>
             <tr>
               <td style="padding:24px 40px;background-color:#1d4d59;font-family:Helvetica,Arial,sans-serif;">
-                <p style="margin:0 0 6px 0;font-size:13px;color:#ffffff;font-weight:bold;">The Mahjong Open</p>
+                <img src="${ASSET_BASE}/assets/logo-email-white.png" alt="The Mahjong Open" width="150" style="display:block;margin:0 0 14px 0;border:0;" />
                 <p style="margin:0 0 10px 0;font-size:12px;line-height:1.5;color:#b8cdc6;">A city-based Mahjong game league. You&rsquo;re receiving this because you registered for ${seriesName}.</p>
                 <p style="margin:0;font-size:12px;line-height:1.5;color:#8ba89f;">[ Mailing address &mdash; add before sending marketing emails ]</p>
               </td>
@@ -183,7 +190,7 @@ export async function POST(request: Request) {
         await resend.emails.send({
           from: "The Mahjong Open <welcome@themahjongopen.com>",
           to: [registrationData.email],
-          subject: `You're in — welcome to ${seriesName}`,
+          subject: `You're in — Welcome to ${seriesName}`,
           html,
         });
       } catch (emailError) {
