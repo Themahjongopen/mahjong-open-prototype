@@ -4,6 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import RegisterModal from "@/components/marketing/RegisterModal";
+import CommissionerSection from "@/components/marketing/CommissionerSection";
 import { Users, CalendarDays, Repeat2, Trophy, MapPin, Shuffle } from "lucide-react";
 
 const FORMAT_STEPS = [
@@ -276,6 +277,8 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      <CommissionerSection />
 
       {/* Series & Events */}
       <section style={{ padding: "72px 0", background: "var(--pink-wash)" }}>
