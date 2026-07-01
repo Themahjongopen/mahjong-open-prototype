@@ -564,6 +564,10 @@ body.admin-drawer-open {
 }
 
 @media (max-width: 899px) {
+  .admin-shell {
+    flex-direction: column;
+  }
+
   .admin-mobile-topbar {
     display: flex;
   }
