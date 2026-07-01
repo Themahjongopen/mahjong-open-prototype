@@ -98,9 +98,17 @@ export async function POST(request: Request) {
 
     const origin = request.headers.get("origin") || "http://localhost:3000";
 
+    const expiresAt = Math.floor(Date.now() / 1000) + 2 * 60 * 60;
+
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       customer_email: email,
+      expires_at: expiresAt,
+      after_expiration: {
+        recovery: {
+          enabled: true,
+        },
+      },
       line_items: [
         {
           quantity: 1,

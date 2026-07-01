@@ -41,18 +41,18 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid signature." }, { status: 400 });
   }
 
+  const supabase: any = createAdminClient();
+
+  if (!supabase) {
+    return NextResponse.json({ error: "Payment service is unavailable." }, { status: 503 });
+  }
+
   if (event.type === "checkout.session.completed") {
     const session = event.data.object as Stripe.Checkout.Session;
     const registrationId = session.metadata?.registration_id;
 
     if (!registrationId) {
       return NextResponse.json({ received: true });
-    }
-
-    const supabase: any = createAdminClient();
-
-    if (!supabase) {
-      return NextResponse.json({ error: "Payment service is unavailable." }, { status: 503 });
     }
 
     const { data: registrationData } = await supabase
@@ -107,10 +107,7 @@ export async function POST(request: Request) {
           ? `${formatDate(seriesData.starts_at)} – ${formatDate(seriesData.ends_at)}`
           : "";
 
-      // Final public site URL — update once the custom domain is connected.
       const SITE_URL = "https://themahjongopen.com";
-      // Paste the rulebook link here when the client provides it. While it's empty,
-      // the rulebook section is hidden automatically (no broken link goes out).
       const RULEBOOK_URL = "";
       const rulebookBlock = RULEBOOK_URL
         ? `<tr><td style="padding:6px 40px 4px 40px;font-family:Helvetica,Arial,sans-serif;"><p style="margin:0;font-size:15px;line-height:1.65;color:#3a4a4f;">New to the game or want a refresher? <a href="${RULEBOOK_URL}" style="color:#c60e31;font-weight:bold;text-decoration:underline;">Read the official rulebook</a> so you&rsquo;re ready for your first table.</p></td></tr>`
@@ -157,6 +154,77 @@ export async function POST(request: Request) {
         });
       } catch (emailError) {
         console.error("Welcome email failed after payment confirmation.", emailError);
+      }
+    }
+  }
+
+  if (event.type === "checkout.session.expired") {
+    const session = event.data.object as Stripe.Checkout.Session;
+    const registrationId = session.metadata?.registration_id;
+
+    if (!registrationId) {
+      return NextResponse.json({ received: true });
+    }
+
+    const { data: registrationData } = await supabase
+      .from("registrations")
+      .select("id, full_name, email, series_id, paid_status, reminder_sent_at")
+      .eq("id", registrationId)
+      .maybeSingle();
+
+    if (
+      !registrationData ||
+      registrationData.paid_status !== "pending" ||
+      registrationData.reminder_sent_at
+    ) {
+      return NextResponse.json({ received: true });
+    }
+
+    const recoveryUrl = session.after_expiration?.recovery?.url;
+
+    if (recoveryUrl && registrationData.email) {
+      const { data: seriesData } = await supabase
+        .from("series")
+        .select("name")
+        .eq("id", registrationData.series_id)
+        .single();
+
+      const seriesName = seriesData?.name ?? "The Mahjong Open";
+      const firstName = (registrationData.full_name || "there").split(" ")[0];
+      const resendApiKey = process.env.RESEND_API_KEY;
+
+      if (resendApiKey) {
+        try {
+          const resend = new Resend(resendApiKey);
+          const innerHtml = `
+            <p style="margin:0 0 12px 0;font-size:15px;line-height:1.65;color:#3a4a4f;">Hi ${firstName}, you’re almost in — your spot for <strong style="color:#1d4d59;">${seriesName}</strong> isn’t confirmed until payment is complete.</p>
+            <p style="margin:0 0 20px 0;font-size:15px;line-height:1.65;color:#3a4a4f;">Complete your registration to hold your place and keep your series plans moving.</p>
+            <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0;">
+              <tr>
+                <td align="center" style="background-color:#ec466e;border-radius:999px;">
+                  <a href="${recoveryUrl}" style="display:inline-block;padding:13px 32px;font-family:Helvetica,Arial,sans-serif;font-size:15px;color:#ffffff;text-decoration:none;font-weight:bold;">Complete your registration</a>
+                </td>
+              </tr>
+            </table>
+          `;
+
+          const html = buildBrandedEmail({
+            title: "Your registration is still waiting",
+            innerHtml,
+            footerNote: "A city-based Mahjong game league. You’re receiving this because your registration was left unfinished.",
+          });
+
+          await resend.emails.send({
+            from: "The Mahjong Open <welcome@themahjongopen.com>",
+            to: [registrationData.email],
+            subject: "Your Mahjong Open registration isn't finished",
+            html,
+          });
+
+          await supabase.from("registrations").update({ reminder_sent_at: new Date().toISOString() }).eq("id", registrationId);
+        } catch (emailError) {
+          console.error("Abandoned registration reminder email failed.", emailError);
+        }
       }
     }
   }
