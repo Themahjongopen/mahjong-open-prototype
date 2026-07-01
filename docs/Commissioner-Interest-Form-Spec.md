@@ -141,5 +141,17 @@ alter table public.commissioner_applications enable row level security;
 
 ---
 
+## Addendum — Email branding (approved 2026-06-30)
+Both commissioner emails should match the branded welcome email. **Decision: fully brand both** (internal notification + applicant acknowledgment).
+
+Reference styling from the welcome email (`app/api/stripe/webhook/route.ts`): logo header (`/assets/logo-email.png`), navy + pink palette, pink CTA button, white logo on navy footer (`/assets/logo-email-white.png`), `ASSET_BASE = https://mahjong-open-prototype-pi.vercel.app`.
+
+Implementation guidance for Claude Code:
+- **Refactor to avoid duplication:** extract the welcome email's HTML shell (header + body wrapper + navy footer) into a shared helper (e.g. `lib/email/brandedEmail.ts`) that takes a title + inner HTML, and have BOTH the welcome email and the two commissioner emails use it. Don't copy-paste the markup three times.
+- **Applicant acknowledgment:** branded shell, friendly copy ("Hi {name}, we've received your interest in leading The Mahjong Open in {city}…"), optional pink CTA (e.g. link back to the site or "How It Works"); footer logo + mailing-address placeholder same as welcome email.
+- **Internal notification:** same branded shell, subject unchanged (`New city commissioner application — {city}`), body = the labeled field list wrapped in the branded template; keep `reply_to` = applicant email.
+- Reuse the existing lazy Resend client + env guards; email failures stay non-blocking. Keep the mailing-address footer placeholder consistent with the welcome email (still pending the client's real address).
+- No new env vars; no DB changes.
+
 ## Workflow note
 Once approved: copy this spec into the repo's `docs/` folder, then hand implementation to Claude Code in VSCode, then deploy to Vercel for review (per the project's division of labor).

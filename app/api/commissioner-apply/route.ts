@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { Resend } from "resend";
+import { buildBrandedEmail } from "@/lib/email/brandedEmail";
 import { createAdminClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
@@ -86,6 +87,36 @@ export async function POST(request: Request) {
 
     if (resendApiKey) {
       const resend = new Resend(resendApiKey);
+      const SITE_URL = "https://themahjongopen.com";
+
+      const internalInnerHtml = `
+        <div style="font-family:Helvetica,Arial,sans-serif;font-size:15px;line-height:1.65;color:#3a4a4f;">
+          <p style="margin:0 0 12px 0;"><strong>Full name:</strong> ${full_name}</p>
+          <p style="margin:0 0 12px 0;"><strong>Email:</strong> ${email}</p>
+          <p style="margin:0 0 12px 0;"><strong>Phone:</strong> ${phone}</p>
+          <p style="margin:0 0 12px 0;"><strong>Proposed city:</strong> ${proposed_city}</p>
+          <p style="margin:0 0 12px 0;"><strong>Socials / website:</strong> ${socials || "Not provided"}</p>
+          <p style="margin:0 0 12px 0;"><strong>Mahjong experience:</strong> ${experience}</p>
+          <p style="margin:0 0 12px 0;"><strong>Teaches or organizes:</strong> ${teaches_organize}</p>
+          <p style="margin:0 0 12px 0;"><strong>Reach estimate:</strong> ${reach_estimate}</p>
+          <p style="margin:0 0 12px 0;"><strong>Where people usually play:</strong> ${play_venues.length ? play_venues.join(", ") : "Not provided"}</p>
+          <p style="margin:0 0 12px 0;"><strong>Why they want to lead:</strong> ${motivation}</p>
+          <p style="margin:0 0 12px 0;"><strong>Desired timeline:</strong> ${desired_timeline || "Not provided"}</p>
+          <p style="margin:0;"><strong>Notes:</strong> ${notes || "Not provided"}</p>
+        </div>
+      `;
+
+      const acknowledgmentInnerHtml = `
+        <p style="margin:0 0 12px 0;font-size:15px;line-height:1.65;color:#3a4a4f;">Hi ${full_name}, we’ve received your interest in leading The Mahjong Open in ${proposed_city}. Thanks for taking the time to share your background and ideas.</p>
+        <p style="margin:0 0 18px 0;font-size:15px;line-height:1.65;color:#3a4a4f;">We’ll review your application and be in touch soon.</p>
+        <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0;">
+          <tr>
+            <td align="center" style="background-color:#ec466e;border-radius:999px;">
+              <a href="${SITE_URL}" style="display:inline-block;padding:13px 32px;font-family:Helvetica,Arial,sans-serif;font-size:15px;color:#ffffff;text-decoration:none;font-weight:bold;">How it works</a>
+            </td>
+          </tr>
+        </table>
+      `;
 
       try {
         await resend.emails.send({
@@ -93,7 +124,11 @@ export async function POST(request: Request) {
           to: ["themahjongopen@gmail.com"],
           replyTo: email,
           subject: `New city commissioner application — ${proposed_city}`,
-          html: `<div><h2>New city commissioner application</h2><p><strong>Full name:</strong> ${full_name}</p><p><strong>Email:</strong> ${email}</p><p><strong>Phone:</strong> ${phone}</p><p><strong>Proposed city:</strong> ${proposed_city}</p><p><strong>Socials / website:</strong> ${socials || "Not provided"}</p><p><strong>Mahjong experience:</strong> ${experience}</p><p><strong>Teaches or organizes:</strong> ${teaches_organize}</p><p><strong>Reach estimate:</strong> ${reach_estimate}</p><p><strong>Where people usually play:</strong> ${play_venues.length ? play_venues.join(", ") : "Not provided"}</p><p><strong>Why they want to lead:</strong> ${motivation}</p><p><strong>Desired timeline:</strong> ${desired_timeline || "Not provided"}</p><p><strong>Notes:</strong> ${notes || "Not provided"}</p></div>`,
+          html: buildBrandedEmail({
+            title: "New city commissioner application",
+            innerHtml: internalInnerHtml,
+            footerNote: "A city-based Mahjong game league. You’re receiving this because someone submitted a commissioner application through The Mahjong Open.",
+          }),
         });
       } catch (internalEmailError) {
         console.error("Internal commissioner application email failed", internalEmailError);
@@ -104,15 +139,11 @@ export async function POST(request: Request) {
           from: "The Mahjong Open <welcome@themahjongopen.com>",
           to: [email],
           subject: "Thanks for your interest in leading The Mahjong Open",
-          html: `
-            <div style="font-family: Arial, sans-serif; color: #1f2a44; line-height: 1.6;">
-              <h2 style="color: #1f2a44; margin-bottom: 8px;">Thanks for your interest</h2>
-              <p>Hi ${full_name},</p>
-              <p>We’ve received your interest in leading The Mahjong Open in ${proposed_city}. Thanks for taking the time to share your background and ideas.</p>
-              <p>We’ll be in touch soon about the next steps.</p>
-              <p>Thanks,<br />The Mahjong Open</p>
-            </div>
-          `,
+          html: buildBrandedEmail({
+            title: "Thanks for your interest",
+            innerHtml: acknowledgmentInnerHtml,
+            footerNote: "A city-based Mahjong game league. You’re receiving this because you submitted a commissioner application to The Mahjong Open.",
+          }),
         });
       } catch (ackEmailError) {
         console.warn("Applicant acknowledgment email failed", ackEmailError);
