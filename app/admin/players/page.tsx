@@ -1,25 +1,43 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
-const STATUS_BADGE: Record<string, string> = { active: "badge-lime", pending: "badge-butter", canceled: "badge-mute" };
-const PAID_BADGE: Record<string, string> = { paid: "badge-lime", unpaid: "badge-butter", refunded: "badge-mute" };
+const PAID_BADGE: Record<string, string> = { paid: "badge-lime", pending: "badge-butter", refunded: "badge-mute" };
 
-type PlayerRow = {
+type RegistrationRow = {
   id: string;
-  status: string;
+  full_name: string | null;
+  email: string;
+  phone: string | null;
+  skill_level: string | null;
   paid_status: string;
-  skill_level: string;
   created_at: string;
-  profiles: { id?: string; full_name: string | null; email: string; role?: string | null };
-  cities: { name: string };
-  seasons: { name: string };
+  city: string | null;
+  series: string | null;
 };
 
-export default function AdminPlayersPage() {
-  const [rows, setRows] = useState<PlayerRow[]>([]);
+type Filter = "all" | "paid" | "pending";
+
+function formatDate(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+// Wrap a CSV field in quotes when it contains a comma, quote, or newline; escape embedded quotes.
+function csvField(value: string | null): string {
+  const text = value ?? "";
+  if (/[",\n\r]/.test(text)) {
+    return `"${text.replace(/"/g, '""')}"`;
+  }
+  return text;
+}
+
+export default function AdminRegistrationsPage() {
+  const [rows, setRows] = useState<RegistrationRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
+  const [filter, setFilter] = useState<Filter>("all");
 
   async function loadRows() {
     setLoading(true);
@@ -29,7 +47,7 @@ export default function AdminPlayersPage() {
       setRows(Array.isArray(payload.players) ? payload.players : []);
       setMessage(null);
     } else {
-      setMessage(payload.error ?? "Unable to load players.");
+      setMessage(payload.error ?? "Unable to load registrations.");
     }
     setLoading(false);
   }
@@ -38,77 +56,122 @@ export default function AdminPlayersPage() {
     void loadRows();
   }, []);
 
-  async function handleDesignationChange(player: PlayerRow, designation: string) {
-    if (designation === (player.profiles.role ?? "player")) return;
+  const paidCount = useMemo(() => rows.filter((r) => r.paid_status === "paid").length, [rows]);
 
-    const confirmed = window.confirm(`Switch ${player.profiles.full_name ?? "this player"} to ${designation === "commissioner" ? "Commissioner" : "Player"}?`);
-    if (!confirmed) return;
+  const filteredRows = useMemo(() => {
+    if (filter === "all") return rows;
+    return rows.filter((r) => r.paid_status === filter);
+  }, [rows, filter]);
 
-    setMessage("Updating designation…");
-    const response = await fetch("/api/admin/players", {
-      method: "PUT",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: player.id, profileId: player.profiles.id, designation, cityName: player.cities.name }),
-    });
-    const payload = await response.json().catch(() => ({}));
-
-    if (response.ok) {
-      setMessage(payload.success ? "Designation updated." : payload.error ?? "Designation updated.");
-      await loadRows();
-    } else {
-      setMessage(payload.error ?? "Unable to update designation.");
+  function handleExport() {
+    const header = ["Name", "Email", "Phone", "City", "Series", "Skill", "Payment status", "Registered date"];
+    const lines = [header.join(",")];
+    for (const r of filteredRows) {
+      lines.push([
+        csvField(r.full_name),
+        csvField(r.email),
+        csvField(r.phone),
+        csvField(r.city),
+        csvField(r.series),
+        csvField(r.skill_level),
+        csvField(r.paid_status),
+        csvField(formatDate(r.created_at)),
+      ].join(","));
     }
+    const csv = lines.join("\r\n");
+    const today = new Date().toISOString().slice(0, 10);
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `registrations-${today}.csv`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    URL.revokeObjectURL(url);
   }
+
+  const filters: { key: Filter; label: string }[] = [
+    { key: "all", label: "All" },
+    { key: "paid", label: "Paid" },
+    { key: "pending", label: "Pending" },
+  ];
 
   return (
     <div style={{ maxWidth: 1200 }}>
-      <h1 style={{ fontFamily: "var(--font-display)", fontSize: 26, color: "var(--ink-900)", marginBottom: 8 }}>Players</h1>
-      <p style={{ fontSize: 15, color: "var(--ink-500)", marginBottom: 24 }}>{rows.length} registration{rows.length !== 1 ? "s" : ""} total</p>
+      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginBottom: 8 }}>
+        <div>
+          <h1 style={{ fontFamily: "var(--font-display)", fontSize: 26, color: "var(--ink-900)", marginBottom: 8 }}>Registrations</h1>
+          <p style={{ fontSize: 15, color: "var(--ink-500)" }}>{paidCount} paid · {rows.length} total</p>
+        </div>
+        <button type="button" className="btn" onClick={handleExport} disabled={filteredRows.length === 0}>
+          Export CSV
+        </button>
+      </div>
+
       {message ? <p style={{ fontSize: 13, color: "var(--ink-700)", marginBottom: 16 }}>{message}</p> : null}
+
+      <div style={{ display: "flex", gap: 8, margin: "16px 0" }}>
+        {filters.map((f) => (
+          <button
+            key={f.key}
+            type="button"
+            onClick={() => setFilter(f.key)}
+            className={`badge ${filter === f.key ? "badge-lime" : "badge-mute"}`}
+            style={{ cursor: "pointer", border: "1px solid var(--hair-200)", background: filter === f.key ? undefined : "#fff" }}
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
 
       <div style={{ background: "#fff", border: "1px solid var(--hair-200)", borderRadius: "var(--radius-lg)", overflow: "hidden", boxShadow: "var(--shadow-xs)" }}>
         <div className="admin-players-table">
           <div className="admin-players-table-header">
-            {["Player", "City · Season", "Designation", "Status", "Payment", "Joined"].map((h) => (
+            {["Name", "Email", "Phone", "City", "Series", "Skill", "Payment", "Registered"].map((h) => (
               <p key={h}>{h}</p>
             ))}
           </div>
           {loading ? (
-            <div style={{ padding: 20, color: "var(--ink-500)" }}>Loading players…</div>
+            <div style={{ padding: 20, color: "var(--ink-500)" }}>Loading registrations…</div>
+          ) : filteredRows.length === 0 ? (
+            <div style={{ padding: 20, color: "var(--ink-500)" }}>
+              {rows.length === 0 ? "No registrations yet." : "No registrations match this filter."}
+            </div>
           ) : (
-            rows.map((m) => (
-              <div key={m.id} className="admin-players-row">
+            filteredRows.map((r) => (
+              <div key={r.id} className="admin-players-row">
                 <div>
-                  <p style={{ fontSize: 14, fontWeight: 500, color: "var(--ink-900)" }}>{m.profiles.full_name ?? "—"}</p>
-                  <p style={{ fontSize: 12, color: "var(--ink-500)" }}>{m.profiles.email}</p>
+                  <span className="admin-mobile-label">Name</span>
+                  <p style={{ fontSize: 14, fontWeight: 500, color: "var(--ink-900)" }}>{r.full_name ?? "—"}</p>
                 </div>
                 <div>
-                  <span className="admin-mobile-label">City · Season</span>
-                  <p style={{ fontSize: 13, color: "var(--ink-700)" }}>{m.cities.name} · {m.seasons.name}</p>
+                  <span className="admin-mobile-label">Email</span>
+                  <p style={{ fontSize: 13, color: "var(--ink-700)", wordBreak: "break-word" }}>{r.email}</p>
                 </div>
                 <div>
-                  <span className="admin-mobile-label">Designation</span>
-                  <select
-                    value={m.profiles.role ?? "player"}
-                    onChange={(event) => handleDesignationChange(m, event.target.value)}
-                    style={{ fontSize: 13, border: "1px solid var(--hair-200)", borderRadius: 6, padding: "10px 12px", background: "#fff" }}
-                  >
-                    <option value="player">Player</option>
-                    <option value="commissioner">Commissioner</option>
-                  </select>
+                  <span className="admin-mobile-label">Phone</span>
+                  <p style={{ fontSize: 13, color: "var(--ink-700)" }}>{r.phone ?? "—"}</p>
                 </div>
                 <div>
-                  <span className="admin-mobile-label">Status</span>
-                  <span className={`badge ${STATUS_BADGE[m.status] ?? "badge-mute"}`} style={{ alignSelf: "center" }}>{m.status}</span>
+                  <span className="admin-mobile-label">City</span>
+                  <p style={{ fontSize: 13, color: "var(--ink-700)" }}>{r.city ?? "—"}</p>
+                </div>
+                <div>
+                  <span className="admin-mobile-label">Series</span>
+                  <p style={{ fontSize: 13, color: "var(--ink-700)" }}>{r.series ?? "—"}</p>
+                </div>
+                <div>
+                  <span className="admin-mobile-label">Skill</span>
+                  <p style={{ fontSize: 13, color: "var(--ink-700)", textTransform: "capitalize" }}>{r.skill_level ?? "—"}</p>
                 </div>
                 <div>
                   <span className="admin-mobile-label">Payment</span>
-                  <span className={`badge ${PAID_BADGE[m.paid_status] ?? "badge-mute"}`} style={{ alignSelf: "center" }}>{m.paid_status}</span>
+                  <span className={`badge ${PAID_BADGE[r.paid_status] ?? "badge-mute"}`} style={{ alignSelf: "center" }}>{r.paid_status}</span>
                 </div>
                 <div>
-                  <span className="admin-mobile-label">Joined</span>
-                  <p style={{ fontSize: 12, color: "var(--ink-500)" }}>{new Date(m.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</p>
+                  <span className="admin-mobile-label">Registered</span>
+                  <p style={{ fontSize: 12, color: "var(--ink-500)" }}>{formatDate(r.created_at)}</p>
                 </div>
               </div>
             ))

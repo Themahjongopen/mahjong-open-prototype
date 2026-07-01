@@ -1,28 +1,32 @@
 import { NextResponse } from "next/server";
-import { MOCK_PLAYERS } from "@/lib/data/mock";
 import { createAdminClient } from "@/lib/supabase/server";
 import { isValidAdminCookie } from "@/lib/admin/passcode";
 
-type MockPlayer = (typeof MOCK_PLAYERS)[number];
+// Registration rows shaped for the admin Registrations page.
+type RegistrationRow = {
+  id: string;
+  full_name: string | null;
+  email: string;
+  phone: string | null;
+  skill_level: string | null;
+  paid_status: string;
+  created_at: string;
+  city: string | null;
+  series: string | null;
+};
 
-let mockPlayersState: MockPlayer[] = [...MOCK_PLAYERS];
+// Local-preview fallback used only when no service-role client is configured.
+// Reshaped to look like real registrations (name/email/phone/city/series/paid_status/date).
+const MOCK_REGISTRATIONS: RegistrationRow[] = [
+  { id: "reg-1", full_name: "Morgan Park", email: "morgan@example.com", phone: "(213) 555-0142", skill_level: "advanced", paid_status: "paid", created_at: "2026-06-28T18:30:00Z", city: "Los Angeles, CA", series: "Spring 2026" },
+  { id: "reg-2", full_name: "Alex Kim", email: "alex@example.com", phone: "(310) 555-0199", skill_level: "intermediate", paid_status: "paid", created_at: "2026-06-27T14:05:00Z", city: "Los Angeles, CA", series: "Spring 2026" },
+  { id: "reg-3", full_name: "Sam Rivera", email: "sam@example.com", phone: null, skill_level: "beginner", paid_status: "pending", created_at: "2026-06-26T21:12:00Z", city: "San Francisco, CA", series: "Spring 2026" },
+  { id: "reg-4", full_name: "Taylor Brooks", email: "taylor@example.com", phone: "(415) 555-0173", skill_level: "intermediate", paid_status: "refunded", created_at: "2026-06-24T09:47:00Z", city: "San Francisco, CA", series: "Spring 2026" },
+];
 
-function toSafePlayer(player: MockPlayer): MockPlayer {
-  return {
-    ...player,
-    profiles: {
-      ...(player.profiles ?? {}),
-      role: (player.profiles?.role ?? "player") as MockPlayer["profiles"]["role"],
-    },
-  };
-}
-
-function getMockPlayers(): MockPlayer[] {
-  return mockPlayersState.map(toSafePlayer);
-}
-
-function setMockPlayers(nextPlayers: MockPlayer[]) {
-  mockPlayersState = nextPlayers.map(toSafePlayer);
+function formatCity(city: { name: string | null; state: string | null } | null | undefined): string | null {
+  if (!city?.name) return null;
+  return city.state ? `${city.name}, ${city.state}` : city.name;
 }
 
 function isAuthorized(request: Request) {
@@ -38,27 +42,46 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const supabase = createAdminClient();
+  // `registrations` and `series` aren't in the generated Database types yet, so use
+  // an untyped client for this query (same pattern as /api/register).
+  const supabase: any = createAdminClient();
   if (supabase) {
-    const { data, error } = await supabase.from("profiles").select("id, full_name, email, role").order("full_name", { ascending: true });
+    const { data, error } = await supabase
+      .from("registrations")
+      .select("id, full_name, email, phone, skill_level, paid_status, created_at, cities(name, state), series(name)")
+      .order("created_at", { ascending: false });
+
     if (!error && data) {
-      const players = data.map((profile) => ({
-        id: profile.id,
-        status: "active",
-        paid_status: "paid",
-        skill_level: "intermediate",
-        created_at: new Date().toISOString(),
-        profiles: { id: profile.id, full_name: profile.full_name, email: profile.email, role: profile.role },
-        cities: { name: "Los Angeles" },
-        seasons: { name: "Spring 2026" },
-      }));
+      const players: RegistrationRow[] = data.map((row: any) => {
+        // Supabase types embedded relations as arrays; normalize to a single object.
+        const city = Array.isArray(row.cities) ? row.cities[0] : row.cities;
+        const series = Array.isArray(row.series) ? row.series[0] : row.series;
+        return {
+          id: row.id,
+          full_name: row.full_name,
+          email: row.email,
+          phone: row.phone,
+          skill_level: row.skill_level,
+          paid_status: row.paid_status,
+          created_at: row.created_at,
+          city: formatCity(city),
+          series: series?.name ?? null,
+        };
+      });
+      // Empty state is returned cleanly as an empty array (page shows "No registrations yet").
       return NextResponse.json({ players });
     }
   }
 
-  return NextResponse.json({ players: getMockPlayers() });
+  return NextResponse.json({ players: MOCK_REGISTRATIONS });
 }
 
+// PHASE 2: Player↔Commissioner designation. This updates `profiles.role`, which
+// requires portal auth accounts that don't exist in Phase 1 (nothing creates a
+// `profiles` row at registration). The Phase-1 Registrations page does NOT render
+// the designation control, so this handler is currently unused — it's parked here
+// for Phase 2, when it will likely operate against profiles/membership joined back
+// to registrations by email.
 export async function PUT(request: Request) {
   if (!isAuthorized(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -68,7 +91,6 @@ export async function PUT(request: Request) {
   const designation = String(body?.designation ?? "player").toLowerCase();
   const nextRole: "player" | "admin" | "commissioner" = designation === "commissioner" ? "commissioner" : "player";
   const profileId = body?.profileId ?? body?.id;
-  const cityName = String(body?.cityName ?? "");
 
   const supabase = createAdminClient();
   if (supabase && profileId) {
@@ -79,36 +101,5 @@ export async function PUT(request: Request) {
     return NextResponse.json({ success: true, designation });
   }
 
-  const players = getMockPlayers();
-  const targetIndex = players.findIndex((player) => player.id === body?.id || player.profiles.id === profileId);
-  if (targetIndex === -1) {
-    return NextResponse.json({ error: "Player not found" }, { status: 404 });
-  }
-
-  const nextPlayers: MockPlayer[] = players.map((player, index) => {
-    if (index === targetIndex) {
-      return {
-        ...player,
-        profiles: {
-          ...player.profiles,
-          role: nextRole as MockPlayer["profiles"]["role"],
-        },
-      } as MockPlayer;
-    }
-
-    if (designation === "commissioner" && player.profiles.role === "commissioner" && player.cities.name === cityName) {
-      return {
-        ...player,
-        profiles: {
-          ...player.profiles,
-          role: "player" as MockPlayer["profiles"]["role"],
-        },
-      } as MockPlayer;
-    }
-
-    return player;
-  });
-
-  setMockPlayers(nextPlayers);
-  return NextResponse.json({ success: true, designation, players: getMockPlayers() });
+  return NextResponse.json({ error: "Player not found" }, { status: 404 });
 }
