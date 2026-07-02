@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type CSSProperties } from "react";
+import ConfirmationIcon from "@/components/ui/ConfirmationIcon";
 
 const teachOptions = [
   { value: "regularly", label: "Yes, regularly" },
@@ -117,8 +118,10 @@ export default function CommissionerForm() {
           borderRadius: "var(--radius-xl)",
           padding: "42px 32px",
           boxShadow: "var(--shadow-sm)",
+          textAlign: "center",
         }}
       >
+        <ConfirmationIcon name="invite" />
         <h2 style={{ fontFamily: "var(--font-display)", fontSize: 30, fontWeight: 400, color: "var(--ink-900)", marginBottom: 12 }}>
           Thanks — we’ve got your interest
         </h2>

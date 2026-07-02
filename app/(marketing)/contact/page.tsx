@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import PageBanner from "@/components/marketing/PageBanner";
+import ConfirmationIcon from "@/components/ui/ConfirmationIcon";
 import { ExternalLink, Send, ChevronDown } from "lucide-react";
 
 const FAQS = [
@@ -134,9 +135,7 @@ export default function ContactPage() {
             >
               {submitted ? (
                 <div style={{ textAlign: "center", padding: "24px 0" }}>
-                  <div style={{ width: 56, height: 56, borderRadius: "50%", background: "var(--lime-50)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>
-                    <Send size={22} color="var(--lime-600)" />
-                  </div>
+                  <ConfirmationIcon name="chat" />
                   <h3 style={{ fontFamily: "var(--font-display)", fontSize: 24, color: "var(--ink-900)", marginBottom: 12 }}>Message sent!</h3>
                   <p style={{ fontSize: 15, color: "var(--ink-700)", lineHeight: 1.6 }}>We&rsquo;ll get back to you within 1–2 business days.</p>
                 </div>
