@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import RegisterModal from "@/components/marketing/RegisterModal";
 import CommissionerSection from "@/components/marketing/CommissionerSection";
-import { Users, CalendarDays, Repeat2, Trophy, MapPin, Shuffle } from "lucide-react";
+import { Users, CalendarDays, Repeat2, Trophy, MapPin, Shuffle, Sparkles } from "lucide-react";
 
 const FORMAT_STEPS = [
   {
@@ -40,33 +40,36 @@ const FORMAT_STEPS = [
   },
 ];
 
-const EVENTS = [
+const SERIES_SCHEDULE = [
   {
-    title: "Spring Kickoff Tea",
-    date: "Mar 14 · Opening",
-    body: "Kick off the series with an opening tea, introductions, and your first table of the 8-week run.",
-    color: "var(--peri-100)",
+    name: "Series One",
+    year: "2026",
+    dates: "Aug 17 – Oct 11, 2026",
+    body: "The inaugural 8-week series. Register, join tables across your city, and set the pace on the leaderboard.",
   },
   {
-    title: "The Blossom Bracket",
-    date: "Apr 18 · Mid-series",
-    body: "Mid-series mixer bringing players from across the city together for a special afternoon of play.",
-    color: "var(--lime-wash)",
-  },
-  {
-    title: "The Spring Soirée",
-    date: "May 23 · Finale",
-    body: "Series closing celebration. Final standings revealed, awards given, and the best table wins.",
-    color: "var(--pink-wash)",
+    name: "Series Two",
+    year: "2026",
+    dates: "Nov 2 – Dec 27, 2026",
+    body: "After a short break, the second 8-week series runs through the season. Registration opens as Series One wraps.",
   },
 ];
 
-const TESTIMONIALS = [
+const WHY_LOVE = [
   {
-    quote:
-      "I moved to this city knowing no one. The Mahjong Open gave me a table every week and a group of women I genuinely love. I can’t imagine my week without it.",
-    name: "Priya S.",
-    city: "Los Angeles",
+    icon: CalendarDays,
+    title: "Play on your schedule",
+    body: "Unlimited games across the 8-week series. Join an open table or host your own, whenever it suits you.",
+  },
+  {
+    icon: Users,
+    title: "Meet your city",
+    body: "Every series brings your local players together — new tables, new faces, and a community that lasts.",
+  },
+  {
+    icon: Sparkles,
+    title: "All skill levels welcome",
+    body: "New to mahjong or a longtime player, you belong here. Tables are open across every skill level.",
   },
 ];
 
@@ -105,6 +108,24 @@ const faqJsonLd = {
 
 export default function HomePage() {
   const [modalOpen, setModalOpen] = useState(false);
+  const [formatVisible, setFormatVisible] = useState(false);
+  const formatRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const el = formatRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          setFormatVisible(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.2 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   return (
     <>
@@ -116,7 +137,7 @@ export default function HomePage() {
             <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", gap: 24 }}>
               <p className="eyebrow">The Mahjong Open</p>
               <h1 className="h1">
-                A city-based mahjong{" "}
+                A city-based mahjong<br />
                 <em className="serif-italic">social league</em>
               </h1>
               <p className="body-lg" style={{ maxWidth: 480 }}>
@@ -141,7 +162,7 @@ export default function HomePage() {
                   { num: "5", label: "Series a year" },
                   { num: "$80", label: "Per series" },
                 ].map((s) => (
-                  <div key={s.label}>
+                  <div key={s.label} style={{ marginLeft: s.label === "Per series" ? 16 : 0 }}>
                     <p
                       style={{
                         fontFamily: "var(--font-display)",
@@ -163,87 +184,36 @@ export default function HomePage() {
             {/* Art */}
             <div style={{ position: "relative" }}>
               <div
+                className="hero-media"
                 style={{
-                  aspectRatio: "4/5",
                   borderRadius: "var(--radius-xl)",
                   overflow: "hidden",
                   background: "var(--pink-100)",
                   boxShadow: "var(--shadow-lg)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
+                  position: "relative",
                 }}
               >
                 <Image
-                  src="/assets/mark-primary.svg"
-                  alt="Mahjong Open logo"
+                  src="/assets/hero.jpg"
+                  alt="Friends playing mahjong together around a table"
                   fill
-                  style={{ objectFit: "contain", padding: 40, opacity: 0.9 }}
+                  style={{ objectFit: "cover", objectPosition: "center" }}
                   priority
                   sizes="(max-width: 900px) 100vw, 50vw"
                 />
-                {/* Placeholder visible when no photo */}
+                {/* Fallback shown until /assets/hero.jpg is added */}
                 <div
                   style={{
                     position: "absolute",
                     inset: 0,
                     display: "flex",
-                    flexDirection: "column",
                     alignItems: "center",
                     justifyContent: "center",
                     background: "linear-gradient(135deg, var(--pink-100) 0%, var(--pink-wash) 100%)",
                     zIndex: -1,
                   }}
                 >
-                  <Image
-                    src="/assets/mark-primary.svg"
-                    alt=""
-                    width={64}
-                    height={64}
-                    style={{ opacity: 0.3 }}
-                  />
-                </div>
-              </div>
-
-              {/* Win card overlay */}
-              <div
-                style={{
-                  position: "absolute",
-                  bottom: 24,
-                  left: -20,
-                  background: "#fff",
-                  borderRadius: "var(--radius-lg)",
-                  boxShadow: "var(--shadow-md)",
-                  padding: "12px 16px",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 12,
-                  minWidth: 220,
-                }}
-              >
-                <div
-                  style={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: "50%",
-                    background: "var(--pink-100)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontFamily: "var(--font-display)",
-                    fontSize: 14,
-                    color: "var(--pink-700)",
-                    fontWeight: 400,
-                    flexShrink: 0,
-                  }}
-                >
-                  MC
-                </div>
-                <div>
-                  <p style={{ fontSize: 13, fontWeight: 600, color: "var(--ink-900)", marginBottom: 2 }}>
-                    Margaret won her table
-                  </p>
-                  <p style={{ fontSize: 12, color: "var(--lime-600)" }}>Group C · +28 points</p>
+                  <Image src="/assets/mark-primary.svg" alt="" width={64} height={64} style={{ opacity: 0.3 }} />
                 </div>
               </div>
             </div>
@@ -252,19 +222,21 @@ export default function HomePage() {
       </section>
 
       {/* Format — How the league works */}
-      <section style={{ padding: "72px 0", background: "var(--bg)" }}>
+      <section style={{ padding: "72px 0", background: "var(--lime-wash)" }}>
         <div className="container-mo">
           <div style={{ textAlign: "center", marginBottom: 48 }}>
             <p className="eyebrow" style={{ marginBottom: 12 }}>How it works</p>
             <h2 className="h2">The league,{" "}<em className="serif-italic">explained</em></h2>
           </div>
-          <div className="format-grid">
-            {FORMAT_STEPS.map((step) => {
+          <div className={`format-grid ${formatVisible ? "in-view" : ""}`} ref={formatRef}>
+            {FORMAT_STEPS.map((step, i) => {
               const Icon = step.icon;
               return (
                 <div
                   key={step.title}
+                  className="format-card"
                   style={{
+                    animationDelay: `${i * 0.09}s`,
                     background: "#fff",
                     border: "1px solid var(--hair-200)",
                     borderRadius: "var(--radius-lg)",
@@ -313,94 +285,104 @@ export default function HomePage() {
 
       <CommissionerSection />
 
-      {/* Series & Events */}
+      {/* Series schedule */}
       <section style={{ padding: "72px 0", background: "var(--pink-wash)" }}>
         <div className="container-mo">
           <div style={{ textAlign: "center", marginBottom: 48 }}>
             <p className="eyebrow" style={{ marginBottom: 12 }}>Series schedule</p>
-            <h2 className="h2">A calendar worth planning for</h2>
+            <h2 className="h2">The 2026 <em className="serif-italic">series schedule</em></h2>
             <p className="body-lg" style={{ marginTop: 16, maxWidth: 560, marginInline: "auto" }}>
-              Each series runs for 8 weeks of open play. Pick your tables, host where you like, and keep your calendar full.
+              Each series runs eight weeks of open play. Here are the first two series of 2026 &mdash; register once and you&rsquo;re set for the whole run.
             </p>
           </div>
-          <div className="events-grid">
-            {EVENTS.map((ev) => (
+          <div className="schedule-grid">
+            {SERIES_SCHEDULE.map((s) => (
               <div
-                key={ev.title}
+                key={s.name}
                 className="card-lift"
                 style={{
                   background: "#fff",
                   border: "1px solid var(--hair-200)",
                   borderRadius: "var(--radius-lg)",
                   boxShadow: "var(--shadow-sm)",
-                  overflow: "hidden",
-                  cursor: "pointer",
+                  padding: "28px 28px",
                 }}
               >
-                {/* Image slot */}
-                <div
+                <p className="eyebrow" style={{ marginBottom: 10 }}>{s.name} · {s.year}</p>
+                <p
                   style={{
-                    height: 168,
-                    background: ev.color,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
+                    fontFamily: "var(--font-display)",
+                    fontSize: 26,
+                    fontWeight: 400,
+                    color: "var(--ink-900)",
+                    lineHeight: 1.15,
+                    marginBottom: 12,
                   }}
                 >
-                  <Image
-                    src="/assets/mark-primary.svg"
-                    alt=""
-                    width={40}
-                    height={40}
-                    style={{ opacity: 0.2 }}
-                  />
-                </div>
-                <div style={{ padding: "20px 24px 24px" }}>
-                  <p className="eyebrow" style={{ marginBottom: 8 }}>{ev.date}</p>
-                  <h3
-                    style={{
-                      fontFamily: "var(--font-display)",
-                      fontSize: 22,
-                      fontWeight: 400,
-                      color: "var(--ink-900)",
-                      marginBottom: 10,
-                    }}
-                  >
-                    {ev.title}
-                  </h3>
-                  <p style={{ fontSize: 15, color: "var(--ink-700)", lineHeight: 1.6 }}>{ev.body}</p>
-                </div>
+                  {s.dates}
+                </p>
+                <p style={{ fontSize: 15, color: "var(--ink-700)", lineHeight: 1.6 }}>{s.body}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Member Voices */}
-      <section style={{ padding: "80px 0", background: "var(--lime-wash)" }}>
-        <div className="container-mo" style={{ maxWidth: 720, textAlign: "center" }}>
-          <p className="eyebrow" style={{ marginBottom: 24 }}>Member voices</p>
-          {TESTIMONIALS.map((t) => (
-            <div key={t.name}>
-              <blockquote
-                style={{
-                  fontFamily: "var(--font-display)",
-                  fontSize: "clamp(22px, 3vw, 30px)",
-                  fontWeight: 400,
-                  lineHeight: 1.3,
-                  color: "var(--ink-900)",
-                  marginBottom: 24,
-                  quotes: "none",
-                }}
-              >
-                &ldquo;{t.quote}&rdquo;
-              </blockquote>
-              <p style={{ fontSize: 14, fontWeight: 600, color: "var(--ink-800)" }}>
-                {t.name}
-                <span style={{ color: "var(--ink-500)", fontWeight: 400 }}> · {t.city}</span>
-              </p>
-            </div>
-          ))}
+      {/* Why you'll love it */}
+      <section style={{ padding: "80px 0", background: "var(--peri-50)" }}>
+        <div className="container-mo">
+          <div style={{ textAlign: "center", marginBottom: 48 }}>
+            <p className="eyebrow" style={{ marginBottom: 12 }}>Come as you are</p>
+            <h2 className="h2">Why you&rsquo;ll{" "}<em className="serif-italic">love it</em></h2>
+          </div>
+          <div className="format-grid">
+            {WHY_LOVE.map((item) => {
+              const Icon = item.icon;
+              return (
+                <div
+                  key={item.title}
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    textAlign: "center",
+                    gap: 16,
+                    padding: "8px 16px",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 56,
+                      height: 56,
+                      borderRadius: "50%",
+                      background: "var(--pink-50)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <Icon size={24} color="var(--pink-600)" />
+                  </div>
+                  <div>
+                    <h3
+                      style={{
+                        fontFamily: "var(--font-display)",
+                        fontSize: 20,
+                        fontWeight: 400,
+                        color: "var(--ink-900)",
+                        marginBottom: 8,
+                        lineHeight: 1.2,
+                      }}
+                    >
+                      {item.title}
+                    </h3>
+                    <p style={{ fontSize: 15, color: "var(--ink-700)", lineHeight: 1.6 }}>{item.body}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </section>
 
@@ -412,8 +394,8 @@ export default function HomePage() {
         />
         <div className="container-mo" style={{ maxWidth: 760 }}>
           <h2 className="h2" style={{ marginBottom: 32 }}>
-            Questions,{" "}
-            <em className="serif-italic">answered</em>
+            Your Mahjong Open Questions,{" "}
+            <em className="serif-italic">Answered</em>
           </h2>
           <div style={{ display: "flex", flexDirection: "column" }}>
             {FAQS.map((f, i) => (
@@ -483,7 +465,7 @@ export default function HomePage() {
                 }}
               >
                 Ready to play?{" "}
-                <em style={{ color: "#fff" }}>Save your spot.</em>
+                <em style={{ color: "var(--lime-200)" }}>Save your spot.</em>
               </h2>
               <p style={{ fontSize: 15, color: "rgba(234,242,242,0.8)", lineHeight: 1.6 }}>
                 Registration includes your full 8-week series, access to all city tables, and a spot on the leaderboard.
@@ -518,7 +500,7 @@ export default function HomePage() {
               </div>
 
               <button
-                className="btn btn-gold"
+                className="btn btn-sage"
                 onClick={() => setModalOpen(true)}
                 style={{ justifyContent: "center", fontSize: 15 }}
               >
@@ -570,6 +552,48 @@ export default function HomePage() {
           .events-grid {
             grid-template-columns: 1fr;
           }
+        }
+        .hero-media {
+          aspect-ratio: 1 / 1;
+          max-height: 520px;
+          width: 100%;
+        }
+        .schedule-grid {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 24px;
+          max-width: 760px;
+          margin-inline: auto;
+        }
+        .btn-sage {
+          background: var(--lime-600);
+          color: #fff;
+        }
+        .btn-sage:hover {
+          background: var(--lime-700);
+        }
+        .format-card {
+          opacity: 0;
+          transform: translateY(16px);
+        }
+        .format-grid.in-view .format-card {
+          animation-name: fadeInUp;
+          animation-duration: 0.55s;
+          animation-timing-function: ease;
+          animation-fill-mode: forwards;
+        }
+        @keyframes fadeInUp {
+          from { opacity: 0; transform: translateY(16px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @media (max-width: 900px) {
+          .hero-media { max-height: 340px; }
+        }
+        @media (max-width: 600px) {
+          .schedule-grid { grid-template-columns: 1fr; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .format-card { opacity: 1; transform: none; animation: none; }
         }
       `}</style>
     </>
