@@ -432,7 +432,8 @@ export default function HomePage() {
         <div className="container-mo">
           <div
             style={{
-              background: "linear-gradient(135deg, var(--pink-600) 0%, var(--pink-400) 100%)",
+              background: "var(--pink-50)",
+              border: "1px solid var(--pink-100)",
               borderRadius: "var(--radius-xl)",
               padding: "56px 48px",
               display: "flex",
@@ -448,7 +449,7 @@ export default function HomePage() {
                   fontWeight: 600,
                   letterSpacing: "0.16em",
                   textTransform: "uppercase",
-                  color: "rgba(234,242,242,0.65)",
+                  color: "var(--pink-600)",
                   marginBottom: 16,
                 }}
               >
@@ -459,40 +460,39 @@ export default function HomePage() {
                   fontFamily: "var(--font-display)",
                   fontSize: "clamp(26px, 3.5vw, 38px)",
                   fontWeight: 400,
-                  color: "#fff",
+                  color: "var(--ink-900)",
                   lineHeight: 1.1,
                   marginBottom: 16,
                 }}
               >
                 Ready to play?{" "}
-                <em style={{ color: "var(--lime-200)" }}>Save your spot.</em>
+                <em className="serif-italic" style={{ color: "var(--pink-600)" }}>Save your spot.</em>
               </h2>
-              <p style={{ fontSize: 15, color: "rgba(234,242,242,0.8)", lineHeight: 1.6 }}>
+              <p style={{ fontSize: 15, color: "var(--ink-700)", lineHeight: 1.6 }}>
                 Registration includes your full 8-week series, access to all city tables, and a spot on the leaderboard.
               </p>
             </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: 16, minWidth: 260 }}>
-              {/* Glass box */}
               <div
                 style={{
-                  background: "rgba(255,255,255,0.14)",
-                  backdropFilter: "blur(8px)",
-                  border: "1px solid rgba(255,255,255,0.22)",
+                  background: "#fff",
+                  border: "1px solid var(--hair-200)",
                   borderRadius: "var(--radius-lg)",
                   padding: "20px 24px",
+                  boxShadow: "var(--shadow-sm)",
                 }}
               >
-                <p style={{ fontSize: 13, fontWeight: 600, color: "#fff", marginBottom: 12 }}>Your series includes:</p>
+                <p style={{ fontSize: 13, fontWeight: 600, color: "var(--ink-900)", marginBottom: 12 }}>Your series includes:</p>
                 <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 8 }}>
                   {[
-                    "8 weekly game nights",
+                    "8 weeks of open play",
                     "Access to all open tables in your city",
                     "Live standings & score tracking",
-                    "Series schedule & event highlights",
+                    "A spot in the member directory",
                   ].map((item) => (
-                    <li key={item} style={{ fontSize: 14, color: "rgba(234,242,242,0.85)", display: "flex", gap: 8, alignItems: "flex-start" }}>
-                      <span style={{ color: "#fff", marginTop: 2, flexShrink: 0 }}>✓</span>
+                    <li key={item} style={{ fontSize: 14, color: "var(--ink-700)", display: "flex", gap: 8, alignItems: "flex-start" }}>
+                      <span style={{ color: "var(--pink-500)", marginTop: 2, flexShrink: 0 }}>✓</span>
                       {item}
                     </li>
                   ))}
@@ -500,9 +500,9 @@ export default function HomePage() {
               </div>
 
               <button
-                className="btn btn-sage"
+                className="btn btn-primary"
                 onClick={() => setModalOpen(true)}
-                style={{ justifyContent: "center" }}
+                style={{ justifyContent: "center", fontSize: 15 }}
               >
                 Save my spot →
               </button>
@@ -564,16 +564,6 @@ export default function HomePage() {
           gap: 24px;
           max-width: 760px;
           margin-inline: auto;
-        }
-        .btn-sage {
-          background: var(--lime-600);
-          color: #fff;
-          border-radius: var(--radius-pill);
-          padding: 14px 32px;
-          font-size: 16px;
-        }
-        .btn-sage:hover {
-          background: var(--lime-700);
         }
         .format-card {
           opacity: 0;
