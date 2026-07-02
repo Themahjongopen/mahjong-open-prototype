@@ -7,10 +7,10 @@ export default function RegisterCancelledPage() {
       <div style={{ background: "#fff", border: "1px solid var(--hair-200)", borderRadius: "var(--radius-xl)", padding: "40px 36px", maxWidth: 440, textAlign: "center", boxShadow: "var(--shadow-md)" }}>
         <ConfirmationIcon name="clock" />
         <h1 style={{ fontFamily: "var(--font-display)", fontSize: 30, fontWeight: 400, color: "var(--ink-900)", marginBottom: 12 }}>
-          Payment didn’t go through
+          Your registration isn’t complete
         </h1>
         <p style={{ fontSize: 15, color: "var(--ink-700)", lineHeight: 1.6, marginBottom: 24 }}>
-          Your spot isn’t reserved yet, so the registration is still pending. You can try again whenever you’re ready.
+          Your spot isn’t reserved yet — no payment was processed. Pick up right where you left off whenever you’re ready.
         </p>
         <div style={{ display: "flex", justifyContent: "center" }}>
           <Link href="/" className="btn btn-primary">
