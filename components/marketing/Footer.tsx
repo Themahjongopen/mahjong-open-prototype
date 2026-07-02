@@ -49,7 +49,7 @@ export default function Footer() {
               />
             </div>
             <p style={{ fontSize: 14, lineHeight: 1.6, color: "rgba(234,242,242,0.6)", maxWidth: 220 }}>
-              A city-based Mahjong Game League for women who love the game. One series, eight weeks, endless tables.
+              A city-based mahjong social league for everyone who loves the game. One series, eight weeks, endless tables.
             </p>
           </div>
 

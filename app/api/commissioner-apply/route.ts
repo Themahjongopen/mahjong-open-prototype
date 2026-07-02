@@ -127,7 +127,7 @@ export async function POST(request: Request) {
           html: buildBrandedEmail({
             title: "New city commissioner application",
             innerHtml: internalInnerHtml,
-            footerNote: "A city-based Mahjong game league. You’re receiving this because someone submitted a commissioner application through The Mahjong Open.",
+            footerNote: "A city-based mahjong social league. You’re receiving this because someone submitted a commissioner application through The Mahjong Open.",
           }),
         });
       } catch (internalEmailError) {
@@ -142,7 +142,7 @@ export async function POST(request: Request) {
           html: buildBrandedEmail({
             title: "Thanks for your interest",
             innerHtml: acknowledgmentInnerHtml,
-            footerNote: "A city-based Mahjong game league. You’re receiving this because you submitted a commissioner application to The Mahjong Open.",
+            footerNote: "A city-based mahjong social league. You’re receiving this because you submitted a commissioner application to The Mahjong Open.",
           }),
         });
       } catch (ackEmailError) {

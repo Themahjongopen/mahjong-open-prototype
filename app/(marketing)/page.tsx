@@ -70,6 +70,39 @@ const TESTIMONIALS = [
   },
 ];
 
+const FAQS = [
+  {
+    q: "What is The Mahjong Open?",
+    a: "A city-based mahjong social league. You register once and play unlimited games over an 8-week series, then climb your city's leaderboard.",
+  },
+  {
+    q: "How much does it cost?",
+    a: "$80 per 8-week series.",
+  },
+  {
+    q: "How long is a series?",
+    a: "Eight weeks, with five series a year.",
+  },
+  {
+    q: "Do I need a partner or experience?",
+    a: "No. A table seats four players, and all skill levels are welcome.",
+  },
+  {
+    q: "How do standings work?",
+    a: "Scores are self-reported after each game, and standings rank by your average score across the series.",
+  },
+];
+
+const faqJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: FAQS.map((f) => ({
+    "@type": "Question",
+    name: f.q,
+    acceptedAnswer: { "@type": "Answer", text: f.a },
+  })),
+};
+
 export default function HomePage() {
   const [modalOpen, setModalOpen] = useState(false);
 
@@ -81,13 +114,13 @@ export default function HomePage() {
           <div className="hero-grid">
             {/* Copy */}
             <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", gap: 24 }}>
-              <p className="eyebrow">Mahjong Game League</p>
+              <p className="eyebrow">The Mahjong Open</p>
               <h1 className="h1">
-                Game on,{" "}
-                <em className="serif-italic">ladies.</em>
+                A city-based mahjong{" "}
+                <em className="serif-italic">social league</em>
               </h1>
               <p className="body-lg" style={{ maxWidth: 480 }}>
-                The Mahjong Open is a city-based Mahjong Game League. Register once, play unlimited matches for 8 weeks, and climb your city&rsquo;s leaderboard.
+                Register once, play unlimited games over an 8-week series, and climb your city&rsquo;s leaderboard.
               </p>
               <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
                 <button
@@ -368,6 +401,47 @@ export default function HomePage() {
               </p>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section style={{ padding: "72px 0", background: "var(--bg)" }}>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+        />
+        <div className="container-mo" style={{ maxWidth: 760 }}>
+          <h2 className="h2" style={{ marginBottom: 32 }}>
+            Questions,{" "}
+            <em className="serif-italic">answered</em>
+          </h2>
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            {FAQS.map((f, i) => (
+              <div
+                key={f.q}
+                style={{
+                  padding: "24px 0",
+                  borderTop: "1px solid var(--hair-200)",
+                  borderBottom: i === FAQS.length - 1 ? "1px solid var(--hair-200)" : undefined,
+                }}
+              >
+                <h3
+                  style={{
+                    fontFamily: "var(--font-display)",
+                    fontSize: 20,
+                    fontWeight: 400,
+                    color: "var(--ink-900)",
+                    marginBottom: 8,
+                  }}
+                >
+                  {f.q}
+                </h3>
+                <p style={{ fontSize: 15, lineHeight: 1.6, color: "var(--ink-700)", maxWidth: 620 }}>
+                  {f.a}
+                </p>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 

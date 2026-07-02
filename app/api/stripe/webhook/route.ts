@@ -169,7 +169,7 @@ export async function POST(request: Request) {
       const html = buildBrandedEmail({
         title: `You’re in, ${firstName}.`,
         innerHtml,
-        footerNote: `A city-based Mahjong game league. You’re receiving this because you registered for ${seriesName}.`,
+        footerNote: `A city-based mahjong social league. You’re receiving this because you registered for ${seriesName}.`,
       });
       try {
         const resend = new Resend(resendApiKey);
@@ -182,7 +182,7 @@ export async function POST(request: Request) {
           html: buildBrandedEmail({
             title: "New registration",
             innerHtml: internalNoticeInnerHtml,
-            footerNote: "A city-based Mahjong game league. You’re receiving this because a player completed a registration through The Mahjong Open.",
+            footerNote: "A city-based mahjong social league. You’re receiving this because a player completed a registration through The Mahjong Open.",
           }),
         });
 
@@ -251,7 +251,7 @@ export async function POST(request: Request) {
           const html = buildBrandedEmail({
             title: "Your registration is still waiting",
             innerHtml,
-            footerNote: "A city-based Mahjong game league. You’re receiving this because your registration was left unfinished.",
+            footerNote: "A city-based mahjong social league. You’re receiving this because your registration was left unfinished.",
           });
 
           await resend.emails.send({

@@ -25,10 +25,46 @@ const quicksand = Quicksand({
 const isIndexable = process.env.SITE_INDEXABLE === "true";
 
 export const metadata: Metadata = {
-  title: "The Mahjong Open",
+  metadataBase: new URL("https://themahjongopen.com"),
+  title: "The Mahjong Open — City-Based Mahjong Social League",
   description:
-    "A city-based Mahjong Game League for women who love the game. Join your city's series.",
+    "The Mahjong Open is a city-based mahjong social league. Register once, play unlimited games over an 8-week series, and climb your city's leaderboard — warm, welcoming, and flexible.",
+  keywords: [
+    "mahjong social league",
+    "mahjong league",
+    "city mahjong league",
+    "mahjong club",
+    "learn mahjong",
+    "The Mahjong Open",
+  ],
+  alternates: { canonical: "/" },
   robots: isIndexable ? undefined : { index: false, follow: false },
+  openGraph: {
+    title: "The Mahjong Open — City-Based Mahjong Social League",
+    description:
+      "A city-based mahjong social league. Register once, play unlimited games over an 8-week series, and climb your city's leaderboard.",
+    type: "website",
+    siteName: "The Mahjong Open",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "The Mahjong Open — City-Based Mahjong Social League",
+    description:
+      "A city-based mahjong social league. Register once, play unlimited games over an 8-week series, and climb your city's leaderboard.",
+  },
+};
+
+// Organization structured data (JSON-LD) — helps Google and AI answer engines
+// understand what The Mahjong Open is. City-agnostic (no fixed address yet).
+const organizationJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: "The Mahjong Open",
+  description:
+    "The Mahjong Open is a city-based mahjong social league where players register once and play unlimited games over an 8-week series, climbing their city's leaderboard.",
+  url: "https://themahjongopen.com",
+  knowsAbout: "Mahjong",
+  slogan: "Warm, welcoming, and flexible.",
 };
 
 export default function RootLayout({
@@ -39,7 +75,13 @@ export default function RootLayout({
       lang="en"
       className={`${bodoniModa.variable} ${quicksand.variable} h-full`}
     >
-      <body className="min-h-full flex flex-col antialiased">{children}</body>
+      <body className="min-h-full flex flex-col antialiased">
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
+        />
+        {children}
+      </body>
     </html>
   );
 }

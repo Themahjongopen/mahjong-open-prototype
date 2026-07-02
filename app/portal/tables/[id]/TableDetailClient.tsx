@@ -240,7 +240,7 @@ function createCalendarHref(date: Date, table: TableDetailClientProps["table"]) 
     `DTSTAMP:${formatDateForCalendar(new Date())}Z`,
     `DTSTART:${formatDateForCalendar(date)}Z`,
     `DTEND:${formatDateForCalendar(endDate)}Z`,
-    `SUMMARY:Mahjong Game League table at ${table.location_name}`,
+    `SUMMARY:The Mahjong Open table at ${table.location_name}`,
     `DESCRIPTION:Skill level: ${table.skill_level ?? "Open"}\\nLocation: ${table.location_name}${table.location_address ? `\\n${table.location_address}` : ""}`,
     `LOCATION:${table.location_address ?? table.location_name}`,
     "END:VEVENT",
@@ -253,5 +253,5 @@ function createGoogleCalendarLink(date: Date, table: TableDetailClientProps["tab
   const endDate = new Date(date.getTime() + 2 * 60 * 60 * 1000);
   const format = (d: Date) => d.toISOString().replace(/[-:]/g, "").split(".")[0];
   const details = `Skill level: ${table.skill_level ?? "Open"} - ${table.location_name}${table.location_address ? `, ${table.location_address}` : ""}`;
-  return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(`Mahjong Game League table at ${table.location_name}`)}&dates=${format(date)}/${format(endDate)}&details=${encodeURIComponent(details)}&location=${encodeURIComponent(table.location_address ?? table.location_name)}&sf=true&output=xml`;
+  return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(`The Mahjong Open table at ${table.location_name}`)}&dates=${format(date)}/${format(endDate)}&details=${encodeURIComponent(details)}&location=${encodeURIComponent(table.location_address ?? table.location_name)}&sf=true&output=xml`;
 }
