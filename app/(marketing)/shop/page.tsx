@@ -4,26 +4,55 @@ import { useState } from "react";
 import PageBanner from "@/components/marketing/PageBanner";
 import { ExternalLink } from "lucide-react";
 
-type Category = "All favorites" | "Tiles & sets" | "Cards & accessories" | "Table & decor" | "Gifts & apparel";
+type Category = "All favorites" | "Tiles & sets" | "Table & decor";
 
 const CATEGORIES: Category[] = [
   "All favorites",
   "Tiles & sets",
-  "Cards & accessories",
   "Table & decor",
-  "Gifts & apparel",
 ];
 
 const PRODUCTS = [
-  { title: "Jade Dynasty Tile Set", category: "Tiles & sets", blurb: "A stunning full-weight bakelite set with a classic ivory finish. Our most-gifted pick.", href: "#", bg: "var(--lime-wash)" },
-  { title: "NMJL Official Card 2026", category: "Cards & accessories", blurb: "The current National Mah Jongg League card — updated every year, essential for league play.", href: "#", bg: "var(--pink-wash)" },
-  { title: "Bamboo Tile Rack Set (4)", category: "Table & decor", blurb: "Lightweight, stackable bamboo racks that look beautiful on any table.", href: "#", bg: "var(--lime-50)" },
-  { title: "The Mahjong Line — Starter Set", category: "Tiles & sets", blurb: "Modern aesthetic, American rules. A favorite among new players and design lovers alike.", href: "#", bg: "var(--peri-50)" },
-  { title: "Velvet Tile Pouch", category: "Cards & accessories", blurb: "A plush carrying pouch for your tiles. Protects the set and travels beautifully.", href: "#", bg: "var(--peri-50)" },
-  { title: "Linen Tablerunner — Garden Party", category: "Table & decor", blurb: "The perfect surface for your tiles. Soft linen, botanical print, machine washable.", href: "#", bg: "var(--lime-wash)" },
-  { title: "Mah Jongg Tote Bag", category: "Gifts & apparel", blurb: "Canvas tote printed with tile motifs. Big enough for a full set, stylish enough for anywhere.", href: "#", bg: "var(--pink-50)" },
-  { title: "Wind Tile Enamel Pin Set", category: "Gifts & apparel", blurb: "East, South, West, North — four enamel pins for the player who has everything.", href: "#", bg: "var(--lime-50)" },
-  { title: "Table Score Tracker", category: "Cards & accessories", blurb: "A reusable dry-erase pad sized for foursome scoring. Designed for league play.", href: "#", bg: "var(--peri-50)" },
+  {
+    title: "Willow Mahjong Tiles",
+    category: "Tiles & sets",
+    blurb: "A serene acrylic set in muted green, dusty blue, and soft gold — 160 tiles with numbered flowers and a charming elephant joker. Quiet luxury for the table.",
+    href: "https://ohmymahjong.com/discount/TSMJP?redirect=/products/willow-tile-set",
+    image: "https://ohmymahjong.com/cdn/shop/files/willow-mahjong-tiles-8261776.jpg?v=1777349053",
+    bg: "var(--lime-wash)",
+  },
+  {
+    title: "Lagoon Mahjong Tiles",
+    category: "Tiles & sets",
+    blurb: "Crisp white faces with triple-layered edges in teal, citron, and magenta. A cool, water-inspired 160-tile set that feels both calming and vivid.",
+    href: "https://ohmymahjong.com/discount/TSMJP?redirect=/products/lagoon-tile-set",
+    image: "https://ohmymahjong.com/cdn/shop/files/lagoon-mahjong-tiles-2471015.jpg?v=1774628489",
+    bg: "var(--peri-50)",
+  },
+  {
+    title: "Holiday Soirée Mahjong Tiles",
+    category: "Tiles & sets",
+    blurb: "A festive heirloom set — bow-tied ornaments, winter florals, nutcracker jokers, and a candy-cane-red back. Hand-painted holiday cheer for every game night.",
+    href: "https://thatmahjongmoment.com/discount/Mahjparlor?redirect=/products/holiday-soiree",
+    image: "https://thatmahjongmoment.com/cdn/shop/files/holiday-soiree-mahjong-tiles-400.webp?v=1778246215",
+    bg: "var(--pink-50)",
+  },
+  {
+    title: "Mahjong Racks & Pushers (Set of 4)",
+    category: "Table & decor",
+    blurb: "Sleek 20-inch racks with magnetic pushers, sized for larger tiles and offered in fourteen colors to match any set. Sweep your whole wall in one motion.",
+    href: "https://peacelovemahjong.com/discount/TSMJP?redirect=/products/mahjong-racks-racks-pushers-set-of-4",
+    image: "https://peacelovemahjong.com/cdn/shop/files/IMG_6813-Edit_754fb59a-81a0-439b-8bca-c6f7dcfd7881.jpg?v=1780507217",
+    bg: "var(--lime-50)",
+  },
+  {
+    title: "Scallop Acrylic Mahjong Racks",
+    category: "Table & decor",
+    blurb: "Thick clear acrylic racks with sixteen scallops per pusher and snap-in magnets. A pretty, sturdy upgrade that fits our tiles and most other brands.",
+    href: "https://thatmahjongmoment.com/discount/Mahjparlor?redirect=/products/scallop-pusher-mahjong-rack",
+    image: "https://thatmahjongmoment.com/cdn/shop/files/scallop-acrylic-mahjong-racks-and-pushers-694.webp?v=1778247045",
+    bg: "var(--lime-wash)",
+  },
 ];
 
 export default function ShopPage() {
@@ -84,7 +113,7 @@ export default function ShopPage() {
                   flexDirection: "column",
                 }}
               >
-                {/* Image slot */}
+                {/* Product image (colored block shows as fallback if the image fails) */}
                 <div
                   style={{
                     aspectRatio: "4/3",
@@ -92,11 +121,22 @@ export default function ShopPage() {
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
+                    overflow: "hidden",
                   }}
                 >
-                  <p style={{ fontSize: 13, color: "var(--ink-500)", textAlign: "center", padding: 16 }}>
-                    {product.title}
-                  </p>
+                  {product.image ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={product.image}
+                      alt={product.title}
+                      loading="lazy"
+                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                    />
+                  ) : (
+                    <p style={{ fontSize: 13, color: "var(--ink-500)", textAlign: "center", padding: 16 }}>
+                      {product.title}
+                    </p>
+                  )}
                 </div>
                 <div style={{ padding: "20px 20px 24px", display: "flex", flexDirection: "column", gap: 10, flex: 1 }}>
                   <span className="badge badge-lime" style={{ alignSelf: "flex-start" }}>{product.category}</span>
