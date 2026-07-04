@@ -110,6 +110,8 @@ export default function HomePage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [formatVisible, setFormatVisible] = useState(false);
   const formatRef = useRef<HTMLDivElement | null>(null);
+  const heroMediaRef = useRef<HTMLDivElement | null>(null);
+  const [heroParallax, setHeroParallax] = useState(0);
 
   useEffect(() => {
     const el = formatRef.current;
@@ -125,6 +127,35 @@ export default function HomePage() {
     );
     observer.observe(el);
     return () => observer.disconnect();
+  }, []);
+
+  // Subtle scroll parallax on the hero image (respects reduced-motion)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    let raf = 0;
+    const update = () => {
+      raf = 0;
+      const el = heroMediaRef.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      const vh = window.innerHeight || 1;
+      const center = rect.top + rect.height / 2;
+      const progress = (center - vh / 2) / (vh / 2 + rect.height / 2); // ~ -1..1
+      const clamped = Math.max(-1, Math.min(1, progress));
+      setHeroParallax(-clamped * 18);
+    };
+    const onScroll = () => {
+      if (!raf) raf = requestAnimationFrame(update);
+    };
+    update();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    return () => {
+      if (raf) cancelAnimationFrame(raf);
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+    };
   }, []);
 
   return (
@@ -183,21 +214,41 @@ export default function HomePage() {
 
             {/* Art */}
             <div style={{ position: "relative" }}>
+              {/* Decorative pink accent line, offset behind the image so it peeks out on the right & bottom */}
+              <div
+                aria-hidden
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  transform: "translate(9px, 9px)",
+                  border: "1px solid var(--pink-400)",
+                  borderRadius: "var(--radius-xl)",
+                  zIndex: 0,
+                  pointerEvents: "none",
+                }}
+              />
               <div
                 className="hero-media"
+                ref={heroMediaRef}
                 style={{
                   borderRadius: "var(--radius-xl)",
                   overflow: "hidden",
                   background: "var(--pink-100)",
                   boxShadow: "var(--shadow-lg)",
                   position: "relative",
+                  zIndex: 1,
                 }}
               >
                 <Image
                   src="/hero.jpg"
                   alt="Friends playing mahjong together around a table"
                   fill
-                  style={{ objectFit: "cover", objectPosition: "center" }}
+                  style={{
+                    objectFit: "cover",
+                    objectPosition: "center",
+                    transform: `translate3d(0, ${heroParallax}px, 0) scale(1.08)`,
+                    willChange: "transform",
+                  }}
                   priority
                   sizes="(max-width: 900px) 100vw, 50vw"
                 />
@@ -283,10 +334,12 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Stacking scroll group: each panel pins and the next slides in front */}
+      <div className="stack-wrap">
       <CommissionerSection />
 
       {/* Series schedule */}
-      <section style={{ padding: "72px 0", background: "var(--pink-wash)" }}>
+      <section className="stack-panel stack-panel--reveal" style={{ padding: "72px 0", background: "var(--pink-wash)" }}>
         <div className="container-mo">
           <div style={{ textAlign: "center", marginBottom: 48 }}>
             <p className="eyebrow" style={{ marginBottom: 12 }}>Series schedule</p>
@@ -329,7 +382,7 @@ export default function HomePage() {
       </section>
 
       {/* Why you'll love it */}
-      <section style={{ padding: "80px 0", background: "var(--peri-50)" }}>
+      <section className="stack-panel stack-panel--reveal" style={{ padding: "80px 0", background: "var(--peri-50)" }}>
         <div className="container-mo">
           <div style={{ textAlign: "center", marginBottom: 48 }}>
             <p className="eyebrow" style={{ marginBottom: 12 }}>Come as you are</p>
@@ -385,6 +438,8 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+      </div>
+      {/* end stacking scroll group */}
 
       {/* FAQ */}
       <section style={{ padding: "72px 0", background: "var(--bg)" }}>
@@ -529,6 +584,31 @@ export default function HomePage() {
           display: grid;
           grid-template-columns: repeat(3, 1fr);
           gap: 24px;
+        }
+        /* Sticky "stacking" scroll sections: each pins, the next slides in front */
+        .stack-panel {
+          position: sticky;
+          top: 0;
+          min-height: 100vh;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+        }
+        .stack-panel--reveal {
+          border-top-left-radius: 28px;
+          border-top-right-radius: 28px;
+          box-shadow: 0 -12px 44px rgba(31, 56, 67, 0.1);
+        }
+        @media (max-width: 900px) {
+          .stack-panel {
+            position: static;
+            min-height: 0;
+          }
+          .stack-panel--reveal {
+            border-top-left-radius: 0;
+            border-top-right-radius: 0;
+            box-shadow: none;
+          }
         }
         @media (max-width: 900px) {
           .hero-grid {

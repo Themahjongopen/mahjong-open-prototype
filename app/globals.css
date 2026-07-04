@@ -877,7 +877,7 @@ body.admin-drawer-open {
   color: #fff;
   border-radius: var(--radius-pill);
   padding: 12px 24px;
-  box-shadow: var(--shadow-pink);
+  box-shadow: 0 2px 6px rgba(31, 56, 67, 0.12);
 }
 .btn-primary:hover { background: var(--pink-500); }
 .btn-primary:active { background: var(--pink-600); }
@@ -897,7 +897,7 @@ body.admin-drawer-open {
   border-radius: var(--radius-pill);
   padding: 14px 32px;
   font-size: 16px;
-  box-shadow: var(--shadow-gold);
+  box-shadow: 0 2px 6px rgba(31, 56, 67, 0.12);
 }
 .btn-gold:hover { background: var(--crimson-600); }
 
