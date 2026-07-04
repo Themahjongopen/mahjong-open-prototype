@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BadgeCheck, HandCoins, HeartHandshake } from "lucide-react";
+import { BadgeCheck, HandCoins, HeartHandshake, TrendingUp } from "lucide-react";
 
 export default function CommissionerSection() {
   return (
@@ -50,6 +50,7 @@ export default function CommissionerSection() {
               { Icon: BadgeCheck, label: "No franchise fees", caption: "Lead your city with zero upfront cost." },
               { Icon: HandCoins, label: "No buy-in", caption: "No financial commitment to get started." },
               { Icon: HeartHandshake, label: "Full support", caption: "We bring the brand, tools, and structure." },
+              { Icon: TrendingUp, label: "Earn as you grow", caption: "Tiered commissions that rise as more players join your city." },
             ].map(({ Icon, label, caption }) => (
               <div
                 key={label}

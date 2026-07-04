@@ -138,12 +138,17 @@ export default function HomePage() {
       raf = 0;
       const el = heroMediaRef.current;
       if (!el) return;
+      // Parallax on desktop only; keep the image static on mobile
+      if (window.innerWidth < 900) {
+        setHeroParallax(0);
+        return;
+      }
       const rect = el.getBoundingClientRect();
       const vh = window.innerHeight || 1;
       const center = rect.top + rect.height / 2;
       const progress = (center - vh / 2) / (vh / 2 + rect.height / 2); // ~ -1..1
       const clamped = Math.max(-1, Math.min(1, progress));
-      setHeroParallax(-clamped * 18);
+      setHeroParallax(-clamped * 60);
     };
     const onScroll = () => {
       if (!raf) raf = requestAnimationFrame(update);
@@ -246,7 +251,7 @@ export default function HomePage() {
                   style={{
                     objectFit: "cover",
                     objectPosition: "center",
-                    transform: `translate3d(0, ${heroParallax}px, 0) scale(1.08)`,
+                    transform: `translate3d(0, ${heroParallax}px, 0) scale(1.24)`,
                     willChange: "transform",
                   }}
                   priority
@@ -593,6 +598,11 @@ export default function HomePage() {
           display: flex;
           flex-direction: column;
           justify-content: center;
+        }
+        /* Keep the inner container full width inside the flex panel
+           (otherwise auto side-margins shrink it and the cards wrap) */
+        .stack-panel > .container-mo {
+          width: 100%;
         }
         .stack-panel--reveal {
           border-top-left-radius: 28px;

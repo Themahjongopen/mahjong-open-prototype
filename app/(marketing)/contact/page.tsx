@@ -3,7 +3,7 @@
 import { useState } from "react";
 import PageBanner from "@/components/marketing/PageBanner";
 import ConfirmationIcon from "@/components/ui/ConfirmationIcon";
-import { ExternalLink, Send, ChevronDown } from "lucide-react";
+import { Mail, Send, ChevronDown } from "lucide-react";
 
 const FAQS = [
   { q: "How do I register for a city?", a: "Click Register on our home page or any page to open the registration modal. Choose your city and preferred day, complete payment, and you're in." },
@@ -18,6 +18,26 @@ export default function ContactPage() {
   const [form, setForm] = useState({ first: "", last: "", email: "", subject: "", message: "", website: "" });
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  const contactLinkStyle: React.CSSProperties = {
+    display: "flex",
+    alignItems: "center",
+    gap: 12,
+    fontSize: 14,
+    color: "var(--ink-700)",
+    textDecoration: "none",
+  };
+  const contactIconBox: React.CSSProperties = {
+    width: 36,
+    height: 36,
+    borderRadius: "var(--radius-sm)",
+    background: "var(--pink-50)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    color: "var(--pink-600)",
+    flexShrink: 0,
+  };
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -91,7 +111,7 @@ export default function ContactPage() {
               <p className="eyebrow" style={{ marginBottom: 16 }}>Send a message</p>
               <h2 className="h2" style={{ marginBottom: 16 }}>Still have <em className="serif-italic">questions?</em></h2>
               <p style={{ fontSize: 16, color: "var(--ink-700)", lineHeight: 1.65, marginBottom: 32 }}>
-                Use the form to reach us. We respond within 1–2 business days. For urgent membership issues, mention &ldquo;urgent&rdquo; in your subject line.
+                Use the form to reach us. We respond within 1–2 business days. Have something time-sensitive? Choose &ldquo;Urgent membership question&rdquo; as your subject and we&rsquo;ll prioritize it.
               </p>
 
               {/* Social card */}
@@ -104,23 +124,33 @@ export default function ContactPage() {
                   boxShadow: "var(--shadow-sm)",
                 }}
               >
-                <p style={{ fontSize: 14, fontWeight: 600, color: "var(--ink-800)", marginBottom: 16 }}>Follow along</p>
-                <a
-                  href="#"
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 12,
-                    fontSize: 14,
-                    color: "var(--ink-700)",
-                    textDecoration: "none",
-                  }}
-                >
-                  <div style={{ width: 36, height: 36, borderRadius: "var(--radius-sm)", background: "var(--pink-50)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <ExternalLink size={18} color="var(--pink-600)" />
-                  </div>
-                  @themahjongopen
-                </a>
+                <p style={{ fontSize: 14, fontWeight: 600, color: "var(--ink-800)", marginBottom: 16 }}>Connect with us</p>
+                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                  <a href="https://www.instagram.com/themahjongopen/" target="_blank" rel="noopener noreferrer" aria-label="Instagram" style={contactLinkStyle}>
+                    <span style={contactIconBox}>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <rect x="2" y="2" width="20" height="20" rx="5" />
+                        <circle cx="12" cy="12" r="4" />
+                        <circle cx="17.5" cy="6.5" r="1.2" fill="currentColor" stroke="none" />
+                      </svg>
+                    </span>
+                    @themahjongopen
+                  </a>
+                  <a href="https://www.facebook.com/themahjongopen/" target="_blank" rel="noopener noreferrer" aria-label="Facebook" style={contactLinkStyle}>
+                    <span style={contactIconBox}>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                        <path d="M22 12a10 10 0 1 0-11.56 9.88v-6.99H7.9V12h2.54V9.8c0-2.5 1.49-3.89 3.77-3.89 1.09 0 2.24.2 2.24.2v2.46h-1.26c-1.24 0-1.63.77-1.63 1.56V12h2.78l-.44 2.89h-2.34v6.99A10 10 0 0 0 22 12z" />
+                      </svg>
+                    </span>
+                    The Mahjong Open
+                  </a>
+                  <a href="mailto:themahjongopen@gmail.com" aria-label="Email" style={contactLinkStyle}>
+                    <span style={contactIconBox}>
+                      <Mail size={18} />
+                    </span>
+                    themahjongopen@gmail.com
+                  </a>
+                </div>
               </div>
             </div>
 
@@ -166,6 +196,7 @@ export default function ContactPage() {
                       <option>Registration question</option>
                       <option>Payment or billing</option>
                       <option>Portal access</option>
+                      <option>Urgent membership question</option>
                       <option>New city inquiry</option>
                       <option>Something else</option>
                     </select>

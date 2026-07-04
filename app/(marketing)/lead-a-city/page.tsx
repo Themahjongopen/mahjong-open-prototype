@@ -22,13 +22,14 @@ export default function LeadACityPage() {
           }}
         >
           <p className="eyebrow" style={{ marginBottom: 12 }}>
-            Lead the Mahjong Open in your city
+            Become a commissioner
           </p>
           <h1 className="h1" style={{ marginBottom: 14 }}>
             Bring the Mahjong Open to your city
           </h1>
           <p className="body-lg" style={{ maxWidth: 680, marginBottom: 4 }}>
-            If you love the game and want to build a local community around it, we’d love to hear from you. No franchise fees. No buy-in.
+            If you love the game and want to build a local community around it, we’d love to hear from you.{" "}
+            <strong style={{ fontWeight: 700, color: "var(--lime-600)" }}>No franchise fees. No buy-in.</strong>
           </p>
         </section>
 
