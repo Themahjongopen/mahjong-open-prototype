@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import PageBanner from "@/components/marketing/PageBanner";
+import CommissionerSection from "@/components/marketing/CommissionerSection";
 import { ChevronDown } from "lucide-react";
 
 const STEPS = [
@@ -146,6 +147,8 @@ export default function HowItWorksPage() {
           </div>
         </div>
       </section>
+
+      <CommissionerSection />
     </>
   );
 }
