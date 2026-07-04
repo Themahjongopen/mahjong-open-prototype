@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 export default function LeadACityPage() {
   return (
-    <main style={{ background: "var(--bg)", padding: "48px 0 88px" }}>
+    <main style={{ background: "var(--pink-wash)", padding: "48px 0 88px" }}>
       <div className="container-mo" style={{ display: "grid", gap: 26 }}>
         <section
           style={{
