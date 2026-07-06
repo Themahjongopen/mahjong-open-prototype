@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
-import { isValidAdminCookie } from "@/lib/admin/passcode";
+import { ADMIN_COOKIE_NAME, isValidAdminCookie } from "@/lib/admin/passcode";
 
 // Registration rows shaped for the admin Registrations page.
 type RegistrationRow = {
@@ -13,15 +13,16 @@ type RegistrationRow = {
   created_at: string;
   city: string | null;
   series: string | null;
+  invited: boolean; // has a linked portal account (registrations.profile_id set)
 };
 
 // Local-preview fallback used only when no service-role client is configured.
 // Reshaped to look like real registrations (name/email/phone/city/series/paid_status/date).
 const MOCK_REGISTRATIONS: RegistrationRow[] = [
-  { id: "reg-1", full_name: "Morgan Park", email: "morgan@example.com", phone: "(213) 555-0142", skill_level: "advanced", paid_status: "paid", created_at: "2026-06-28T18:30:00Z", city: "Los Angeles, CA", series: "Spring 2026" },
-  { id: "reg-2", full_name: "Alex Kim", email: "alex@example.com", phone: "(310) 555-0199", skill_level: "intermediate", paid_status: "paid", created_at: "2026-06-27T14:05:00Z", city: "Los Angeles, CA", series: "Spring 2026" },
-  { id: "reg-3", full_name: "Sam Rivera", email: "sam@example.com", phone: null, skill_level: "beginner", paid_status: "pending", created_at: "2026-06-26T21:12:00Z", city: "San Francisco, CA", series: "Spring 2026" },
-  { id: "reg-4", full_name: "Taylor Brooks", email: "taylor@example.com", phone: "(415) 555-0173", skill_level: "intermediate", paid_status: "refunded", created_at: "2026-06-24T09:47:00Z", city: "San Francisco, CA", series: "Spring 2026" },
+  { id: "reg-1", full_name: "Morgan Park", email: "morgan@example.com", phone: "(213) 555-0142", skill_level: "advanced", paid_status: "paid", created_at: "2026-06-28T18:30:00Z", city: "Los Angeles, CA", series: "Spring 2026", invited: true },
+  { id: "reg-2", full_name: "Alex Kim", email: "alex@example.com", phone: "(310) 555-0199", skill_level: "intermediate", paid_status: "paid", created_at: "2026-06-27T14:05:00Z", city: "Los Angeles, CA", series: "Spring 2026", invited: false },
+  { id: "reg-3", full_name: "Sam Rivera", email: "sam@example.com", phone: null, skill_level: "beginner", paid_status: "pending", created_at: "2026-06-26T21:12:00Z", city: "San Francisco, CA", series: "Spring 2026", invited: false },
+  { id: "reg-4", full_name: "Taylor Brooks", email: "taylor@example.com", phone: "(415) 555-0173", skill_level: "intermediate", paid_status: "refunded", created_at: "2026-06-24T09:47:00Z", city: "San Francisco, CA", series: "Spring 2026", invited: false },
 ];
 
 function formatCity(city: { name: string | null; state: string | null } | null | undefined): string | null {
@@ -31,10 +32,9 @@ function formatCity(city: { name: string | null; state: string | null } | null |
 
 function isAuthorized(request: Request) {
   const cookieHeader = request.headers.get("cookie") ?? "";
-  const adminCookie = cookieHeader.split(";").map((part) => part.trim()).find((part) => part.startsWith("admin-passcode="));
+  const adminCookie = cookieHeader.split(";").map((part) => part.trim()).find((part) => part.startsWith(`${ADMIN_COOKIE_NAME}=`));
   if (!adminCookie) return false;
-  const value = adminCookie.split("=")[1];
-  return isValidAdminCookie(value, process.env.ADMIN_PASSCODE);
+  return isValidAdminCookie(adminCookie.slice(ADMIN_COOKIE_NAME.length + 1), process.env.ADMIN_PASSCODE);
 }
 
 export async function GET(request: Request) {
@@ -48,7 +48,7 @@ export async function GET(request: Request) {
   if (supabase) {
     const { data, error } = await supabase
       .from("registrations")
-      .select("id, full_name, email, phone, skill_level, paid_status, created_at, cities(name, state), series(name)")
+      .select("id, full_name, email, phone, skill_level, paid_status, created_at, profile_id, cities(name, state), series(name)")
       .order("created_at", { ascending: false });
 
     if (!error && data) {
@@ -66,6 +66,7 @@ export async function GET(request: Request) {
           created_at: row.created_at,
           city: formatCity(city),
           series: series?.name ?? null,
+          invited: Boolean(row.profile_id),
         };
       });
       // Empty state is returned cleanly as an empty array (page shows "No registrations yet").

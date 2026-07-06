@@ -14,6 +14,7 @@ type RegistrationRow = {
   created_at: string;
   city: string | null;
   series: string | null;
+  invited: boolean;
 };
 
 type Filter = "all" | "paid" | "pending";
@@ -38,6 +39,7 @@ export default function AdminRegistrationsPage() {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
   const [filter, setFilter] = useState<Filter>("all");
+  const [invitingId, setInvitingId] = useState<string | null>(null);
 
   async function loadRows() {
     setLoading(true);
@@ -91,6 +93,26 @@ export default function AdminRegistrationsPage() {
     URL.revokeObjectURL(url);
   }
 
+  async function handleInvite(row: RegistrationRow) {
+    if (!window.confirm(`Send a portal invite to ${row.full_name ?? row.email} (${row.email})?`)) return;
+    setInvitingId(row.id);
+    setMessage(null);
+    const response = await fetch("/api/admin/invite", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ registrationId: row.id }),
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (response.ok) {
+      setRows((prev) => prev.map((r) => (r.id === row.id ? { ...r, invited: true } : r)));
+      setMessage(`Invite sent to ${row.email}.`);
+    } else {
+      setMessage(payload.error ?? "Unable to send invite.");
+    }
+    setInvitingId(null);
+  }
+
   const filters: { key: Filter; label: string }[] = [
     { key: "all", label: "All" },
     { key: "paid", label: "Paid" },
@@ -128,7 +150,7 @@ export default function AdminRegistrationsPage() {
       <div style={{ background: "#fff", border: "1px solid var(--hair-200)", borderRadius: "var(--radius-lg)", overflow: "hidden", boxShadow: "var(--shadow-xs)" }}>
         <div className="admin-players-table">
           <div className="admin-players-table-header">
-            {["Name", "Email", "Phone", "City", "Series", "Skill", "Payment", "Registered"].map((h) => (
+            {["Name", "Email", "Phone", "City", "Series", "Skill", "Payment", "Registered", "Portal"].map((h) => (
               <p key={h}>{h}</p>
             ))}
           </div>
@@ -172,6 +194,24 @@ export default function AdminRegistrationsPage() {
                 <div>
                   <span className="admin-mobile-label">Registered</span>
                   <p style={{ fontSize: 12, color: "var(--ink-500)" }}>{formatDate(r.created_at)}</p>
+                </div>
+                <div>
+                  <span className="admin-mobile-label">Portal</span>
+                  {r.invited ? (
+                    <span className="badge badge-lime" style={{ alignSelf: "center" }}>Invited</span>
+                  ) : r.paid_status === "paid" ? (
+                    <button
+                      type="button"
+                      className="btn"
+                      style={{ fontSize: 12, padding: "6px 12px" }}
+                      disabled={invitingId === r.id}
+                      onClick={() => handleInvite(r)}
+                    >
+                      {invitingId === r.id ? "Sending…" : "Invite"}
+                    </button>
+                  ) : (
+                    <span style={{ fontSize: 12, color: "var(--ink-500)" }}>—</span>
+                  )}
                 </div>
               </div>
             ))

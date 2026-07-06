@@ -20,7 +20,8 @@ export default function PortalAppBar({ title, isAdmin, onToggleAdmin, userName }
   async function handleSignOut() {
     const supabase = createClient();
     await supabase.auth.signOut();
-    router.push("/login");
+    router.push("/portal/login");
+    router.refresh();
   }
 
   const initials = userName
