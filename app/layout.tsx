@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
-import { Bodoni_Moda, Quicksand } from "next/font/google";
+import localFont from "next/font/local";
+import { Quicksand } from "next/font/google";
 import "./globals.css";
 
-const bodoniModa = Bodoni_Moda({
-  weight: ["400", "500", "600"],
-  style: ["normal", "italic"],
-  subsets: ["latin"],
+// Self-hosted heading font (client-licensed webfont).
+const dreamAvenue = localFont({
+  src: "./fonts/dream_avenue-webfont.woff2",
+  weight: "400",
   variable: "--font-display-loaded",
   display: "swap",
 });
@@ -73,7 +74,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${bodoniModa.variable} ${quicksand.variable} h-full`}
+      className={`${dreamAvenue.variable} ${quicksand.variable} h-full`}
     >
       <body className="min-h-full flex flex-col antialiased">
         <script

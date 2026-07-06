@@ -11,6 +11,18 @@ export function buildBrandedEmail({
 }) {
   return `<!DOCTYPE html>
 <html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      @font-face {
+        font-family: 'Dream Avenue';
+        font-style: normal;
+        font-weight: 400;
+        font-display: swap;
+        src: url('${ASSET_BASE}/fonts/dream_avenue-webfont.woff2') format('woff2');
+      }
+    </style>
+  </head>
   <body style="margin:0;padding:0;background-color:#f4f5f3;">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f5f3;">
       <tr>
@@ -24,7 +36,7 @@ export function buildBrandedEmail({
             <tr><td style="padding:14px 40px 0 40px;"><div style="height:3px;background-color:#8ab49c;border-radius:2px;"></div></td></tr>
             <tr>
               <td style="padding:28px 40px 4px 40px;font-family:Helvetica,Arial,sans-serif;">
-                <h1 style="margin:0 0 12px 0;font-family:Georgia,'Times New Roman',serif;font-size:25px;color:#1d4d59;font-weight:normal;">${title}</h1>
+                <h1 style="margin:0 0 12px 0;font-family:'Dream Avenue',Georgia,'Times New Roman',serif;font-size:25px;color:#1d4d59;font-weight:normal;">${title}</h1>
                 ${innerHtml}
               </td>
             </tr>

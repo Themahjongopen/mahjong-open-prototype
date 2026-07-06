@@ -19,7 +19,7 @@ const policyLinks = [
   { label: "Disclaimer", href: "/disclaimer" },
 ];
 
-export default function Footer() {
+export default function Footer({ onRegisterClick }: { onRegisterClick?: () => void }) {
   return (
     <footer
       style={{
@@ -57,7 +57,7 @@ export default function Footer() {
           <FooterCol title="League" links={leagueLinks} />
 
           {/* Members */}
-          <FooterCol title="Members" links={memberLinks} />
+          <FooterCol title="Members" links={memberLinks} onRegisterClick={onRegisterClick} />
 
           {/* Policies */}
           <FooterCol title="Policies" links={policyLinks} />
@@ -122,7 +122,21 @@ export default function Footer() {
   );
 }
 
-function FooterCol({ title, links }: { title: string; links: { label: string; href: string }[] }) {
+function FooterCol({
+  title,
+  links,
+  onRegisterClick,
+}: {
+  title: string;
+  links: { label: string; href: string }[];
+  onRegisterClick?: () => void;
+}) {
+  const linkStyle: React.CSSProperties = {
+    fontSize: 14,
+    color: "rgba(234,242,242,0.7)",
+    textDecoration: "none",
+    transition: "color 0.15s",
+  };
   return (
     <div>
       <p
@@ -140,17 +154,26 @@ function FooterCol({ title, links }: { title: string; links: { label: string; hr
       <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 10 }}>
         {links.map((link) => (
           <li key={link.label}>
-            <Link
-              href={link.href}
-              style={{
-                fontSize: 14,
-                color: "rgba(234,242,242,0.7)",
-                textDecoration: "none",
-                transition: "color 0.15s",
-              }}
-            >
-              {link.label}
-            </Link>
+            {link.href === "#register" && onRegisterClick ? (
+              <button
+                onClick={onRegisterClick}
+                style={{
+                  ...linkStyle,
+                  background: "none",
+                  border: "none",
+                  padding: 0,
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                  textAlign: "left",
+                }}
+              >
+                {link.label}
+              </button>
+            ) : (
+              <Link href={link.href} style={linkStyle}>
+                {link.label}
+              </Link>
+            )}
           </li>
         ))}
       </ul>
