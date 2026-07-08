@@ -25,7 +25,7 @@ export default function LeadACityPage() {
             Become a commissioner
           </p>
           <h1 className="h1" style={{ marginBottom: 14 }}>
-            Bring the Mahjong Open to your city
+            Bring The Mahjong Open to your city
           </h1>
           <p className="body-lg" style={{ maxWidth: 680, marginBottom: 4 }}>
             If you love the game and want to build a local community around it, we’d love to hear from you.{" "}

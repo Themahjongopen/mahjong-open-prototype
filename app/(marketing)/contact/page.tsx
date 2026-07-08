@@ -9,7 +9,7 @@ const FAQS = [
   { q: "How do I register for a city?", a: "Click Register on our home page or any page to open the registration modal. Choose your city and preferred day, complete payment, and you're in." },
   { q: "I forgot my portal password — what do I do?", a: "Go to the Sign In page and click 'Forgot password.' We'll email you a reset link." },
   { q: "Can I transfer my registration to a different city?", a: "City transfers are handled case by case. Reach out via the contact form and we'll do our best to help." },
-  { q: "I submitted a score but it's not showing up — why?", a: "Scores show immediately as pending in all four players' portals. They appear in the standings once processed, usually within 24–48 hours." },
+  { q: "I submitted a score but it's not showing up — why?", a: "Scores are live the moment your table's host submits them — standings update in real time. Scoring runs on the honor system." },
   { q: "How do refunds work?", a: "Refunds are available up to 7 days before the series starts. Contact us via the form below." },
 ];
 

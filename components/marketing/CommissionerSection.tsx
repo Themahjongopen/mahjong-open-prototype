@@ -31,7 +31,7 @@ export default function CommissionerSection() {
             Lead a city
           </p>
           <h2 className="h2" style={{ marginBottom: 16 }}>
-            Bring the Mahjong Open to your city
+            Bring The Mahjong Open to your city
           </h2>
           <p className="body-lg" style={{ maxWidth: 760, marginBottom: 28 }}>
             The Mahjong Open grows one community at a time. If you love the game and want to build something local, you can lead the Mahjong Open in your city as its commissioner — we’ll bring the structure, the brand, and the support.

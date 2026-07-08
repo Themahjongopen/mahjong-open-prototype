@@ -15,13 +15,13 @@ const FORMAT_STEPS = [
   },
   {
     icon: CalendarDays,
-    title: "Sign up each week",
-    body: "Every week, claim a spot at an open table — or create your own. Any paid player in your city can host.",
+    title: "Propose or accept rounds",
+    body: "Propose a round or accept an existing round that fits your schedule. Play as much or as little as you want. Any registered player in your city can host.",
   },
   {
     icon: Shuffle,
     title: "Play with new people",
-    body: "Tables are open across skill levels. Mix it up, meet your city's players, keep it fresh.",
+    body: "Tables are open across all skill levels. Mix it up. Meet new players or play with familiar faces. The Mahjong Open is welcoming for all types of players due to the flexible format.",
   },
   {
     icon: Trophy,
@@ -50,7 +50,7 @@ const SERIES_SCHEDULE = [
   {
     name: "Series Two",
     year: "2026",
-    dates: "Nov 2 – Dec 27, 2026",
+    dates: "Oct 26 – Dec 20, 2026",
     body: "After a short break, the second 8-week series runs through the season. Registration opens as Series One wraps.",
   },
 ];
@@ -59,7 +59,7 @@ const WHY_LOVE = [
   {
     icon: CalendarDays,
     title: "Play on your schedule",
-    body: "Unlimited games across the 8-week series. Join an open table or host your own, whenever it suits you.",
+    body: "Unlimited games across the 8-week series. Join an open table or host your own, whenever it suits you. Anywhere, anytime.",
   },
   {
     icon: Users,
@@ -69,7 +69,7 @@ const WHY_LOVE = [
   {
     icon: Sparkles,
     title: "All skill levels welcome",
-    body: "New to mahjong or a longtime player, you belong here. Tables are open across every skill level.",
+    body: "New to mahjong or a longtime player, you belong here. From beginner and intermediate to advanced, there are rounds for everyone. All are welcome!",
   },
 ];
 
@@ -350,7 +350,7 @@ export default function HomePage() {
             <p className="eyebrow" style={{ marginBottom: 12 }}>Series schedule</p>
             <h2 className="h2">The 2026 <em className="serif-italic">Series Schedule</em></h2>
             <p className="body-lg" style={{ marginTop: 16, maxWidth: 560, marginInline: "auto" }}>
-              Each series runs eight weeks of open play. Here are the first two series of 2026 &mdash; register once and you&rsquo;re set for the whole&nbsp;run.
+              Each series runs 8 weeks of open play. There will be 5 series per year with breaks between.
             </p>
           </div>
           <div className="schedule-grid">
