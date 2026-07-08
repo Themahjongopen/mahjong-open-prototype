@@ -6,7 +6,7 @@ import CommissionerSection from "@/components/marketing/CommissionerSection";
 import { ChevronDown } from "lucide-react";
 
 const STEPS = [
-  { n: "01", title: "Register for your city's series", body: "Choose your city, fill out your registration, and complete payment. Each series runs 8 weeks — one game per week." },
+  { n: "01", title: "Register for your city's series", body: "Choose your city, fill out your registration, and complete payment. Each series runs 8 weeks of open play." },
   { n: "02", title: "Get access to the player portal", body: "Once you're paid and confirmed, you'll receive login credentials for the private player portal. This is where your tables and standings live." },
   { n: "03", title: "Sign up for your weekly table", body: "Each week, browse open tables in your city — or create one. Pick your date, time, and location. You fill seat 1 automatically." },
   { n: "04", title: "Play your game", body: "Your foursome meets at the chosen spot. Play a full session of American mahjong. The table creator records the result." },
@@ -16,11 +16,11 @@ const STEPS = [
 
 const FAQS = [
   { q: "Do I have to play every week?", a: "No — there's no attendance requirement. Play as many of the 8 weeks as you'd like. Points only come from weeks you play." },
-  { q: "Can I play more than one table per week?", a: "Each week you can claim a seat at one open table (or create your own). One game per week per player." },
-  { q: "What if a player cancels?", a: "You can cancel your own seat up to 24 hours before game time. Within 24 hours, the seat is locked." },
-  { q: "Who submits the score?", a: "Only the table creator can submit scores. All four seated players can see the pending score in their portal." },
+  { q: "Can I play more than one table per week?", a: "Yes — play as many games as you like each week. Claim seats at open tables or host your own; there's no weekly limit." },
+  { q: "What if a player cancels?", a: "You can cancel your seat up to 24 hours before your table time. Late cancellations and no-shows are recorded as −25 points, and the three players who do show up receive 25 points each for that game. Can't make it inside the 24-hour window? You can also send a replacement player to take your seat instead." },
+  { q: "Who submits the score?", a: "Only the table creator submits scores after the game. They're live in all four players' portals and the standings immediately — scoring runs on the honor system." },
   { q: "What mahjong rules do you use?", a: "The Mahjong Open uses American mahjong rules (NMJL card). All skill levels are welcome." },
-  { q: "Can I join mid-series?", a: "Registration closes at the start of each series. Keep an eye out for early-bird registration for the next 8-week cycle." },
+  { q: "Can I join mid-series?", a: "Yes — registration stays open for the first two weeks of each series. After that, it closes until the next series." },
 ];
 
 export default function HowItWorksPage() {
@@ -43,7 +43,7 @@ export default function HowItWorksPage() {
             The Mahjong Open runs city-by-city on a series schedule. Each series is exactly 8 weeks long. When you register, you&rsquo;re in for the full series in your city — but you choose which weeks to play.
           </p>
           <p style={{ fontSize: 16, color: "var(--ink-700)", lineHeight: 1.65 }}>
-            Every week, paid players in your city can create or join a 4-person table. You pick the day, time, and location. The game happens. The creator submits the score. An admin approves it. Your points land on the leaderboard. Repeat.
+            Every week, paid players in your city can create or join a 4-person table. You pick the day, time, and location. The game happens. The table creator submits the score, and it lands in every player&rsquo;s portal and the standings immediately. Repeat.
           </p>
         </div>
       </section>

@@ -168,7 +168,7 @@ export default function CommissionerForm() {
         </div>
 
         <div style={{ display: "grid", gap: 10 }}>
-          <label style={labelStyle}>What city / region would you bring the Mahjong Open to? *</label>
+          <label style={labelStyle}>What city / region would you bring The Mahjong Open to? *</label>
           <input
             className="input-mo"
             value={form.proposed_city}
@@ -266,7 +266,7 @@ export default function CommissionerForm() {
         </div>
 
         <div style={{ display: "grid", gap: 10 }}>
-          <label style={labelStyle}>Why do you want to lead the Mahjong Open in your city? *</label>
+          <label style={labelStyle}>Why do you want to lead The Mahjong Open in your city? *</label>
           <textarea
             className="input-mo"
             rows={4}
