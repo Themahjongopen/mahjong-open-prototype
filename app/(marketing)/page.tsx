@@ -677,7 +677,13 @@ export default function HomePage() {
           to { opacity: 1; transform: translateY(0); }
         }
         @media (max-width: 900px) {
-          .hero-media { max-height: 340px; }
+          /* Mobile: show the full 1:1 photo with no crop. The square image in a
+             square box (no height cap) fills with zero cropping; drop the desktop
+             scale(1.24) zoom (inline on the img) so the raised hands and the
+             tiles at top/bottom aren't clipped. Parallax translate is already 0
+             on mobile; this removes the residual zoom. Desktop is untouched. */
+          .hero-media { max-height: none; }
+          .hero-media img { transform: none !important; }
         }
         @media (max-width: 600px) {
           .schedule-grid { grid-template-columns: 1fr; }
