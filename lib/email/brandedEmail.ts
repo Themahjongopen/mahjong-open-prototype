@@ -1,4 +1,4 @@
-const ASSET_BASE = "https://mahjong-open-prototype-pi.vercel.app";
+const ASSET_BASE = "https://themahjongopen.com";
 
 export function buildBrandedEmail({
   title,
