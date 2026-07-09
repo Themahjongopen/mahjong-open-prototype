@@ -35,7 +35,7 @@ export default function Nav({ activePage, onRegisterClick }: NavProps) {
           left: 0,
           right: 0,
           zIndex: 100,
-          height: 64,
+          height: 80,
           display: "flex",
           alignItems: "center",
           backgroundColor: scrolled ? "rgba(250,252,251,0.88)" : "rgba(250,252,251,0.96)",
@@ -53,10 +53,11 @@ export default function Nav({ activePage, onRegisterClick }: NavProps) {
           {/* Brand */}
           <Link href="/" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
             <Image
+              className="nav-logo"
               src="/assets/logo-nav.svg?v=2"
               alt="The Mahjong Open"
-              width={123}
-              height={40}
+              width={168}
+              height={54}
               priority
             />
           </Link>
@@ -119,7 +120,7 @@ export default function Nav({ activePage, onRegisterClick }: NavProps) {
         <div
           style={{
             position: "fixed",
-            top: 64,
+            top: 80,
             left: 0,
             right: 0,
             bottom: 0,
@@ -179,6 +180,7 @@ export default function Nav({ activePage, onRegisterClick }: NavProps) {
       )}
 
       <style>{`
+        .nav-logo { width: 168px; height: auto; }
         @media (min-width: 900px) {
           .hidden-mobile { display: flex !important; }
           .show-mobile { display: none !important; }
@@ -186,6 +188,8 @@ export default function Nav({ activePage, onRegisterClick }: NavProps) {
         @media (max-width: 899px) {
           .hidden-mobile { display: none !important; }
           .show-mobile { display: flex !important; }
+          /* Slightly smaller on mobile so the logo doesn't crowd the hamburger */
+          .nav-logo { width: 155px; }
         }
       `}</style>
     </>

@@ -166,11 +166,11 @@ export default function HomePage() {
   return (
     <>
       {/* Hero */}
-      <section style={{ padding: "72px 0 80px", background: "var(--bg)" }}>
+      <section style={{ padding: "40px 0 80px", background: "var(--bg)" }}>
         <div className="container-mo">
           <div className="hero-grid">
             {/* Copy */}
-            <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", gap: 24 }}>
+            <div className="hero-copy" style={{ display: "flex", flexDirection: "column", justifyContent: "center", gap: 24 }}>
               <p className="eyebrow">The Mahjong Open</p>
               <h1 className="h1" style={{ fontSize: "clamp(32px, 4.2vw, 46px)" }}>
                 A city-based mahjong<br />
@@ -578,7 +578,14 @@ export default function HomePage() {
           display: grid;
           grid-template-columns: 1fr 1fr;
           gap: 64px;
-          align-items: center;
+          /* Top-align the columns; the copy then gets a small top offset below
+             (desktop only) so it lands halfway between centered and top-aligned. */
+          align-items: start;
+        }
+        @media (min-width: 901px) {
+          /* Midpoint between vertically-centered and top-aligned against the
+             520px hero image (measured: centered = 70px below image top). */
+          .hero-copy { margin-top: 35px; }
         }
         .format-grid {
           display: grid;

@@ -44,8 +44,8 @@ export default function Footer() {
               <Image
                 src="/assets/logo-white.svg?v=2"
                 alt="The Mahjong Open"
-                width={123}
-                height={40}
+                width={140}
+                height={45}
               />
             </div>
             <p style={{ fontSize: 14, lineHeight: 1.6, color: "rgba(234,242,242,0.6)", maxWidth: 220 }}>
