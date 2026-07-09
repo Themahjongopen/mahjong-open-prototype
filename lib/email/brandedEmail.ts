@@ -41,7 +41,7 @@ export function buildBrandedEmail({
               <td style="padding:24px 40px;background-color:#1d4d59;font-family:Helvetica,Arial,sans-serif;">
                 <img src="${ASSET_BASE}/assets/logo-email-white.png" alt="The Mahjong Open" width="150" style="display:block;margin:0 0 14px 0;border:0;" />
                 <p style="margin:0 0 10px 0;font-size:12px;line-height:1.5;color:#b8cdc6;">${footerNote}</p>
-                <p style="margin:0;font-size:12px;line-height:1.5;color:#8ba89f;">[ Mailing address — add before sending marketing emails ]</p>
+                <p style="margin:0;font-size:12px;line-height:1.5;color:#8ba89f;">The Mahjong Open<br>304 S. Jones Blvd #8748<br>Las Vegas, NV 89107</p>
               </td>
             </tr>
           </table>
