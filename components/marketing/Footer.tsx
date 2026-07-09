@@ -8,8 +8,6 @@ const leagueLinks = [
 ];
 
 const memberLinks = [
-  { label: "Sign In", href: "/login" },
-  { label: "Player Portal", href: "/portal" },
   { label: "Register", href: "#register" },
 ];
 
