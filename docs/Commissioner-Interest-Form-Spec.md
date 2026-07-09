@@ -144,7 +144,7 @@ alter table public.commissioner_applications enable row level security;
 ## Addendum — Email branding (approved 2026-06-30)
 Both commissioner emails should match the branded welcome email. **Decision: fully brand both** (internal notification + applicant acknowledgment).
 
-Reference styling from the welcome email (`app/api/stripe/webhook/route.ts`): logo header (`/assets/logo-email.png`), navy + pink palette, pink CTA button, white logo on navy footer (`/assets/logo-email-white.png`), `ASSET_BASE = https://mahjong-open-prototype-pi.vercel.app`.
+Reference styling from the welcome email (`app/api/stripe/webhook/route.ts`): logo header (`/assets/logo-email.png`), navy + pink palette, pink CTA button, white logo on navy footer (`/assets/logo-email-white.png`), `ASSET_BASE = https://themahjongopen.com` (domain connected 2026-07-08).
 
 Implementation guidance for Claude Code:
 - **Refactor to avoid duplication:** extract the welcome email's HTML shell (header + body wrapper + navy footer) into a shared helper (e.g. `lib/email/brandedEmail.ts`) that takes a title + inner HTML, and have BOTH the welcome email and the two commissioner emails use it. Don't copy-paste the markup three times.

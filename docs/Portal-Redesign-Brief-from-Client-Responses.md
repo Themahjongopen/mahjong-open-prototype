@@ -10,7 +10,7 @@
 
 | Source | What it is | Where |
 |---|---|---|
-| Live prototype | Next.js app, deployed on Vercel | `github.com/jordanpaulco-37/mahjong-open-prototype` (branch `main`), `mahjong-open-prototype.vercel.app` |
+| Live prototype | Next.js app, deployed on Vercel | `github.com/jordanpaulco-37/mahjong-open-prototype` (branch `main`), `https://themahjongopen.com` |
 | Discovery questionnaire | The 95-question form the client answered | `Mahjong-Open-Discovery-Questionnaire.md` |
 | Client responses | Shari Kelly's actual answers (submitted 2026-06-24) | Google Form Excel export |
 

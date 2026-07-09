@@ -62,7 +62,7 @@ The portal shell is already mobile-first (`PortalAppBar` top + `BottomTabBar` bo
 - `/admin/login` shows only the passcode card — no admin nav.
 - No admin route causes horizontal page scroll at 375px; Players/Tables/Seasons/Dashboard reflow (stacked cards / single column); the Player↔Commissioner control stays usable on mobile.
 - Player portal audited on mobile; any overflow/hidden-content issues fixed; nothing regressed on desktop.
-- `npm run build` passes; deploy to Vercel; verify on an actual phone (the reported `-pi.vercel.app` URL).
+- `npm run build` passes; deploy to Vercel; verify on an actual phone (the reported `https://themahjongopen.com` URL).
 
 ## Open questions
 - None blocking. If a data-dense admin table (Players/Tables) is better as horizontal-scroll than stacked cards on mobile, implementer may choose per readability — default is stacked cards.
