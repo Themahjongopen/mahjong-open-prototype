@@ -447,7 +447,7 @@ export default function HomePage() {
       {/* end stacking scroll group */}
 
       {/* FAQ */}
-      <section style={{ padding: "72px 0", background: "var(--bg)" }}>
+      <section className="faq-section" style={{ padding: "72px 0", background: "var(--bg)" }}>
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
@@ -488,7 +488,7 @@ export default function HomePage() {
       </section>
 
       {/* Register CTA */}
-      <section style={{ padding: "72px 0" }}>
+      <section className="cta-section" style={{ padding: "72px 0" }}>
         <div className="container-mo">
           <div
             style={{
@@ -684,6 +684,9 @@ export default function HomePage() {
              on mobile; this removes the residual zoom. Desktop is untouched. */
           .hero-media { max-height: none; }
           .hero-media img { transform: none !important; }
+          /* Tighten the tall FAQ→CTA whitespace on mobile (desktop keeps 72px). */
+          .faq-section { padding-bottom: 36px !important; }
+          .cta-section { padding-top: 36px !important; }
         }
         @media (max-width: 600px) {
           .schedule-grid { grid-template-columns: 1fr; }
