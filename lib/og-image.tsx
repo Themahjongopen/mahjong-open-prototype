@@ -8,23 +8,22 @@ export const OG_SIZE = { width: 1200, height: 630 };
 const FONTS = "node_modules/@fontsource";
 
 // Shared 1200×630 share image: the tile background under a pale-pink --pink-wash
-// wash, with the brand wordmark (Bodoni) and tagline (Quicksand). Used by both
-// opengraph-image and twitter-image.
+// wash, with the primary logo mark (raster PNG — Satori needs a bitmap, not the
+// SVG) and the tagline in Quicksand. Used by both opengraph-image and twitter-image.
 export async function renderShareImage() {
-  const bodoni = readFileSync(join(process.cwd(), FONTS, "bodoni-moda/files/bodoni-moda-latin-600-normal.woff"));
   const quicksand = readFileSync(join(process.cwd(), FONTS, "quicksand/files/quicksand-latin-500-normal.woff"));
-  // Text-free crop of the tile image (no "Bam! Let's Mahjong" script) so it reads
-  // as a clean, subtle backdrop behind the wordmark.
   const tiles = readFileSync(join(process.cwd(), "public/coming-soon-bg.jpg")).toString("base64");
+  // Transparent PNG of the brand mark (already generated from mark-primary.svg).
+  const mark = readFileSync(join(process.cwd(), "app/icon.png")).toString("base64");
   const bg = `data:image/jpeg;base64,${tiles}`;
+  const markSrc = `data:image/png;base64,${mark}`;
 
   return new ImageResponse(
     (
       <div style={{ position: "relative", display: "flex", width: "100%", height: "100%" }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={bg} width={1200} height={630} style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", objectFit: "cover" }} alt="" />
-        {/* Stronger --pink-wash so the colorful tiles stay subtle and the text stays legible at thumbnail size.
-            (Satori ignores the `inset` shorthand — set explicit dimensions so the wash covers the image.) */}
+        {/* --pink-wash so the colorful tiles stay subtle behind the mark + text. */}
         <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", backgroundColor: "rgba(253, 239, 243, 0.84)" }} />
 
         <div
@@ -36,13 +35,11 @@ export async function renderShareImage() {
             justifyContent: "center",
             width: "100%",
             height: "100%",
-            fontFamily: "Bodoni",
           }}
         >
-          <div style={{ display: "flex", fontSize: 30, letterSpacing: 10, color: "#1F3843" }}>THE</div>
-          <div style={{ display: "flex", fontSize: 128, lineHeight: 1, color: "#D64466", marginTop: 4 }}>MAHJONG</div>
-          <div style={{ display: "flex", fontSize: 34, letterSpacing: 18, color: "#1F3843", marginTop: 2 }}>OPEN</div>
-          <div style={{ display: "flex", marginTop: 40, fontFamily: "Quicksand", fontSize: 38, color: "#3A5163" }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={markSrc} width={300} height={300} style={{ width: 300, height: 300 }} alt="" />
+          <div style={{ display: "flex", marginTop: 20, fontFamily: "Quicksand", fontSize: 40, color: "#3A5163" }}>
             A city-based mahjong social league.
           </div>
         </div>
@@ -50,10 +47,7 @@ export async function renderShareImage() {
     ),
     {
       ...OG_SIZE,
-      fonts: [
-        { name: "Bodoni", data: bodoni, weight: 600 as const, style: "normal" as const },
-        { name: "Quicksand", data: quicksand, weight: 500 as const, style: "normal" as const },
-      ],
+      fonts: [{ name: "Quicksand", data: quicksand, weight: 500 as const, style: "normal" as const }],
     }
   );
 }
