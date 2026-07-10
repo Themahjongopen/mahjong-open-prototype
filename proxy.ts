@@ -29,18 +29,31 @@ export function proxy(request: NextRequest) {
   if (process.env.COMING_SOON) {
     const hostname = (request.headers.get("host") ?? "").split(":")[0].toLowerCase();
     if (GATED_HOSTS.has(hostname) && !isComingSoonExempt(pathname)) {
-      const hasPreviewParam = request.nextUrl.searchParams.has("preview");
-      const hasPreviewCookie = request.cookies.get(PREVIEW_COOKIE)?.value === "1";
+      // Bypass requires the secret ?preview=<token> matching COMING_SOON_PREVIEW_TOKEN.
+      // A valid token mints a cookie so the rest of the session is exempt; rotating
+      // the env token invalidates old cookies. No token configured = no bypass.
+      const token = process.env.COMING_SOON_PREVIEW_TOKEN;
+      const cookieOk = !!token && request.cookies.get(PREVIEW_COOKIE)?.value === token;
 
-      if (!hasPreviewParam && !hasPreviewCookie) {
+      if (!cookieOk) {
+        const previewParam = request.nextUrl.searchParams.get("preview");
+        if (token && previewParam === token) {
+          // Grant access: set the cookie and strip the token from the URL.
+          const cleanUrl = request.nextUrl.clone();
+          cleanUrl.searchParams.delete("preview");
+          const res = NextResponse.redirect(cleanUrl);
+          res.cookies.set(PREVIEW_COOKIE, token, {
+            path: "/",
+            httpOnly: true,
+            secure: true,
+            sameSite: "lax",
+            maxAge: 60 * 60 * 24 * 30,
+          });
+          return res;
+        }
         return NextResponse.redirect(new URL("/coming-soon", request.url));
       }
-      // First visit with ?preview= — remember it for the rest of the session.
-      if (hasPreviewParam && !hasPreviewCookie) {
-        const res = NextResponse.next();
-        res.cookies.set(PREVIEW_COOKIE, "1", { path: "/", sameSite: "lax" });
-        return res;
-      }
+      // Valid preview cookie — fall through to the normal site.
     }
   }
 
