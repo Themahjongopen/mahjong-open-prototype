@@ -13,6 +13,10 @@ function isComingSoonExempt(pathname: string) {
     pathname.startsWith("/coming-soon/") ||
     pathname.startsWith("/api/") ||
     pathname.startsWith("/admin") ||
+    // Metadata image routes (extensionless): social crawlers must get the actual
+    // image, not the teaser HTML, so share-link previews work while gated.
+    pathname.startsWith("/opengraph-image") ||
+    pathname.startsWith("/twitter-image") ||
     // Any request for a file (has an extension) — lets root-level /public assets
     // (.jpg/.png/.svg/.webp/.ico/.xml/.txt/…) through instead of redirecting them
     // to the teaser HTML. (/_next and /assets are already excluded by the matcher.)
