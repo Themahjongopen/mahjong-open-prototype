@@ -10,7 +10,7 @@ const FAQS = [
   { q: "I forgot my portal password — what do I do?", a: "Go to the Sign In page and click 'Forgot password.' We'll email you a reset link." },
   { q: "Can I transfer my registration to a different city?", a: "City transfers are handled case by case. Reach out via the contact form and we'll do our best to help." },
   { q: "I submitted a score but it's not showing up — why?", a: "Scores are live the moment your table's host submits them — standings update in real time. Scoring runs on the honor system." },
-  { q: "How do refunds work?", a: "Refunds are available up to 7 days before the series starts. Contact us via the form below." },
+  { q: "How do refunds work?", a: "Your $80 registration is fully refundable any time before your series begins. Once a series starts, registrations are non-refundable. And if your city doesn't reach the 20-player minimum needed to run, all registrants are refunded in full. Questions? Email themahjongopen@gmail.com." },
 ];
 
 export default function ContactPage() {

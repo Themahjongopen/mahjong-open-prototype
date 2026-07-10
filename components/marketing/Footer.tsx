@@ -15,6 +15,7 @@ const policyLinks = [
   { label: "Terms", href: "/terms" },
   { label: "Privacy Policy", href: "/privacy" },
   { label: "Disclaimer", href: "/disclaimer" },
+  { label: "Refund Policy", href: "/refund-policy" },
 ];
 
 export default function Footer() {
