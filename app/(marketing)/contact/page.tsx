@@ -6,10 +6,11 @@ import ConfirmationIcon from "@/components/ui/ConfirmationIcon";
 import { Mail, Send, ChevronDown } from "lucide-react";
 
 const FAQS = [
-  { q: "How do I register for a city?", a: "Click Register on our home page or any page to open the registration modal. Choose your city and preferred day, complete payment, and you're in." },
-  { q: "I forgot my portal password — what do I do?", a: "Go to the Sign In page and click 'Forgot password.' We'll email you a reset link." },
+  { q: "How do I register for a city?", a: "Click Register on our home page or any page to open the registration modal. Choose your city and skill level, complete payment, and you're in." },
+  // PHASE 2 BACKLOG: restore this FAQ when the player portal + Sign In launch (not live in Phase 1).
+  // { q: "I forgot my portal password — what do I do?", a: "Go to the Sign In page and click 'Forgot password.' We'll email you a reset link." },
   { q: "Can I transfer my registration to a different city?", a: "City transfers are handled case by case. Reach out via the contact form and we'll do our best to help." },
-  { q: "I submitted a score but it's not showing up — why?", a: "Scores are live the moment your table's host submits them — standings update in real time. Scoring runs on the honor system." },
+  { q: "I submitted a score but it's not showing up — why?", a: "Scores are live the moment your table's host submits them. First check with the table host to confirm your scores were submitted. If the host did submit scores and it's still not showing up, fill out the contact form and choose Portal Troubleshooting as the subject." },
   { q: "How do refunds work?", a: "Your $80 registration is fully refundable any time before your series begins. Once a series starts, registrations are non-refundable. And if your city doesn't reach the 20-player minimum needed to run, all registrants are refunded in full. Questions? Email themahjongopen@gmail.com." },
 ];
 
@@ -196,6 +197,7 @@ export default function ContactPage() {
                       <option>Registration question</option>
                       <option>Payment or billing</option>
                       <option>Portal access</option>
+                      <option>Portal Troubleshooting</option>
                       <option>Urgent membership question</option>
                       <option>New city inquiry</option>
                       <option>Something else</option>
