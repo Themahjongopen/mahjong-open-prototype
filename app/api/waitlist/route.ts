@@ -25,20 +25,24 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "The waitlist is unavailable right now." }, { status: 503 });
     }
 
-    // Dedupe: insert ... on conflict (email) do nothing. Never reveal whether the
-    // email already existed — always return success below.
-    const { error: insertError } = await supabase
+    // Dedupe: insert ... on conflict (email) do nothing. .select() returns the
+    // new row on insert and nothing when the email already existed, so we can
+    // notify only on genuinely new signups. Never reveal dupes to the client.
+    const { data: inserted, error: insertError } = await supabase
       .from("waitlist")
-      .upsert({ email }, { onConflict: "email", ignoreDuplicates: true });
+      .upsert({ email }, { onConflict: "email", ignoreDuplicates: true })
+      .select("id");
 
     if (insertError) {
       console.error("Waitlist insert failed", insertError);
       return NextResponse.json({ error: "Could not save your email. Please try again." }, { status: 500 });
     }
 
-    // Internal notice so signups are visible. Non-fatal.
+    const isNewSignup = Array.isArray(inserted) && inserted.length > 0;
+
+    // Internal notice on genuinely new signups only. Non-fatal.
     const resendApiKey = process.env.RESEND_API_KEY;
-    if (resendApiKey) {
+    if (isNewSignup && resendApiKey) {
       try {
         const resend = new Resend(resendApiKey);
         await resend.emails.send({
@@ -55,7 +59,7 @@ export async function POST(request: Request) {
       } catch (emailError) {
         console.error("Waitlist internal notice email failed", emailError);
       }
-    } else {
+    } else if (isNewSignup) {
       console.warn("Skipping waitlist notice email because RESEND_API_KEY is not configured.");
     }
 
