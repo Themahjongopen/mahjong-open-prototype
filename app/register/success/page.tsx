@@ -20,8 +20,8 @@ export default function RegisterSuccessPage() {
           Your registration is confirmed. We’ll send the welcome email after payment confirmation and keep you posted about the series.
         </p>
         <div style={{ display: "flex", justifyContent: "center" }}>
-          <Link href="/portal" className="btn btn-primary">
-            Go to the portal
+          <Link href="/" className="btn btn-primary">
+            Return to Site
           </Link>
         </div>
       </div>
