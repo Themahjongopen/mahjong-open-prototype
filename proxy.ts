@@ -12,7 +12,11 @@ function isComingSoonExempt(pathname: string) {
     pathname === "/coming-soon" ||
     pathname.startsWith("/coming-soon/") ||
     pathname.startsWith("/api/") ||
-    pathname.startsWith("/admin")
+    pathname.startsWith("/admin") ||
+    // Any request for a file (has an extension) — lets root-level /public assets
+    // (.jpg/.png/.svg/.webp/.ico/.xml/.txt/…) through instead of redirecting them
+    // to the teaser HTML. (/_next and /assets are already excluded by the matcher.)
+    /\.[^/]+$/.test(pathname)
   );
 }
 
