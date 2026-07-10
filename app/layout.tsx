@@ -28,7 +28,7 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://themahjongopen.com"),
   title: "The Mahjong Open — City-Based Mahjong Social League",
   description:
-    "The Mahjong Open is a city-based mahjong social league. Register once, play unlimited games over an 8-week series, and climb your city's leaderboard — warm, welcoming, and flexible.",
+    "A city-based mahjong social league. Register once, play unlimited games over an 8-week series, and climb your city's leaderboard. Warm, welcoming, flexible.",
   keywords: [
     "mahjong social league",
     "mahjong league",
@@ -42,7 +42,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "The Mahjong Open — City-Based Mahjong Social League",
     description:
-      "A city-based mahjong social league. Register once, play unlimited games over an 8-week series, and climb your city's leaderboard.",
+      "A city-based mahjong social league. Register once, play unlimited games over an 8-week series, and climb your city's leaderboard. Warm, welcoming, flexible.",
     type: "website",
     siteName: "The Mahjong Open",
   },
@@ -50,7 +50,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "The Mahjong Open — City-Based Mahjong Social League",
     description:
-      "A city-based mahjong social league. Register once, play unlimited games over an 8-week series, and climb your city's leaderboard.",
+      "A city-based mahjong social league. Register once, play unlimited games over an 8-week series, and climb your city's leaderboard. Warm, welcoming, flexible.",
   },
 };
 

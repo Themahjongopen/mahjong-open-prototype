@@ -1,11 +1,26 @@
 import type { Metadata } from "next";
 import CommissionerForm from "@/components/marketing/CommissionerForm";
 
+// Approved indexable page (target keyword: "become a mahjong league commissioner").
+// No page-level robots override — it follows the global SITE_INDEXABLE guard, so it
+// stays noindex pre-launch and becomes indexable when SITE_INDEXABLE=true at launch.
+const title = "Become a Mahjong League Commissioner — The Mahjong Open";
+const description =
+  "Become a mahjong league commissioner and bring The Mahjong Open to your city. No franchise fees, no buy-in — we bring the brand, tools, and support.";
+
 export const metadata: Metadata = {
-  robots: {
-    index: false,
-    follow: false,
-  },
+  title,
+  description,
+  keywords: [
+    "become a mahjong league commissioner",
+    "mahjong league commissioner",
+    "lead a mahjong league",
+    "start a mahjong club",
+    "The Mahjong Open",
+  ],
+  alternates: { canonical: "/lead-a-city" },
+  openGraph: { title, description, type: "website", siteName: "The Mahjong Open" },
+  twitter: { card: "summary_large_image", title, description },
 };
 
 export default function LeadACityPage() {

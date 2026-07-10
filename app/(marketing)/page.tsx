@@ -246,7 +246,7 @@ export default function HomePage() {
               >
                 <Image
                   src="/hero.jpg"
-                  alt="Friends playing mahjong together around a table"
+                  alt="Four friends playing American mahjong together at a styled table."
                   fill
                   style={{
                     objectFit: "cover",
