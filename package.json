@@ -9,8 +9,11 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@fontsource/bodoni-moda": "^5.2.7",
+    "@fontsource/quicksand": "^5.2.10",
     "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.107.0",
+    "@vercel/analytics": "^2.0.1",
     "lucide-react": "^1.17.0",
     "next": "16.2.7",
     "react": "19.2.4",

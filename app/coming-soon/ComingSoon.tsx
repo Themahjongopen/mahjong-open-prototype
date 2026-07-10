@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import { track } from "@vercel/analytics";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -29,6 +30,7 @@ export default function ComingSoon() {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error || "Something went wrong. Please try again.");
       }
+      track("waitlist_signup");
       setStatus("done");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
