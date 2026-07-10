@@ -4,6 +4,7 @@ import PolicyEmbed from "@/components/marketing/PolicyEmbed";
 
 export const metadata: Metadata = {
   title: "Terms of Service — The Mahjong Open",
+  robots: { index: false, follow: false },
 };
 
 export default function TermsPage() {

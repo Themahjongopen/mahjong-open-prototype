@@ -4,6 +4,7 @@ import PolicyEmbed from "@/components/marketing/PolicyEmbed";
 
 export const metadata: Metadata = {
   title: "Privacy Policy — The Mahjong Open",
+  robots: { index: false, follow: false },
 };
 
 export default function PrivacyPage() {

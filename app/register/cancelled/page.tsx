@@ -1,5 +1,10 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import ConfirmationIcon from "@/components/ui/ConfirmationIcon";
+
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
 
 export default function RegisterCancelledPage() {
   return (
