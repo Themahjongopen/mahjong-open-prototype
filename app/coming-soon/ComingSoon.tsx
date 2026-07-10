@@ -44,7 +44,12 @@ export default function ComingSoon() {
         alignItems: "center",
         justifyContent: "center",
         padding: "32px 20px",
-        background: "var(--paper-50)",
+        // Lead-a-City tile image with a pale-pink (--pink-wash) wash instead of white.
+        backgroundImage:
+          "linear-gradient(rgba(253, 239, 243, 0.82), rgba(253, 239, 243, 0.82)), url('/commissioner-tiles-bg.jpg')",
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
       }}
     >
       <div className="cs-card" style={{ width: "100%", maxWidth: 480, textAlign: "center" }}>
@@ -65,7 +70,7 @@ export default function ComingSoon() {
             letterSpacing: "-0.01em",
           }}
         >
-          Coming <em className="serif-italic" style={{ color: "var(--pink-600)" }}>soon</em>
+          Coming <em className="serif-italic" style={{ color: "var(--pink-600)" }}>Soon</em>
         </h1>
 
         <p
