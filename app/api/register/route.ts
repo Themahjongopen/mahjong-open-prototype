@@ -123,6 +123,10 @@ export async function POST(request: Request) {
       ],
       success_url: `${origin}/register/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/register/cancelled`,
+      // Redundant linkage to the registration row: metadata AND client_reference_id.
+      // Stripe copies both onto recovery sessions, so the webhook can reconnect even
+      // if one is missing.
+      client_reference_id: registrationId,
       metadata: {
         registration_id: registrationId,
         series_id,

@@ -6,6 +6,70 @@ import { createAdminClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
 
+const REG_COLUMNS = "id, full_name, email, phone, city_id, series_id, paid_status, created_at";
+
+// Resolve a registration from a completed/recovered Checkout Session, most reliable
+// link first: (1) metadata.registration_id, (2) client_reference_id, (3) customer
+// email + series_id. Stripe copies all three onto recovery sessions. Each lookup
+// tolerates errors (e.g. a non-uuid id) and falls through. Returns null if unmatched.
+async function resolveRegistration(supabase: any, session: Stripe.Checkout.Session) {
+  const byId = async (id: string | null | undefined) => {
+    if (!id) return null;
+    const { data } = await supabase.from("registrations").select(REG_COLUMNS).eq("id", id).maybeSingle();
+    return data ?? null;
+  };
+
+  const byId1 = await byId(session.metadata?.registration_id);
+  if (byId1) return byId1;
+
+  const byId2 = await byId(session.client_reference_id);
+  if (byId2) return byId2;
+
+  const email = session.customer_email ?? session.customer_details?.email ?? null;
+  const seriesId = session.metadata?.series_id ?? null;
+  if (email && seriesId) {
+    const { data } = await supabase
+      .from("registrations")
+      .select(REG_COLUMNS)
+      .eq("email", email)
+      .eq("series_id", seriesId)
+      .maybeSingle();
+    return data ?? null;
+  }
+
+  return null;
+}
+
+// Alert (internal email) when a paid checkout can't be matched to a registration, so
+// a paid-but-unregistered case is visible instead of silently orphaning. Non-fatal.
+async function sendUnmatchedAlert(sessionId: string, email: string | null, amountCents: number | null) {
+  const resendApiKey = process.env.RESEND_API_KEY;
+  if (!resendApiKey) return;
+  const amount = typeof amountCents === "number" ? `$${(amountCents / 100).toFixed(2)}` : "unknown";
+  try {
+    const resend = new Resend(resendApiKey);
+    await resend.emails.send({
+      from: "The Mahjong Open <welcome@themahjongopen.com>",
+      to: ["themahjongopen@gmail.com"],
+      subject: `Action needed: paid checkout not matched to a registration (${sessionId})`,
+      html: buildBrandedEmail({
+        title: "Unmatched paid checkout",
+        innerHtml: `
+          <div style="font-family:Helvetica,Arial,sans-serif;font-size:15px;line-height:1.65;color:#3a4a4f;">
+            <p style="margin:0 0 12px 0;">A Stripe checkout completed but couldn&rsquo;t be matched to a registration row. Please reconcile manually in Stripe and Supabase.</p>
+            <p style="margin:0 0 12px 0;"><strong>Session:</strong> ${sessionId}</p>
+            <p style="margin:0 0 12px 0;"><strong>Email:</strong> ${email || "unknown"}</p>
+            <p style="margin:0;"><strong>Amount:</strong> ${amount}</p>
+          </div>
+        `,
+        footerNote: "Automated alert from the Stripe webhook.",
+      }),
+    });
+  } catch (alertError) {
+    console.error("[stripe-webhook] failed to send unmatched-checkout alert", alertError);
+  }
+}
+
 export async function POST(request: Request) {
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
@@ -49,19 +113,18 @@ export async function POST(request: Request) {
 
   if (event.type === "checkout.session.completed") {
     const session = event.data.object as Stripe.Checkout.Session;
-    const registrationId = session.metadata?.registration_id;
 
-    if (!registrationId) {
-      return NextResponse.json({ received: true });
-    }
+    const registrationData = await resolveRegistration(supabase, session);
 
-    const { data: registrationData } = await supabase
-      .from("registrations")
-      .select("id, full_name, email, phone, city_id, series_id, paid_status, created_at")
-      .eq("id", registrationId)
-      .maybeSingle();
-
-    if (registrationData?.paid_status === "paid") {
+    if (!registrationData) {
+      // Paid but unmatched: surface it (log + internal alert) instead of returning silently.
+      const sessionEmail = session.customer_email ?? session.customer_details?.email ?? session.metadata?.email ?? null;
+      console.error("[stripe-webhook] checkout.session.completed could not be matched to a registration", {
+        sessionId: session.id,
+        email: sessionEmail,
+        amountCents: session.amount_total,
+      });
+      await sendUnmatchedAlert(session.id, sessionEmail, session.amount_total ?? null);
       return NextResponse.json({ received: true });
     }
 
@@ -70,14 +133,27 @@ export async function POST(request: Request) {
         ? session.payment_intent
         : session.payment_intent?.id ?? null;
 
-    await supabase.from("registrations").update({ paid_status: "paid" }).eq("id", registrationId);
+    // Atomic flip pending -> paid: only the delivery that actually flips proceeds, so
+    // concurrent/duplicate webhook deliveries can't both mark paid or send the email.
+    const { data: flipped } = await supabase
+      .from("registrations")
+      .update({ paid_status: "paid" })
+      .eq("id", registrationData.id)
+      .eq("paid_status", "pending")
+      .select("id");
+
+    if (!flipped || flipped.length === 0) {
+      // Already processed (or not in a pending state) — idempotent no-op.
+      return NextResponse.json({ received: true });
+    }
+
     await supabase
       .from("payments")
       .update({
         status: "succeeded",
         provider_payment_id: paymentIntentId,
       })
-      .eq("registration_id", registrationId);
+      .eq("registration_id", registrationData.id);
 
     const resendApiKey = process.env.RESEND_API_KEY;
 
