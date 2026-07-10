@@ -44,9 +44,10 @@ export default function ComingSoon() {
         alignItems: "center",
         justifyContent: "center",
         padding: "32px 20px",
-        // Lead-a-City tile image with a pale-pink (--pink-wash) wash instead of white.
+        // Lead-a-City tile image (cropped copy without the "Bam! Let's Mahjong"
+        // script) under a pale-pink (--pink-wash) wash instead of white.
         backgroundImage:
-          "linear-gradient(rgba(253, 239, 243, 0.82), rgba(253, 239, 243, 0.82)), url('/commissioner-tiles-bg.jpg')",
+          "linear-gradient(rgba(253, 239, 243, 0.82), rgba(253, 239, 243, 0.82)), url('/coming-soon-bg.jpg')",
         backgroundSize: "cover",
         backgroundPosition: "center",
         backgroundRepeat: "no-repeat",
