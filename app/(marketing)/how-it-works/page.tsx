@@ -11,11 +11,11 @@ const STEPS = [
   { n: "03", title: "Sign up for your weekly table", body: "Each week, browse open tables in your city — or create one. Pick your date, time, and location. You fill seat 1 automatically." },
   { n: "04", title: "Play your game", body: "Your foursome meets at the chosen spot. Play a full session of American mahjong. The table creator records the result." },
   { n: "05", title: "Submit the score", body: "After the game, the table creator enters each player's score. Scores are visible in the portal immediately and update the leaderboard within the series." },
-  { n: "06", title: "Watch your standings update", body: "Your average score updates as the series progresses. Keep playing each week to climb the city leaderboard." },
+  { n: "06", title: "Watch your standings update", body: "Your average score updates as the series progresses, with a minimum of 5 rounds played. Keep playing each week to climb the city leaderboard." },
 ];
 
 const FAQS = [
-  { q: "Do I have to play every week?", a: "No — there's no attendance requirement. Play as many of the 8 weeks as you'd like. Points only come from weeks you play." },
+  { q: "Do I have to play every week?", a: "No — there's no attendance requirement. Play as many of the 8 weeks as you'd like. Points only come from weeks you play. The series concludes with your best 7 weeks of points." },
   { q: "Can I play more than one table per week?", a: "Yes — play as many games as you like each week. Claim seats at open tables or host your own; there's no weekly limit." },
   { q: "What if a player cancels?", a: "You can cancel your seat up to 24 hours before your table time. Late cancellations and no-shows are recorded as −25 points, and the three players who do show up receive 25 points each for that game. Can't make it inside the 24-hour window? You can also send a replacement player to take your seat instead." },
   { q: "Who submits the score?", a: "Only the table creator submits scores after the game. They're live in all four players' portals and the standings immediately — scoring runs on the honor system." },
@@ -40,7 +40,7 @@ export default function HowItWorksPage() {
           <p className="eyebrow" style={{ marginBottom: 16 }}>The basics</p>
           <h2 className="h2" style={{ marginBottom: 24 }}>One series. Eight weeks. <em className="serif-italic">Your pace.</em></h2>
           <p className="body-lg" style={{ marginBottom: 20 }}>
-            The Mahjong Open runs city-by-city on a series schedule. Each series is exactly 8 weeks long. When you register, you&rsquo;re in for the full series in your city — but you choose which weeks to play.
+            The Mahjong Open runs city-by-city on a series schedule. Each series is exactly 8 weeks long. When you register, you&rsquo;re in for the full series in your city — play as much or as little as you want.
           </p>
           <p style={{ fontSize: 16, color: "var(--ink-700)", lineHeight: 1.65 }}>
             Every week, paid players in your city can create or join a 4-person table. You pick the day, time, and location. The game happens. The table creator submits the score, and it lands in every player&rsquo;s portal and the standings immediately. Repeat.
