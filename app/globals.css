@@ -7,7 +7,7 @@
 
 :root {
   /* ---------- FONT FAMILIES ---------- */
-  --font-display: "Dream Avenue", Georgia, "Times New Roman", serif;
+  --font-display: "Bodoni Moda", Georgia, "Times New Roman", serif;
   --font-body: "Quicksand", -apple-system, "Segoe UI", sans-serif;
   --font-label: "Quicksand", -apple-system, sans-serif;
 
@@ -137,7 +137,7 @@
    ============================================================ */
 @theme {
   /* Fonts */
-  --font-display: "Dream Avenue", Georgia, "Times New Roman", serif;
+  --font-display: "Bodoni Moda", Georgia, "Times New Roman", serif;
   --font-body: "Quicksand", -apple-system, "Segoe UI", sans-serif;
 
   /* Colors — full palette exposed as Tailwind utilities */
@@ -207,7 +207,7 @@
 
 /* Override font variables when Next.js font has loaded */
 :root {
-  --font-display: var(--font-display-loaded, "Dream Avenue"), Georgia, "Times New Roman", serif;
+  --font-display: var(--font-display-loaded, "Bodoni Moda"), Georgia, "Times New Roman", serif;
   --font-body: var(--font-body-loaded, "Quicksand"), -apple-system, "Segoe UI", sans-serif;
 }
 
