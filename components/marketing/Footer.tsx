@@ -8,8 +8,6 @@ const leagueLinks = [
 ];
 
 const memberLinks = [
-  { label: "Sign In", href: "/login" },
-  { label: "Player Portal", href: "/portal" },
   { label: "Register", href: "#register" },
 ];
 
@@ -17,9 +15,10 @@ const policyLinks = [
   { label: "Terms", href: "/terms" },
   { label: "Privacy Policy", href: "/privacy" },
   { label: "Disclaimer", href: "/disclaimer" },
+  { label: "Refund Policy", href: "/refund-policy" },
 ];
 
-export default function Footer({ onRegisterClick }: { onRegisterClick?: () => void }) {
+export default function Footer() {
   return (
     <footer
       style={{
@@ -44,8 +43,8 @@ export default function Footer({ onRegisterClick }: { onRegisterClick?: () => vo
               <Image
                 src="/assets/logo-white.svg?v=2"
                 alt="The Mahjong Open"
-                width={123}
-                height={40}
+                width={140}
+                height={45}
               />
             </div>
             <p style={{ fontSize: 14, lineHeight: 1.6, color: "rgba(234,242,242,0.6)", maxWidth: 220 }}>
@@ -57,7 +56,7 @@ export default function Footer({ onRegisterClick }: { onRegisterClick?: () => vo
           <FooterCol title="League" links={leagueLinks} />
 
           {/* Members */}
-          <FooterCol title="Members" links={memberLinks} onRegisterClick={onRegisterClick} />
+          <FooterCol title="Members" links={memberLinks} />
 
           {/* Policies */}
           <FooterCol title="Policies" links={policyLinks} />
@@ -122,21 +121,7 @@ export default function Footer({ onRegisterClick }: { onRegisterClick?: () => vo
   );
 }
 
-function FooterCol({
-  title,
-  links,
-  onRegisterClick,
-}: {
-  title: string;
-  links: { label: string; href: string }[];
-  onRegisterClick?: () => void;
-}) {
-  const linkStyle: React.CSSProperties = {
-    fontSize: 14,
-    color: "rgba(234,242,242,0.7)",
-    textDecoration: "none",
-    transition: "color 0.15s",
-  };
+function FooterCol({ title, links }: { title: string; links: { label: string; href: string }[] }) {
   return (
     <div>
       <p
@@ -154,26 +139,17 @@ function FooterCol({
       <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 10 }}>
         {links.map((link) => (
           <li key={link.label}>
-            {link.href === "#register" && onRegisterClick ? (
-              <button
-                onClick={onRegisterClick}
-                style={{
-                  ...linkStyle,
-                  background: "none",
-                  border: "none",
-                  padding: 0,
-                  cursor: "pointer",
-                  fontFamily: "inherit",
-                  textAlign: "left",
-                }}
-              >
-                {link.label}
-              </button>
-            ) : (
-              <Link href={link.href} style={linkStyle}>
-                {link.label}
-              </Link>
-            )}
+            <Link
+              href={link.href}
+              style={{
+                fontSize: 14,
+                color: "rgba(234,242,242,0.7)",
+                textDecoration: "none",
+                transition: "color 0.15s",
+              }}
+            >
+              {link.label}
+            </Link>
           </li>
         ))}
       </ul>

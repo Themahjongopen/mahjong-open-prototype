@@ -63,7 +63,7 @@ export default function ShopPage() {
   return (
     <>
       <PageBanner
-        eyebrow="Our favorites"
+        eyebrow="Affiliate picks"
         headline={<>The good stuff, <em className="serif-italic">handpicked</em></>}
         lead="Our favorite gear for playing, hosting, and gifting — curated by players, for players."
       />

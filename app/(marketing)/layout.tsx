@@ -16,8 +16,8 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
         activePage={pathname}
         onRegisterClick={() => setModalOpen(true)}
       />
-      <main style={{ paddingTop: 64, flex: 1 }}>{children}</main>
-      <Footer onRegisterClick={() => setModalOpen(true)} />
+      <main style={{ paddingTop: 80, flex: 1 }}>{children}</main>
+      <Footer />
       <RegisterModal open={modalOpen} onClose={() => setModalOpen(false)} />
     </>
   );
