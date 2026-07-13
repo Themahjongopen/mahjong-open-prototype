@@ -4,6 +4,7 @@ import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import AuthLogo from "@/components/portal/AuthLogo";
 
 const cardStyle: React.CSSProperties = {
   background: "#fff",
@@ -44,9 +45,7 @@ function LoginForm() {
   return (
     <div style={{ minHeight: "100dvh", background: "var(--pink-wash)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
       <div style={cardStyle}>
-        <p style={{ fontFamily: "var(--font-display)", fontSize: 28, color: "var(--pink-600)", marginBottom: 8, textAlign: "center" }}>
-          The Mahjong Open
-        </p>
+        <AuthLogo />
         <h1 style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 400, color: "var(--ink-900)", marginBottom: 24, textAlign: "center" }}>
           Player portal sign in
         </h1>
