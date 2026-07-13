@@ -18,6 +18,30 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Registration service is unavailable right now." }, { status: 503 });
     }
 
+    // Validate the series up front — before touching the registrations table —
+    // so a deactivated or past-deadline series never leaves a pending
+    // registration behind. We reuse this row's name/price for Stripe below.
+    const { data: seriesData, error: seriesError } = await supabase
+      .from("series")
+      .select("name, price_cents, is_active, registration_closes_at")
+      .eq("id", series_id)
+      .single();
+
+    if (seriesError || !seriesData) {
+      return NextResponse.json({ error: "The selected series could not be found." }, { status: 404 });
+    }
+
+    // registration_closes_at is an inclusive date (registration stays open
+    // through that day); a series that isn't active is treated as closed too.
+    const today = new Date().toISOString().slice(0, 10);
+    const registrationClosed =
+      !seriesData.is_active ||
+      (seriesData.registration_closes_at && seriesData.registration_closes_at < today);
+
+    if (registrationClosed) {
+      return NextResponse.json({ error: "Registration for this series has closed." }, { status: 400 });
+    }
+
     const { data: existingRegistration, error: lookupError } = await supabase
       .from("registrations")
       .select("id, paid_status")
@@ -74,16 +98,6 @@ export async function POST(request: Request) {
       }
 
       registrationId = insertedRegistration.id;
-    }
-
-    const { data: seriesData, error: seriesError } = await supabase
-      .from("series")
-      .select("name, price_cents")
-      .eq("id", series_id)
-      .single();
-
-    if (seriesError || !seriesData) {
-      return NextResponse.json({ error: "The selected series could not be found." }, { status: 404 });
     }
 
     const stripeSecretKey = process.env.STRIPE_SECRET_KEY;

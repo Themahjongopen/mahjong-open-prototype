@@ -20,6 +20,7 @@ type CityOption = {
 type SeriesOption = {
   id: string;
   name: string;
+  registration_closes_at: string | null;
 };
 
 export default function RegisterModal({ open, onClose }: RegisterModalProps) {
@@ -62,7 +63,7 @@ export default function RegisterModal({ open, onClose }: RegisterModalProps) {
     async function loadCatalog() {
       const [{ data: cityData, error: cityError }, { data: seriesData, error: seriesError }] = await Promise.all([
         supabase.from("cities").select("id, name, state").eq("is_active", true).order("name", { ascending: true }),
-        supabase.from("series").select("id, name").eq("is_active", true).order("starts_at", { ascending: true }),
+        supabase.from("series").select("id, name, registration_closes_at").eq("is_active", true).order("starts_at", { ascending: true }),
       ]);
 
       if (!active) return;
@@ -150,6 +151,14 @@ export default function RegisterModal({ open, onClose }: RegisterModalProps) {
     }
   }
 
+  // Registration stays open through the close date (inclusive). The catalog
+  // query only returns active series, so this handles the "series still active
+  // but past its deadline" case; the register API enforces the same rule.
+  const today = new Date().toISOString().slice(0, 10);
+  const seriesClosed = Boolean(
+    currentSeries?.registration_closes_at && currentSeries.registration_closes_at < today
+  );
+
   if (!open) return null;
 
   return (
@@ -201,7 +210,62 @@ export default function RegisterModal({ open, onClose }: RegisterModalProps) {
           <X size={18} />
         </button>
 
-        {step === "form" ? (
+        {step === "success" ? (
+          <div style={{ textAlign: "center", padding: "16px 0" }}>
+            <div
+              style={{
+                width: 56,
+                height: 56,
+                borderRadius: "50%",
+                background: "var(--lime-50)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                margin: "0 auto 20px",
+              }}
+            >
+              <Check size={24} color="var(--lime-600)" />
+            </div>
+            <h2
+              style={{
+                fontFamily: "var(--font-display)",
+                fontSize: 28,
+                fontWeight: 400,
+                color: "var(--ink-900)",
+                marginBottom: 12,
+              }}
+            >
+              You&rsquo;re on the list!
+            </h2>
+            <p style={{ fontSize: 16, color: "var(--ink-700)", lineHeight: 1.6, marginBottom: 28 }}>
+              You&rsquo;re registered — watch for details.
+            </p>
+            <button className="btn btn-primary" onClick={handleClose} style={{ justifyContent: "center" }}>
+              Done
+            </button>
+          </div>
+        ) : seriesClosed ? (
+          <div style={{ textAlign: "center", padding: "16px 0" }}>
+            <p className="eyebrow" style={{ marginBottom: 8 }}>{currentSeries?.name}</p>
+            <h2
+              style={{
+                fontFamily: "var(--font-display)",
+                fontSize: 28,
+                fontWeight: 400,
+                color: "var(--ink-900)",
+                marginBottom: 12,
+              }}
+            >
+              Registration has closed
+            </h2>
+            <p style={{ fontSize: 16, color: "var(--ink-700)", lineHeight: 1.6, marginBottom: 28 }}>
+              Registration for this series has closed. Check back soon for the next one.
+            </p>
+            <button className="btn btn-primary" onClick={handleClose} style={{ justifyContent: "center" }}>
+              Close
+            </button>
+          </div>
+        ) : (
           <>
             <p className="eyebrow" style={{ marginBottom: 8 }}>{currentSeries?.name ?? "The Mahjong Open — 2026 — Series One"}</p>
             <h2
@@ -295,40 +359,6 @@ export default function RegisterModal({ open, onClose }: RegisterModalProps) {
               </button>
             </form>
           </>
-        ) : (
-          <div style={{ textAlign: "center", padding: "16px 0" }}>
-            <div
-              style={{
-                width: 56,
-                height: 56,
-                borderRadius: "50%",
-                background: "var(--lime-50)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                margin: "0 auto 20px",
-              }}
-            >
-              <Check size={24} color="var(--lime-600)" />
-            </div>
-            <h2
-              style={{
-                fontFamily: "var(--font-display)",
-                fontSize: 28,
-                fontWeight: 400,
-                color: "var(--ink-900)",
-                marginBottom: 12,
-              }}
-            >
-              You&rsquo;re on the list!
-            </h2>
-            <p style={{ fontSize: 16, color: "var(--ink-700)", lineHeight: 1.6, marginBottom: 28 }}>
-              You&rsquo;re registered — watch for details.
-            </p>
-            <button className="btn btn-primary" onClick={handleClose} style={{ justifyContent: "center" }}>
-              Done
-            </button>
-          </div>
         )}
       </div>
     </div>
