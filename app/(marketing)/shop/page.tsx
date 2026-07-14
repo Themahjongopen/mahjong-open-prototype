@@ -12,7 +12,17 @@ const CATEGORIES: Category[] = [
   "Table & decor",
 ];
 
-const PRODUCTS = [
+type Product = {
+  title: string;
+  category: Category;
+  blurb: string;
+  href: string;
+  image: string;
+  bg: string;
+  comingSoon?: boolean;
+};
+
+const PRODUCTS: Product[] = [
   {
     title: "Willow Mahjong Tiles",
     category: "Tiles & sets",
@@ -52,6 +62,15 @@ const PRODUCTS = [
     href: "https://thatmahjongmoment.com/discount/Mahjparlor?redirect=/products/scallop-pusher-mahjong-rack",
     image: "https://thatmahjongmoment.com/cdn/shop/files/scallop-acrylic-mahjong-racks-and-pushers-694.webp?v=1778247045",
     bg: "var(--lime-wash)",
+  },
+  {
+    title: "Heirloom Collection: Fire + Fortune — Verdant Fortune",
+    category: "Tiles & sets",
+    blurb: "A jewel-toned heirloom set steeped in deep verdant greens and gilded detail, where fiery symbolism meets lush botanical artistry. A statement set worth the wait.",
+    href: "https://www.macandmillermahjong.com/discount/TSMJP?redirect=/products/heirloom-collection-fire-fortune-verdant-fortune-coming-soon",
+    image: "https://www.macandmillermahjong.com/cdn/shop/files/IMG_5750_1500x.jpg?v=1777589747",
+    bg: "var(--peri-50)",
+    comingSoon: true,
   },
 ];
 
@@ -139,7 +158,10 @@ export default function ShopPage() {
                   )}
                 </div>
                 <div style={{ padding: "20px 20px 24px", display: "flex", flexDirection: "column", gap: 10, flex: 1 }}>
-                  <span className="badge badge-lime" style={{ alignSelf: "flex-start" }}>{product.category}</span>
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+                    <span className="badge badge-lime">{product.category}</span>
+                    {product.comingSoon ? <span className="badge badge-mute">Coming soon</span> : null}
+                  </div>
                   <h3
                     style={{
                       fontFamily: "var(--font-display)",
@@ -167,7 +189,7 @@ export default function ShopPage() {
                       marginTop: 4,
                     }}
                   >
-                    Shop this pick
+                    {product.comingSoon ? "Get notified" : "Shop this pick"}
                     <ExternalLink size={13} />
                   </a>
                 </div>
