@@ -1,61 +1,95 @@
 import Link from "next/link";
-import { getAdminPlayers, getMembership } from "@/lib/data";
-import { getDemoUser } from "@/lib/data/auth";
+import { createClient } from "@/lib/supabase/server";
+import { getPortalUser } from "@/lib/portal/session";
+
+type DirectoryRow = {
+  profile_id: string;
+  full_name: string | null;
+  city_name: string | null;
+  skill_level: string | null;
+  is_commissioner: boolean;
+};
+
+function skillLabel(skill: string | null) {
+  if (!skill) return "Member";
+  return `${skill.charAt(0).toUpperCase()}${skill.slice(1)} player`;
+}
 
 export default async function DirectoryPage() {
-  const user = getDemoUser();
-  const membership = await getMembership(user.id);
-  const members = await getAdminPlayers();
-  const cityName = membership?.cities?.name ?? "Hattiesburg";
+  const session = await getPortalUser();
+  const viewerId = session && session.status === "active" ? session.id : null;
+
+  // Read the directory through the member's own JWT: the directory_members view
+  // is RLS-scoped to the viewer's paid city+series cohort and exposes only
+  // safe columns (no email/phone).
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("directory_members")
+    .select("profile_id, full_name, city_name, skill_level, is_commissioner")
+    .order("full_name", { ascending: true });
+
+  const members = (data ?? []) as DirectoryRow[];
+  const viewerRow = members.find((m) => m.profile_id === viewerId);
+  const cityName = viewerRow?.city_name ?? members[0]?.city_name ?? null;
 
   return (
     <div style={{ padding: "20px 16px", maxWidth: 640, margin: "0 auto" }}>
       <div style={{ marginBottom: 24 }}>
-        <p className="eyebrow" style={{ marginBottom: 4 }}>{cityName}</p>
+        {cityName ? <p className="eyebrow" style={{ marginBottom: 4 }}>{cityName}</p> : null}
         <h2 style={{ fontFamily: "var(--font-display)", fontSize: 22, color: "var(--ink-900)" }}>Member Directory</h2>
         <p style={{ fontSize: 15, color: "var(--ink-500)", marginTop: 8 }}>
-          View your city roster, connect with players, and see who&rsquo;s active in this series.
+          Your city roster for this series — connect with players and see who&rsquo;s active.
         </p>
       </div>
 
-      <div style={{ display: "grid", gap: 12 }}>
-        {members.map((member) => (
-          <div
-            key={member.id}
-            style={{
-              background: "#fff",
-              border: "1px solid var(--hair-200)",
-              borderRadius: "var(--radius-lg)",
-              padding: "18px",
-              boxShadow: "var(--shadow-xs)",
-              display: "grid",
-              gridTemplateColumns: "1fr auto",
-              gap: 12,
-              alignItems: "center",
-            }}
-          >
-            <div>
-              <Link href={`/portal/profile/${member.id}`} style={{ textDecoration: "none", color: "inherit" }}>
-                <p style={{ fontSize: 15, fontWeight: 600, color: "var(--ink-900)", marginBottom: 6 }}>{member.profiles.full_name}</p>
-              </Link>
-              <p style={{ fontSize: 13, color: "var(--ink-500)", marginBottom: 4 }}>{member.profiles.email}</p>
-              <p style={{ fontSize: 13, color: "var(--ink-500)" }}>
-                {member.skill_level ? `${member.skill_level.charAt(0).toUpperCase()}${member.skill_level.slice(1)} player` : "Member"}
-              </p>
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "flex-end" }}>
-              {member.profiles.role === "commissioner" ? (
-                <span style={{ fontSize: 12, fontWeight: 600, color: "var(--pink-700)", background: "var(--pink-50)", border: "1px solid var(--pink-100)", borderRadius: 999, padding: "4px 8px", whiteSpace: "nowrap" }}>
-                  Commissioner
-                </span>
-              ) : null}
-              <span className="badge badge-peri" style={{ fontSize: 12, whiteSpace: "nowrap" }}>
-                Active
-              </span>
-            </div>
-          </div>
-        ))}
-      </div>
+      {error ? (
+        <div style={{ background: "#fff", border: "1px solid var(--hair-200)", borderRadius: "var(--radius-lg)", padding: 20, color: "var(--ink-500)", fontSize: 14 }}>
+          The directory couldn&rsquo;t be loaded right now. Please try again shortly.
+        </div>
+      ) : members.length === 0 ? (
+        <div style={{ background: "#fff", border: "1px solid var(--hair-200)", borderRadius: "var(--radius-lg)", padding: 20, color: "var(--ink-500)", fontSize: 14 }}>
+          No other members have joined your city for this series yet. Check back soon.
+        </div>
+      ) : (
+        <div style={{ display: "grid", gap: 12 }}>
+          {members.map((member) => {
+            const isYou = member.profile_id === viewerId;
+            return (
+              <div
+                key={member.profile_id}
+                style={{
+                  background: "#fff",
+                  border: "1px solid var(--hair-200)",
+                  borderRadius: "var(--radius-lg)",
+                  padding: "18px",
+                  boxShadow: "var(--shadow-xs)",
+                  display: "grid",
+                  gridTemplateColumns: "1fr auto",
+                  gap: 12,
+                  alignItems: "center",
+                }}
+              >
+                <div>
+                  <Link href={`/portal/profile/${member.profile_id}`} style={{ textDecoration: "none", color: "inherit" }}>
+                    <p style={{ fontSize: 15, fontWeight: 600, color: "var(--ink-900)", marginBottom: 6 }}>
+                      {member.full_name ?? "Member"}
+                      {isYou ? <span style={{ fontSize: 12, fontWeight: 500, color: "var(--ink-400)", marginLeft: 8 }}>You</span> : null}
+                    </p>
+                  </Link>
+                  <p style={{ fontSize: 13, color: "var(--ink-500)" }}>{skillLabel(member.skill_level)}</p>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "flex-end" }}>
+                  {member.is_commissioner ? (
+                    <span style={{ fontSize: 12, fontWeight: 600, color: "var(--pink-700)", background: "var(--pink-50)", border: "1px solid var(--pink-100)", borderRadius: 999, padding: "4px 8px", whiteSpace: "nowrap" }}>
+                      Commissioner
+                    </span>
+                  ) : null}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

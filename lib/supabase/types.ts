@@ -494,7 +494,20 @@ export interface Database {
       };
     };
     Views: {
-      [_ in never]: never;
+      // Directory-safe member roster (migration 009). RLS-scoped to the
+      // viewer's paid city+series cohort; exposes no private columns.
+      directory_members: {
+        Row: {
+          profile_id: string | null;
+          full_name: string | null;
+          city_id: string | null;
+          city_name: string | null;
+          skill_level: SkillLevel | null;
+          is_commissioner: boolean | null;
+          series_id: string | null;
+        };
+        Relationships: [];
+      };
     };
     Functions: {
       [_ in never]: never;
