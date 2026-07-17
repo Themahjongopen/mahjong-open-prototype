@@ -108,8 +108,9 @@ async function main() {
       .from("league_tables")
       .select("id, status, table_seats(seat_number, user_id, canceled_at, profiles(full_name))")
       .eq("id", tableId).maybeSingle();
-    const seat1 = (detail?.table_seats ?? []).find((s: any) => s.seat_number === 1);
-    check("seat-name embed resolves creator name", seat1?.profiles?.full_name === "Table a", seat1?.profiles?.full_name ?? "no name");
+    const seat1: any = ((detail as any)?.table_seats ?? []).find((s: any) => s.seat_number === 1);
+    const seat1Name = seat1?.profiles?.full_name ?? seat1?.profiles?.[0]?.full_name ?? "no name";
+    check("seat-name embed resolves creator name", seat1Name === "Table a", seat1Name);
 
     // JOIN B into the lowest free seat (2).
     const seatB = freeSeat(await activeSeatNumbers(tableId));

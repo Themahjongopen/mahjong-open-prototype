@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { CalendarDays, MapPin, Clock } from "lucide-react";
 import { useToast } from "@/components/portal/PortalShellClient";
 import type { LeagueTable } from "@/lib/portal/tables";
+import type { TableSubmission } from "@/lib/portal/scores";
 
 const SKILL_COLORS: Record<string, string> = {
   beginner: "badge-lime",
@@ -18,9 +19,17 @@ const STATUS_COLORS: Record<string, string> = {
   canceled: "badge-mute",
 };
 
-type Action = "join" | "leave" | "cancel" | null;
+type Action = "join" | "leave" | "cancel" | "complete" | null;
 
-export default function TableDetailClient({ table, currentUserId }: { table: LeagueTable; currentUserId: string }) {
+export default function TableDetailClient({
+  table,
+  currentUserId,
+  submission,
+}: {
+  table: LeagueTable;
+  currentUserId: string;
+  submission: TableSubmission | null;
+}) {
   const { showToast } = useToast();
   const router = useRouter();
   const [loading, setLoading] = useState<Action>(null);
@@ -32,6 +41,8 @@ export default function TableDetailClient({ table, currentUserId }: { table: Lea
   const canJoin = !myActiveSeat && seatsFilled < 4 && table.status === "open" && !isCreator;
   const canLeave = !!myActiveSeat && !isCreator && (table.status === "open" || table.status === "full");
   const canCancelTable = isCreator && (table.status === "open" || table.status === "full");
+  const canMarkPlayed = isCreator && (table.status === "open" || table.status === "full");
+  const canSubmitScores = isCreator && table.status === "completed" && !submission;
 
   const tableDateTime = new Date(`${table.table_date}T${table.table_time ?? "12:00:00"}`);
   const hoursUntil = (tableDateTime.getTime() - Date.now()) / (1000 * 60 * 60);
@@ -72,6 +83,16 @@ export default function TableDetailClient({ table, currentUserId }: { table: Lea
       `/api/tables/${table.id}`,
       { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "cancel" }) },
       "Table cancelled."
+    );
+  }
+
+  function handleMarkPlayed() {
+    if (!window.confirm("Mark this table as played? You'll then enter the round's scores.")) return;
+    run(
+      "complete",
+      `/api/tables/${table.id}`,
+      { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "complete" }) },
+      "Table marked as played."
     );
   }
 
@@ -195,17 +216,39 @@ export default function TableDetailClient({ table, currentUserId }: { table: Lea
           </a>
         </div>
 
+        {canMarkPlayed && (
+          <button className="btn btn-primary" onClick={handleMarkPlayed} disabled={loading === "complete"} style={{ justifyContent: "center", padding: "13px" }}>
+            {loading === "complete" ? "Updating…" : "Mark as played"}
+          </button>
+        )}
+
+        {canSubmitScores && (
+          <a href={`/portal/scores?table_id=${table.id}`} className="btn btn-primary" style={{ justifyContent: "center", padding: "13px", display: "flex" }}>
+            Enter round scores →
+          </a>
+        )}
+
+        {submission && (
+          <div style={{ background: "#fff", border: "1px solid var(--hair-200)", borderRadius: "var(--radius-lg)", overflow: "hidden", boxShadow: "var(--shadow-xs)" }}>
+            <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--hair-200)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <p style={{ fontSize: 13, fontWeight: 600, color: "var(--ink-800)" }}>Round scores</p>
+              <span className="badge badge-lime">Posted</span>
+            </div>
+            {submission.players.map((p, i) => (
+              <div key={p.user_id} style={{ padding: "10px 16px", borderBottom: i < submission.players.length - 1 ? "1px solid var(--hair-200)" : "none", display: "flex", justifyContent: "space-between", fontSize: 14 }}>
+                <span style={{ color: "var(--ink-800)" }}>{p.full_name ?? "Player"}</span>
+                <span style={{ color: p.is_no_show ? "var(--danger)" : "var(--ink-900)", fontWeight: 600 }}>
+                  {p.is_no_show ? "No-show" : p.is_no_show_bonus ? "+25 (stayed)" : p.round_score}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+
         {canCancelTable && (
           <button className="btn btn-ghost" onClick={handleCancelTable} disabled={loading === "cancel"} style={{ justifyContent: "center", padding: "13px", color: "var(--danger)", borderColor: "rgba(200,16,46,0.3)" }}>
             {loading === "cancel" ? "Cancelling…" : "Cancel this table"}
           </button>
-        )}
-
-        {/* Hook: score submission arrives with the scores build. */}
-        {isCreator && table.status === "completed" && (
-          <a href={`/portal/scores?table_id=${table.id}`} className="btn btn-primary" style={{ justifyContent: "center", padding: "13px", display: "flex" }}>
-            Submit score →
-          </a>
         )}
       </div>
     </>
