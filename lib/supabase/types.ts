@@ -16,6 +16,8 @@ export interface Database {
           full_name: string | null;
           email: string | null;
           role: UserRole;
+          skill_level: SkillLevel | null;
+          notification_preferences: Json;
           created_at: string;
         };
         Insert: {
@@ -23,12 +25,16 @@ export interface Database {
           full_name?: string | null;
           email?: string | null;
           role?: UserRole;
+          skill_level?: SkillLevel | null;
+          notification_preferences?: Json;
           created_at?: string;
         };
         Update: {
           full_name?: string | null;
           email?: string | null;
           role?: UserRole;
+          skill_level?: SkillLevel | null;
+          notification_preferences?: Json;
         };
         Relationships: [];
       };
