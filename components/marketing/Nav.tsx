@@ -87,7 +87,7 @@ export default function Nav({ activePage, onRegisterClick }: NavProps) {
           {/* Actions */}
           <div style={{ display: "flex", alignItems: "center", gap: 16 }} className="hidden-mobile">
             <Link
-              href="/login"
+              href="/portal/login"
               style={{
                 fontSize: 14,
                 fontWeight: 600,
@@ -151,7 +151,7 @@ export default function Nav({ activePage, onRegisterClick }: NavProps) {
           ))}
           <div style={{ marginTop: 24, display: "flex", flexDirection: "column", gap: 12 }}>
             <Link
-              href="/login"
+              href="/portal/login"
               onClick={() => setMobileOpen(false)}
               style={{
                 fontSize: 15,

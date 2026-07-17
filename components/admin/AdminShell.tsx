@@ -53,7 +53,7 @@ export default function AdminShell({ children, adminName }: { children: React.Re
     closeDrawer();
     const supabase = createClient();
     await supabase.auth.signOut();
-    router.push("/login");
+    router.push("/");
   }
 
   return (
