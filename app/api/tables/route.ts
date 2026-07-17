@@ -1,12 +1,74 @@
 import { NextResponse } from "next/server";
-// Demo stub — returns success without writing to a database.
-// Replace with real Supabase logic when connecting the backend.
-export async function POST() {
-  return NextResponse.json({ ok: true });
-}
-export async function GET() {
-  return NextResponse.json({ ok: true });
-}
-export async function PATCH() {
-  return NextResponse.json({ ok: true });
+import { getPortalUser } from "@/lib/portal/session";
+import { createAdminClient } from "@/lib/supabase/server";
+
+const SKILLS = new Set(["beginner", "intermediate", "advanced"]);
+
+// Create a table in the member's own city+series and seat them at seat 1.
+export async function POST(request: Request) {
+  const session = await getPortalUser();
+  if (!session || session.status !== "active") {
+    return NextResponse.json({ error: "Please sign in." }, { status: 401 });
+  }
+  if (!session.series_id || !session.city_id) {
+    return NextResponse.json({ error: "You need an active paid registration to create a table." }, { status: 403 });
+  }
+
+  const body = await request.json().catch(() => null);
+  const weekNumber = Number.parseInt(body?.week_number?.toString() ?? "", 10);
+  const tableDate = body?.table_date?.toString().trim();
+  const tableTime = body?.table_time?.toString().trim();
+  const locationName = body?.location_name?.toString().trim();
+  const locationAddress = body?.location_address?.toString().trim() || null;
+  const skillLevel = body?.skill_level?.toString().trim() || null;
+  const notes = body?.notes?.toString().trim() || null;
+
+  if (!Number.isInteger(weekNumber) || weekNumber < 1 || weekNumber > 9) {
+    return NextResponse.json({ error: "Please choose a valid week." }, { status: 400 });
+  }
+  if (!tableDate || !tableTime || !locationName) {
+    return NextResponse.json({ error: "Please fill in the date, time, and location." }, { status: 400 });
+  }
+  if (skillLevel && !SKILLS.has(skillLevel)) {
+    return NextResponse.json({ error: "Invalid skill level." }, { status: 400 });
+  }
+
+  const admin: any = createAdminClient();
+  if (!admin) {
+    return NextResponse.json({ error: "Tables are unavailable right now." }, { status: 503 });
+  }
+
+  const { data: table, error: tableError } = await admin
+    .from("league_tables")
+    .insert({
+      city_id: session.city_id,
+      series_id: session.series_id,
+      creator_id: session.id,
+      week_number: weekNumber,
+      table_date: tableDate,
+      table_time: tableTime,
+      location_name: locationName,
+      location_address: locationAddress,
+      skill_level: skillLevel,
+      notes,
+      status: "open",
+    })
+    .select("id")
+    .single();
+
+  if (tableError || !table) {
+    return NextResponse.json({ error: "Your table could not be created." }, { status: 500 });
+  }
+
+  const { error: seatError } = await admin
+    .from("table_seats")
+    .insert({ table_id: table.id, user_id: session.id, seat_number: 1 });
+
+  if (seatError) {
+    // Roll back the table so we don't leave a creator-less table behind.
+    await admin.from("league_tables").delete().eq("id", table.id);
+    return NextResponse.json({ error: "Your table could not be created." }, { status: 500 });
+  }
+
+  return NextResponse.json({ id: table.id });
 }

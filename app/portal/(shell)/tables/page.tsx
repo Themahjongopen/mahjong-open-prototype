@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { MapPin, Clock, Users, Plus } from "lucide-react";
-import { getOpenTables } from "@/lib/data";
-import { getDemoUser } from "@/lib/data/auth";
+import { getPortalUser } from "@/lib/portal/session";
+import { getOpenTables, activeSeats, type LeagueTable } from "@/lib/portal/tables";
 
 const SKILL_COLORS: Record<string, string> = {
   beginner: "badge-lime",
@@ -10,12 +10,12 @@ const SKILL_COLORS: Record<string, string> = {
 };
 
 export default async function TablesPage() {
-  const user = getDemoUser();
-  const openTables = await getOpenTables(user.id);
+  const session = await getPortalUser();
+  const member = session && session.status === "active" ? session : null;
+  const openTables = member ? await getOpenTables(member) : [];
 
-  const byWeek = openTables.reduce<Record<number, typeof openTables>>((acc, t) => {
-    if (!acc[t.week_number]) acc[t.week_number] = [];
-    acc[t.week_number].push(t);
+  const byWeek = openTables.reduce<Record<number, LeagueTable[]>>((acc, t) => {
+    (acc[t.week_number] ??= []).push(t);
     return acc;
   }, {});
 
@@ -44,10 +44,9 @@ export default async function TablesPage() {
           </p>
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {weekTables.map((table) => {
-              const activeSeats = table.table_seats.filter((s) => !s.canceled_at);
-              const seatsFilled = activeSeats.length;
-              const seatsLeft = 4 - seatsFilled;
-              const isSeated = activeSeats.some((s) => s.user_id === user.id);
+              const filled = activeSeats(table.table_seats).length;
+              const seatsLeft = 4 - filled;
+              const isSeated = activeSeats(table.table_seats).some((s) => s.user_id === member?.id);
 
               return (
                 <Link key={table.id} href={`/portal/tables/${table.id}`} style={{ textDecoration: "none" }}>
@@ -63,12 +62,14 @@ export default async function TablesPage() {
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
                       <div>
                         <p style={{ fontSize: 15, fontWeight: 600, color: "var(--ink-900)", marginBottom: 2 }}>
-                          {new Date(table.table_date).toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })}
+                          {new Date(`${table.table_date}T12:00:00`).toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })}
                         </p>
                         <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
-                          <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 13, color: "var(--ink-500)" }}>
-                            <Clock size={12} /> {table.table_time.slice(0, 5)}
-                          </span>
+                          {table.table_time ? (
+                            <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 13, color: "var(--ink-500)" }}>
+                              <Clock size={12} /> {table.table_time.slice(0, 5)}
+                            </span>
+                          ) : null}
                           <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 13, color: "var(--ink-500)" }}>
                             <MapPin size={12} /> {table.location_name}
                           </span>
@@ -91,7 +92,7 @@ export default async function TablesPage() {
                               width: 22,
                               height: 22,
                               borderRadius: "50%",
-                              background: n <= seatsFilled ? "var(--pink-400)" : "var(--hair-200)",
+                              background: n <= filled ? "var(--pink-400)" : "var(--hair-200)",
                               border: "2px solid #fff",
                             }}
                           />

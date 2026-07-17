@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 export default function CreateTablePage() {
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [created, setCreated] = useState(false);
   const [error, setError] = useState("");
   const [form, setForm] = useState({
     week_number: "",
@@ -17,7 +17,7 @@ export default function CreateTablePage() {
     notes: "",
   });
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
     if (!form.week_number || !form.table_date || !form.table_time || !form.location_name || !form.skill_level) {
@@ -25,10 +25,21 @@ export default function CreateTablePage() {
       return;
     }
     setLoading(true);
-    setTimeout(() => {
-      setCreated(true);
+
+    const res = await fetch("/api/tables", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(form),
+    });
+    const payload = await res.json().catch(() => ({}));
+
+    if (!res.ok || !payload.id) {
+      setError(payload.error || "Your table could not be created.");
       setLoading(false);
-    }, 700);
+      return;
+    }
+
+    router.push(`/portal/tables/${payload.id}`);
   }
 
   function field(label: string, required: boolean, children: React.ReactNode) {
@@ -42,29 +53,6 @@ export default function CreateTablePage() {
     );
   }
 
-  if (created) {
-    return (
-      <div style={{ padding: "20px 16px", maxWidth: 480, margin: "0 auto", textAlign: "center" }}>
-        <div style={{ width: 56, height: 56, borderRadius: "50%", background: "var(--lime-50)", display: "flex", alignItems: "center", justifyContent: "center", margin: "48px auto 20px", fontSize: 24 }}>
-          ✓
-        </div>
-        <p style={{ fontFamily: "var(--font-display)", fontSize: 22, color: "var(--ink-900)", marginBottom: 8 }}>Table created!</p>
-        <p style={{ fontSize: 14, color: "var(--ink-500)", marginBottom: 28 }}>
-          Week {form.week_number} · {form.location_name}<br />
-          You&rsquo;re in seat 1 as the creator.
-        </p>
-        <div style={{ display: "flex", flexDirection: "column", gap: 10, alignItems: "center" }}>
-          <Link href="/portal/tables" className="btn btn-primary" style={{ display: "inline-flex" }}>
-            Back to open tables
-          </Link>
-          <button onClick={() => { setCreated(false); setForm({ week_number: "", table_date: "", table_time: "", location_name: "", location_address: "", skill_level: "", notes: "" }); }} className="btn btn-ghost" style={{ fontSize: 13 }}>
-            Create another
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div style={{ padding: "20px 16px", maxWidth: 480, margin: "0 auto" }}>
       <p style={{ fontFamily: "var(--font-display)", fontSize: 22, color: "var(--ink-900)", marginBottom: 20 }}>
@@ -72,10 +60,10 @@ export default function CreateTablePage() {
       </p>
 
       <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-        {field("Week number (1–8)", true,
+        {field("Round (week 1–8)", true,
           <select className="input-mo" value={form.week_number} onChange={(e) => setForm((f) => ({ ...f, week_number: e.target.value }))}>
-            <option value="">Select week</option>
-            {[1,2,3,4,5,6,7,8].map((w) => <option key={w} value={w}>Week {w}</option>)}
+            <option value="">Select round</option>
+            {[1, 2, 3, 4, 5, 6, 7, 8].map((w) => <option key={w} value={w}>Round {w}</option>)}
           </select>
         )}
         {field("Date", true,
