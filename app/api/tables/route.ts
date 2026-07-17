@@ -3,6 +3,7 @@ import { getPortalUser } from "@/lib/portal/session";
 import { createAdminClient } from "@/lib/supabase/server";
 
 const SKILLS = new Set(["beginner", "intermediate", "advanced"]);
+const ROUND_TYPES = new Set(["social", "focused", "lightning"]);
 
 // Create a table in the member's own city+series and seat them at seat 1.
 export async function POST(request: Request) {
@@ -21,6 +22,7 @@ export async function POST(request: Request) {
   const locationName = body?.location_name?.toString().trim();
   const locationAddress = body?.location_address?.toString().trim() || null;
   const skillLevel = body?.skill_level?.toString().trim() || null;
+  const roundType = body?.round_type?.toString().trim() || null;
   const notes = body?.notes?.toString().trim() || null;
 
   if (!Number.isInteger(weekNumber) || weekNumber < 1 || weekNumber > 9) {
@@ -31,6 +33,9 @@ export async function POST(request: Request) {
   }
   if (skillLevel && !SKILLS.has(skillLevel)) {
     return NextResponse.json({ error: "Invalid skill level." }, { status: 400 });
+  }
+  if (roundType && !ROUND_TYPES.has(roundType)) {
+    return NextResponse.json({ error: "Invalid round type." }, { status: 400 });
   }
 
   const admin: any = createAdminClient();
@@ -50,6 +55,7 @@ export async function POST(request: Request) {
       location_name: locationName,
       location_address: locationAddress,
       skill_level: skillLevel,
+      round_type: roundType,
       notes,
       status: "open",
     })

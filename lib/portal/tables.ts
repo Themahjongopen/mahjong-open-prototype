@@ -26,6 +26,7 @@ export type LeagueTable = {
   location_name: string;
   location_address: string | null;
   skill_level: string | null;
+  round_type: string | null;
   notes: string | null;
   status: string;
   table_seats: SeatRow[];
@@ -49,7 +50,7 @@ export async function getOpenTables(member: PortalMember): Promise<LeagueTable[]
 
   const { data } = await admin
     .from("league_tables")
-    .select("id, city_id, series_id, creator_id, week_number, table_date, table_time, location_name, location_address, skill_level, notes, status, table_seats(id, user_id, seat_number, canceled_at)")
+    .select("id, city_id, series_id, creator_id, week_number, table_date, table_time, location_name, location_address, skill_level, round_type, notes, status, table_seats(id, user_id, seat_number, canceled_at)")
     .eq("series_id", member.series_id)
     .eq("city_id", member.city_id)
     .eq("status", "open")
@@ -68,7 +69,7 @@ export async function getTableDetail(id: string, member: PortalMember): Promise<
 
   const { data } = await admin
     .from("league_tables")
-    .select("id, city_id, series_id, creator_id, week_number, table_date, table_time, location_name, location_address, skill_level, notes, status, table_seats(id, user_id, seat_number, canceled_at, profiles(full_name))")
+    .select("id, city_id, series_id, creator_id, week_number, table_date, table_time, location_name, location_address, skill_level, round_type, notes, status, table_seats(id, user_id, seat_number, canceled_at, profiles(full_name))")
     .eq("id", id)
     .maybeSingle();
 
@@ -84,7 +85,7 @@ export async function getMyTables(member: PortalMember): Promise<MyTableSeat[]> 
 
   const { data } = await admin
     .from("table_seats")
-    .select("seat_number, league_tables(id, city_id, series_id, creator_id, week_number, table_date, table_time, location_name, location_address, skill_level, notes, status, table_seats(id, user_id, seat_number, canceled_at))")
+    .select("seat_number, league_tables(id, city_id, series_id, creator_id, week_number, table_date, table_time, location_name, location_address, skill_level, round_type, notes, status, table_seats(id, user_id, seat_number, canceled_at))")
     .eq("user_id", member.id)
     .is("canceled_at", null);
 

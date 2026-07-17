@@ -105,6 +105,9 @@ export default function TableDetailClient({
           {table.skill_level && (
             <span className={`badge ${SKILL_COLORS[table.skill_level] ?? "badge-mute"}`}>{table.skill_level}</span>
           )}
+          {table.round_type && (
+            <span className="badge badge-peri" style={{ textTransform: "capitalize" }}>{table.round_type}</span>
+          )}
           {isCreator && <span className="badge badge-butter">Your table</span>}
         </div>
         <h2 style={{ fontFamily: "var(--font-display)", fontSize: 24, color: "var(--ink-900)", marginBottom: 12 }}>

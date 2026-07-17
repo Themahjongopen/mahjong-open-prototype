@@ -14,13 +14,14 @@ export default function CreateTablePage() {
     location_name: "",
     location_address: "",
     skill_level: "",
+    round_type: "",
     notes: "",
   });
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-    if (!form.week_number || !form.table_date || !form.table_time || !form.location_name || !form.skill_level) {
+    if (!form.week_number || !form.table_date || !form.table_time || !form.location_name || !form.skill_level || !form.round_type) {
       setError("Please fill in all required fields.");
       return;
     }
@@ -84,6 +85,14 @@ export default function CreateTablePage() {
             <option value="beginner">Beginner</option>
             <option value="intermediate">Intermediate</option>
             <option value="advanced">Advanced</option>
+          </select>
+        )}
+        {field("Round type", true,
+          <select className="input-mo" value={form.round_type} onChange={(e) => setForm((f) => ({ ...f, round_type: e.target.value }))}>
+            <option value="">Select type</option>
+            <option value="social">Social</option>
+            <option value="focused">Focused</option>
+            <option value="lightning">Lightning</option>
           </select>
         )}
         {field("Notes", false,
