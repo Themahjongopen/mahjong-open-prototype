@@ -1,4 +1,4 @@
-import { getAdminTables } from "@/lib/data";
+import { getAdminTables } from "@/lib/admin/tables";
 
 const STATUS_BADGE: Record<string, string> = { open: "badge-lime", full: "badge-peri", completed: "badge-mute", canceled: "badge-mute" };
 
@@ -13,27 +13,31 @@ export default async function AdminTablesPage() {
       <div style={{ background: "#fff", border: "1px solid var(--hair-200)", borderRadius: "var(--radius-lg)", overflow: "hidden", boxShadow: "var(--shadow-xs)" }}>
         <div className="admin-tables-table">
           <div className="admin-tables-table-header">
-            {["Wk", "Table", "City · Season", "Creator", "Status", "Seats"].map((h) => (
+            {["Wk", "Table", "City · Series", "Host", "Status", "Seats"].map((h) => (
               <p key={h}>{h}</p>
             ))}
           </div>
-          {rows.map((t) => {
-            const activeSeats = t.table_seats.filter((s) => !s.canceled_at).length;
-            return (
+          {rows.length === 0 ? (
+            <div style={{ padding: 20, color: "var(--ink-500)", fontSize: 14 }}>No tables have been created yet.</div>
+          ) : (
+            rows.map((t) => (
               <div key={t.id} className="admin-tables-row">
                 <p style={{ fontSize: 13, fontWeight: 600, color: "var(--ink-500)" }}>W{t.week_number}</p>
                 <div>
                   <span className="admin-mobile-label">Table</span>
                   <p style={{ fontSize: 14, fontWeight: 500, color: "var(--ink-900)" }}>{t.location_name}</p>
-                  <p style={{ fontSize: 12, color: "var(--ink-500)" }}>{new Date(t.table_date).toLocaleDateString("en-US", { month: "short", day: "numeric" })} · {t.table_time.slice(0,5)}</p>
+                  <p style={{ fontSize: 12, color: "var(--ink-500)" }}>
+                    {new Date(`${t.table_date}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                    {t.table_time ? ` · ${t.table_time.slice(0, 5)}` : ""}
+                  </p>
                 </div>
                 <div>
-                  <span className="admin-mobile-label">City · Season</span>
-                  <p style={{ fontSize: 13, color: "var(--ink-700)" }}>{t.cities?.name} · {t.seasons?.name}</p>
+                  <span className="admin-mobile-label">City · Series</span>
+                  <p style={{ fontSize: 13, color: "var(--ink-700)" }}>{[t.city_name, t.series_name].filter(Boolean).join(" · ") || "—"}</p>
                 </div>
                 <div>
-                  <span className="admin-mobile-label">Creator</span>
-                  <p style={{ fontSize: 13, color: "var(--ink-700)" }}>{t.profiles?.full_name ?? "—"}</p>
+                  <span className="admin-mobile-label">Host</span>
+                  <p style={{ fontSize: 13, color: "var(--ink-700)" }}>{t.creator_name ?? "—"}</p>
                 </div>
                 <div>
                   <span className="admin-mobile-label">Status</span>
@@ -41,11 +45,11 @@ export default async function AdminTablesPage() {
                 </div>
                 <div>
                   <span className="admin-mobile-label">Seats</span>
-                  <p style={{ fontSize: 13, color: "var(--ink-700)" }}>{activeSeats}/4</p>
+                  <p style={{ fontSize: 13, color: "var(--ink-700)" }}>{t.active_seats}/4</p>
                 </div>
               </div>
-            );
-          })}
+            ))
+          )}
         </div>
       </div>
     </div>
