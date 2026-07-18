@@ -48,49 +48,25 @@ export async function getProfileStats(admin: any, userId: string, seriesId: stri
     return { allTime, season: { ...EMPTY, cumulativeRank: null, averageRank: null } };
   }
 
-  // Current season: restrict to submissions on tables in this series.
-  // Done as small explicit lookups rather than a nested embed filter so it stays
-  // robust; volumes are tiny at league scale.
-  const { data: tableRows } = await admin
-    .from("league_tables")
-    .select("id")
-    .eq("series_id", seriesId);
-  const tableIds = ((tableRows ?? []) as { id: string }[]).map((t) => t.id);
-
-  let seasonBlock = EMPTY;
-  if (tableIds.length) {
-    const { data: subRows } = await admin
-      .from("score_submissions")
-      .select("id")
-      .in("table_id", tableIds)
-      .neq("status", "voided");
-    const submissionIds = ((subRows ?? []) as { id: string }[]).map((s) => s.id);
-
-    if (submissionIds.length) {
-      const { data: seasonPlayers } = await admin
-        .from("score_submission_players")
-        .select("round_score, is_no_show, is_no_show_bonus")
-        .eq("user_id", userId)
-        .in("score_submission_id", submissionIds);
-      seasonBlock = block(playedScores(seasonPlayers));
-    }
-  }
-
-  // Ranks from the current single-rank standings row.
-  // HOOK: split into cumulative + average ranks with the standings rebuild.
+  // Current season: read straight from the standings view so the profile always
+  // matches the standings page (rounds/total/average + both ranks, with the
+  // 5-round gate leaving averageRank null).
   const { data: standing } = await admin
-    .from("standings")
-    .select("rank")
+    .from("member_series_standings")
+    .select("rounds_played, total_score, average_score, cumulative_rank, average_rank")
     .eq("series_id", seriesId)
     .eq("user_id", userId)
     .maybeSingle();
 
-  return {
-    allTime,
-    season: {
-      ...seasonBlock,
-      cumulativeRank: standing?.rank ?? null,
-      averageRank: null,
-    },
-  };
+  const season = standing
+    ? {
+        rounds: standing.rounds_played ?? 0,
+        totalScore: standing.total_score ?? 0,
+        avgScore: Number(standing.average_score ?? 0),
+        cumulativeRank: standing.cumulative_rank ?? null,
+        averageRank: standing.average_rank ?? null,
+      }
+    : { ...EMPTY, cumulativeRank: null, averageRank: null };
+
+  return { allTime, season };
 }
