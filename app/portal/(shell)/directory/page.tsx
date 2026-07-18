@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getPortalUser } from "@/lib/portal/session";
+import Avatar from "@/components/portal/Avatar";
 
 type DirectoryRow = {
   profile_id: string;
@@ -8,6 +9,7 @@ type DirectoryRow = {
   city_name: string | null;
   skill_level: string | null;
   is_commissioner: boolean;
+  avatar_url: string | null;
 };
 
 function skillLabel(skill: string | null) {
@@ -25,7 +27,7 @@ export default async function DirectoryPage() {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("directory_members")
-    .select("profile_id, full_name, city_name, skill_level, is_commissioner")
+    .select("profile_id, full_name, city_name, skill_level, is_commissioner, avatar_url")
     .order("full_name", { ascending: true });
 
   const members = (data ?? []) as DirectoryRow[];
@@ -69,14 +71,17 @@ export default async function DirectoryPage() {
                   alignItems: "center",
                 }}
               >
-                <div>
-                  <Link href={`/portal/profile/${member.profile_id}`} style={{ textDecoration: "none", color: "inherit" }}>
-                    <p style={{ fontSize: 15, fontWeight: 600, color: "var(--ink-900)", marginBottom: 6 }}>
-                      {member.full_name ?? "Member"}
-                      {isYou ? <span style={{ fontSize: 12, fontWeight: 500, color: "var(--ink-400)", marginLeft: 8 }}>You</span> : null}
-                    </p>
-                  </Link>
-                  <p style={{ fontSize: 13, color: "var(--ink-500)" }}>{skillLabel(member.skill_level)}</p>
+                <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
+                  <Avatar src={member.avatar_url} size={44} alt={member.full_name ?? "Member"} />
+                  <div style={{ minWidth: 0 }}>
+                    <Link href={`/portal/profile/${member.profile_id}`} style={{ textDecoration: "none", color: "inherit" }}>
+                      <p style={{ fontSize: 15, fontWeight: 600, color: "var(--ink-900)", marginBottom: 6 }}>
+                        {member.full_name ?? "Member"}
+                        {isYou ? <span style={{ fontSize: 12, fontWeight: 500, color: "var(--ink-400)", marginLeft: 8 }}>You</span> : null}
+                      </p>
+                    </Link>
+                    <p style={{ fontSize: 13, color: "var(--ink-500)" }}>{skillLabel(member.skill_level)}</p>
+                  </div>
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "flex-end" }}>
                   {member.is_commissioner ? (

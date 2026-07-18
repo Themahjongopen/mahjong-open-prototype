@@ -4,6 +4,7 @@ import { getPortalUser } from "@/lib/portal/session";
 import { getProfileStats, type StatBlock } from "@/lib/portal/profileStats";
 import { resolvePrefs } from "@/lib/portal/notificationPrefs";
 import ProfileEditForm from "@/components/portal/ProfileEditForm";
+import Avatar from "@/components/portal/Avatar";
 
 type SkillValue = "beginner" | "intermediate" | "advanced" | "";
 
@@ -62,7 +63,7 @@ export default async function PlayerProfilePage({ params }: { params: Promise<{ 
   const supabase = await createClient();
   const { data: dirRow } = await supabase
     .from("directory_members")
-    .select("profile_id, full_name, city_name, skill_level, is_commissioner, series_id")
+    .select("profile_id, full_name, city_name, skill_level, is_commissioner, series_id, avatar_url")
     .eq("profile_id", id)
     .maybeSingle();
 
@@ -78,7 +79,7 @@ export default async function PlayerProfilePage({ params }: { params: Promise<{ 
     ? (
         await admin
           .from("profiles")
-          .select("full_name, email, skill_level, notification_preferences, role")
+          .select("full_name, email, skill_level, notification_preferences, role, avatar_url")
           .eq("id", id)
           .maybeSingle()
       ).data
@@ -87,6 +88,7 @@ export default async function PlayerProfilePage({ params }: { params: Promise<{ 
   const fullName = dirRow?.full_name ?? ownProfile?.full_name ?? "Member";
   const cityName = dirRow?.city_name ?? null;
   const skill = (dirRow?.skill_level ?? ownProfile?.skill_level ?? null) as string | null;
+  const avatarUrl = (dirRow?.avatar_url ?? ownProfile?.avatar_url ?? null) as string | null;
   const isCommissioner = dirRow?.is_commissioner ?? ownProfile?.role === "commissioner";
   const seriesId = dirRow?.series_id ?? (isOwn && session?.status === "active" ? session.series_id : null);
 
@@ -101,10 +103,13 @@ export default async function PlayerProfilePage({ params }: { params: Promise<{ 
       {/* Header */}
       <div style={cardStyle}>
         <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "flex-start" }}>
-          <div>
-            {cityName ? <p className="eyebrow" style={{ marginBottom: 6 }}>{cityName}</p> : null}
-            <h2 style={{ fontFamily: "var(--font-display)", fontSize: 24, color: "var(--ink-900)", margin: 0 }}>{fullName}</h2>
-            <p style={{ fontSize: 14, color: "var(--ink-500)", marginTop: 6 }}>{skillLabel(skill)} player</p>
+          <div style={{ display: "flex", gap: 16, alignItems: "center", minWidth: 0 }}>
+            <Avatar src={avatarUrl} size={64} alt={fullName} />
+            <div style={{ minWidth: 0 }}>
+              {cityName ? <p className="eyebrow" style={{ marginBottom: 6 }}>{cityName}</p> : null}
+              <h2 style={{ fontFamily: "var(--font-display)", fontSize: 24, color: "var(--ink-900)", margin: 0 }}>{fullName}</h2>
+              <p style={{ fontSize: 14, color: "var(--ink-500)", marginTop: 6 }}>{skillLabel(skill)} player</p>
+            </div>
           </div>
           {isCommissioner ? (
             <span style={{ fontSize: 12, fontWeight: 600, color: "var(--pink-700)", background: "var(--pink-50)", border: "1px solid var(--pink-100)", borderRadius: 999, padding: "6px 10px", whiteSpace: "nowrap" }}>
@@ -147,9 +152,11 @@ export default async function PlayerProfilePage({ params }: { params: Promise<{ 
           <h3 style={{ fontFamily: "var(--font-display)", fontSize: 18, color: "var(--ink-900)", margin: "0 0 4px" }}>Edit your profile</h3>
           {ownProfile?.email ? <p style={{ fontSize: 13, color: "var(--ink-500)", margin: "0 0 20px" }}>Signed in as {ownProfile.email}</p> : null}
           <ProfileEditForm
+            userId={id}
             initialName={ownProfile?.full_name ?? fullName}
             initialSkill={((ownProfile?.skill_level ?? "") as SkillValue)}
             initialPrefs={resolvePrefs(ownProfile?.notification_preferences)}
+            initialAvatarUrl={avatarUrl}
           />
         </div>
       ) : null}

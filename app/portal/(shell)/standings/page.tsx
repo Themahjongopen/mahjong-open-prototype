@@ -1,5 +1,6 @@
 import { getPortalUser } from "@/lib/portal/session";
 import { getStandings, byCumulative, byAverage, type StandingRow } from "@/lib/portal/standings";
+import Avatar from "@/components/portal/Avatar";
 
 const COLS = "36px 1fr 72px 64px";
 
@@ -35,9 +36,7 @@ function Row({
     >
       <p style={{ fontSize: 15, fontFamily: "var(--font-display)", color: rank === "1" ? "var(--crimson-500)" : "var(--ink-700)" }}>{rank}</p>
       <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
-        <div style={{ width: 28, height: 28, borderRadius: "50%", background: isMe ? "var(--pink-400)" : "var(--paper-100)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: isMe ? "#fff" : "var(--ink-700)", flexShrink: 0 }}>
-          {name[0]}
-        </div>
+        <Avatar src={row.avatar_url} size={28} alt={name} />
         <p style={{ fontSize: 14, fontWeight: isMe ? 600 : 400, color: "var(--ink-900)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {isMe ? "You" : firstName(name)}
         </p>

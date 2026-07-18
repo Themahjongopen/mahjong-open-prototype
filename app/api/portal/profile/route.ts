@@ -27,6 +27,7 @@ export async function PATCH(request: Request) {
     full_name?: string;
     skill_level?: string | null;
     notification_preferences?: Record<string, boolean>;
+    avatar_url?: string | null;
   } = {};
 
   if ("full_name" in body) {
@@ -49,6 +50,21 @@ export async function PATCH(request: Request) {
     update.notification_preferences = sanitizePrefs(body.notification_preferences);
   }
 
+  if ("avatar_url" in body) {
+    const raw = body.avatar_url;
+    if (raw === null || raw === "") {
+      update.avatar_url = null;
+    } else {
+      const url = String(raw);
+      // Only accept URLs from our own Supabase Storage (public avatars bucket).
+      const base = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
+      if (!base || !url.startsWith(`${base}/storage/v1/object/public/avatars/`)) {
+        return NextResponse.json({ error: "Invalid photo." }, { status: 400 });
+      }
+      update.avatar_url = url;
+    }
+  }
+
   if (Object.keys(update).length === 0) {
     return NextResponse.json({ error: "Nothing to update." }, { status: 400 });
   }
@@ -62,7 +78,7 @@ export async function PATCH(request: Request) {
     .from("profiles")
     .update(update)
     .eq("id", user.id)
-    .select("full_name, skill_level, notification_preferences")
+    .select("full_name, skill_level, notification_preferences, avatar_url")
     .single();
 
   if (error) {

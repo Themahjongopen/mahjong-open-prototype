@@ -18,6 +18,7 @@ export interface Database {
           role: UserRole;
           skill_level: SkillLevel | null;
           notification_preferences: Json;
+          avatar_url: string | null;
           created_at: string;
         };
         Insert: {
@@ -27,6 +28,7 @@ export interface Database {
           role?: UserRole;
           skill_level?: SkillLevel | null;
           notification_preferences?: Json;
+          avatar_url?: string | null;
           created_at?: string;
         };
         Update: {
@@ -35,6 +37,7 @@ export interface Database {
           role?: UserRole;
           skill_level?: SkillLevel | null;
           notification_preferences?: Json;
+          avatar_url?: string | null;
         };
         Relationships: [];
       };
@@ -511,6 +514,7 @@ export interface Database {
           skill_level: SkillLevel | null;
           is_commissioner: boolean | null;
           series_id: string | null;
+          avatar_url: string | null;
         };
         Relationships: [];
       };

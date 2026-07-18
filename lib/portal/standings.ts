@@ -8,6 +8,7 @@ import type { PortalMember } from "@/lib/portal/session";
 export type StandingRow = {
   user_id: string;
   full_name: string | null;
+  avatar_url: string | null;
   rounds_played: number;
   total_score: number;
   average_score: number;
@@ -23,7 +24,7 @@ export async function getStandings(member: PortalMember): Promise<{ cityName: st
   const [{ data: rows }, { data: city }] = await Promise.all([
     admin
       .from("member_series_standings")
-      .select("user_id, full_name, rounds_played, total_score, average_score, cumulative_score, cumulative_rank, average_rank")
+      .select("user_id, full_name, avatar_url, rounds_played, total_score, average_score, cumulative_score, cumulative_rank, average_rank")
       .eq("series_id", member.series_id)
       .eq("city_id", member.city_id),
     admin.from("cities").select("name").eq("id", member.city_id).maybeSingle(),
@@ -32,6 +33,7 @@ export async function getStandings(member: PortalMember): Promise<{ cityName: st
   const normalized: StandingRow[] = ((rows ?? []) as any[]).map((r) => ({
     user_id: r.user_id,
     full_name: r.full_name,
+    avatar_url: r.avatar_url ?? null,
     rounds_played: r.rounds_played ?? 0,
     total_score: r.total_score ?? 0,
     average_score: Number(r.average_score ?? 0),

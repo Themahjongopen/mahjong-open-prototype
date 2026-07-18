@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { CalendarDays, MapPin, Clock } from "lucide-react";
 import { useToast } from "@/components/portal/PortalShellClient";
+import Avatar from "@/components/portal/Avatar";
 import type { LeagueTable } from "@/lib/portal/tables";
 import type { TableSubmission } from "@/lib/portal/scores";
 
@@ -157,18 +158,13 @@ export default function TableDetailClient({
                 background: isMe ? "var(--pink-50)" : "#fff",
               }}
             >
-              <div
-                style={{
-                  width: 32, height: 32, borderRadius: "50%",
-                  background: seat ? (isMe ? "var(--pink-400)" : "var(--ink-900)") : "var(--hair-200)",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 12, fontWeight: 700,
-                  color: seat ? "#fff" : "var(--mute-400)",
-                  flexShrink: 0,
-                }}
-              >
-                {seat ? (seat.profiles?.full_name?.[0] ?? "?") : seatNum}
-              </div>
+              {seat ? (
+                <Avatar src={seat.profiles?.avatar_url} size={32} alt={seat.profiles?.full_name ?? "Player"} />
+              ) : (
+                <div style={{ width: 32, height: 32, borderRadius: "50%", background: "var(--hair-200)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, color: "var(--mute-400)", flexShrink: 0 }}>
+                  {seatNum}
+                </div>
+              )}
               <div style={{ flex: 1 }}>
                 <p style={{ fontSize: 14, fontWeight: seat ? 500 : 400, color: seat ? "var(--ink-900)" : "var(--ink-500)" }}>
                   {seat ? (seat.profiles?.full_name ?? "Player") : "Open spot"}
