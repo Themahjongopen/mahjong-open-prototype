@@ -118,6 +118,10 @@ export async function POST(request: Request) {
       mode: "payment",
       customer_email: email,
       expires_at: expiresAt,
+      // Show the "Add promotion code" field on Stripe's hosted checkout. Coupons
+      // and their promotion codes are managed in the Stripe dashboard; Stripe
+      // validates the code, applies the discount, and enforces limits/expiry.
+      allow_promotion_codes: true,
       after_expiration: {
         recovery: {
           enabled: true,
