@@ -37,7 +37,33 @@ export default function RegisterModal({ open, onClose }: RegisterModalProps) {
     series_id: "",
     skill_level: "" as "beginner" | "intermediate" | "advanced" | "",
   });
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
   const dialogRef = useRef<HTMLDivElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  async function handlePhoto(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    setError("");
+    const supabase: any = createClient();
+    const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+    // Pre-auth staging upload (no account yet). RLS allows anon inserts only
+    // under the registrations/ prefix; the photo is carried onto the profile
+    // when the member later accepts their portal invite.
+    const path = `registrations/${crypto.randomUUID()}.${ext}`;
+    const { error: upErr } = await supabase.storage.from("avatars").upload(path, file, { contentType: file.type });
+    if (upErr) {
+      setError("Photo upload failed. Use a JPG, PNG, or WebP under 3 MB.");
+      setUploading(false);
+      return;
+    }
+    const { data } = supabase.storage.from("avatars").getPublicUrl(path);
+    setAvatarUrl(data.publicUrl);
+    setUploading(false);
+    if (fileRef.current) fileRef.current.value = "";
+  }
 
   // Close on Escape
   useEffect(() => {
@@ -98,6 +124,8 @@ export default function RegisterModal({ open, onClose }: RegisterModalProps) {
   function reset() {
     setStep("form");
     setForm({ full_name: "", email: "", phone: "", city_id: "", series_id: currentSeries?.id ?? "", skill_level: "" });
+    setAvatarUrl(null);
+    setUploading(false);
     setError("");
     setLoading(false);
   }
@@ -117,6 +145,10 @@ export default function RegisterModal({ open, onClose }: RegisterModalProps) {
       setError("Please fill in all required fields.");
       return;
     }
+    if (!avatarUrl) {
+      setError("Please add a profile photo.");
+      return;
+    }
 
     setLoading(true);
     try {
@@ -130,6 +162,7 @@ export default function RegisterModal({ open, onClose }: RegisterModalProps) {
           city_id: form.city_id,
           series_id: selectedSeriesId,
           skill_level: form.skill_level,
+          avatar_url: avatarUrl,
         }),
       });
       if (!res.ok) {
@@ -283,6 +316,24 @@ export default function RegisterModal({ open, onClose }: RegisterModalProps) {
             </h2>
 
             <form onSubmit={handleSubmit} noValidate style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              <Field label="Profile photo">
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <div style={{ width: 52, height: 52, borderRadius: "50%", overflow: "hidden", background: "var(--hair-200)", flexShrink: 0 }}>
+                    {avatarUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={avatarUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                    ) : null}
+                  </div>
+                  <div>
+                    <button type="button" className="btn btn-ghost" onClick={() => fileRef.current?.click()} disabled={uploading} style={{ fontSize: 13, padding: "8px 14px" }}>
+                      {uploading ? "Uploading…" : avatarUrl ? "Change photo" : "Upload photo"}
+                    </button>
+                    <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={handlePhoto} style={{ display: "none" }} />
+                    <p style={{ fontSize: 12, color: "var(--ink-500)", marginTop: 4 }}>Required · JPG, PNG, or WebP · up to 3 MB.</p>
+                  </div>
+                </div>
+              </Field>
+
               <Field label="Full name">
                 <input
                   className="input-mo"
@@ -352,7 +403,7 @@ export default function RegisterModal({ open, onClose }: RegisterModalProps) {
               <button
                 className="btn btn-primary"
                 type="submit"
-                disabled={loading}
+                disabled={loading || uploading}
                 style={{ marginTop: 8, justifyContent: "center", padding: "14px 24px" }}
               >
                 {loading ? "Saving your spot…" : "Save my spot →"}

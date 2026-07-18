@@ -5,10 +5,16 @@ import { createAdminClient } from "@/lib/supabase/server";
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { full_name, email, phone, city_id, series_id, skill_level } = body;
+    const { full_name, email, phone, city_id, series_id, skill_level, avatar_url } = body;
 
-    if (!full_name || !email || !phone || !city_id || !series_id || !skill_level) {
-      return NextResponse.json({ error: "Please complete all required fields." }, { status: 400 });
+    if (!full_name || !email || !phone || !city_id || !series_id || !skill_level || !avatar_url) {
+      return NextResponse.json({ error: "Please complete all required fields, including a profile photo." }, { status: 400 });
+    }
+
+    // Only accept a photo URL from our own Supabase Storage avatars bucket.
+    const storageBase = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
+    if (!storageBase || !String(avatar_url).startsWith(`${storageBase}/storage/v1/object/public/avatars/`)) {
+      return NextResponse.json({ error: "Invalid profile photo." }, { status: 400 });
     }
 
     const supabase: any = createAdminClient();
@@ -67,6 +73,7 @@ export async function POST(request: Request) {
           phone,
           city_id,
           skill_level,
+          avatar_url,
           paid_status: "pending",
         })
         .eq("id", registrationId);
@@ -84,6 +91,7 @@ export async function POST(request: Request) {
           city_id,
           series_id,
           skill_level,
+          avatar_url,
           paid_status: "pending",
         })
         .select("id")
