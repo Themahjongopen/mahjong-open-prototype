@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createAdminClient, listAuthUsersByEmail } from "@/lib/supabase/server";
-import { ADMIN_COOKIE_NAME, isValidAdminCookie } from "@/lib/admin/passcode";
+import { isAdminRequest } from "@/lib/admin/auth";
 
 // Portal account state for a registrant:
 //   none     — no auth account yet (can be invited if paid)
@@ -21,6 +21,8 @@ type RegistrationRow = {
   series: string | null;
   invited: boolean; // convenience: invite_state !== "none"
   invite_state: InviteState;
+  profile_id?: string | null;
+  role?: string | null;
 };
 
 // Local-preview fallback used only when no service-role client is configured.
@@ -37,15 +39,9 @@ function formatCity(city: { name: string | null; state: string | null } | null |
   return city.state ? `${city.name}, ${city.state}` : city.name;
 }
 
-function isAuthorized(request: Request) {
-  const cookieHeader = request.headers.get("cookie") ?? "";
-  const adminCookie = cookieHeader.split(";").map((part) => part.trim()).find((part) => part.startsWith(`${ADMIN_COOKIE_NAME}=`));
-  if (!adminCookie) return false;
-  return isValidAdminCookie(adminCookie.slice(ADMIN_COOKIE_NAME.length + 1), process.env.ADMIN_PASSCODE);
-}
 
-export async function GET(request: Request) {
-  if (!isAuthorized(request)) {
+export async function GET() {
+  if (!(await isAdminRequest())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -55,7 +51,7 @@ export async function GET(request: Request) {
   if (supabase) {
     const { data, error } = await supabase
       .from("registrations")
-      .select("id, full_name, email, phone, skill_level, paid_status, created_at, profile_id, cities(name, state), series(name)")
+      .select("id, full_name, email, phone, skill_level, paid_status, created_at, profile_id, cities(name, state), series(name), profiles(role)")
       .order("created_at", { ascending: false });
 
     if (!error && data) {
@@ -82,6 +78,8 @@ export async function GET(request: Request) {
           invite_state = "invited"; // linked account we couldn't read sign-in state for
         }
 
+        const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
+
         return {
           id: row.id,
           full_name: row.full_name,
@@ -94,6 +92,8 @@ export async function GET(request: Request) {
           series: series?.name ?? null,
           invited: invite_state !== "none",
           invite_state,
+          profile_id: row.profile_id ?? null,
+          role: profile?.role ?? null,
         };
       });
       // Empty state is returned cleanly as an empty array (page shows "No registrations yet").
@@ -104,30 +104,62 @@ export async function GET(request: Request) {
   return NextResponse.json({ players: MOCK_REGISTRATIONS });
 }
 
-// PHASE 2: Player↔Commissioner designation. This updates `profiles.role`, which
-// requires portal auth accounts that don't exist in Phase 1 (nothing creates a
-// `profiles` row at registration). The Phase-1 Registrations page does NOT render
-// the designation control, so this handler is currently unused — it's parked here
-// for Phase 2, when it will likely operate against profiles/membership joined back
-// to registrations by email.
+// Player↔Commissioner designation against real profiles. One commissioner PER
+// CITY: promoting a player demotes only the current commissioner(s) in that same
+// city (derived from the target's paid registration), not every commissioner
+// system-wide (the old bug).
 export async function PUT(request: Request) {
-  if (!isAuthorized(request)) {
+  if (!(await isAdminRequest())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const body = await request.json().catch(() => null);
   const designation = String(body?.designation ?? "player").toLowerCase();
-  const nextRole: "player" | "admin" | "commissioner" = designation === "commissioner" ? "commissioner" : "player";
-  const profileId = body?.profileId ?? body?.id;
-
-  const supabase = createAdminClient();
-  if (supabase && profileId) {
-    await supabase.from("profiles").update({ role: nextRole }).eq("id", profileId);
-    if (designation === "commissioner") {
-      await supabase.from("profiles").update({ role: "player" }).neq("id", profileId).eq("role", "commissioner");
-    }
-    return NextResponse.json({ success: true, designation });
+  const profileId = (body?.profileId ?? body?.id)?.toString();
+  if (!profileId) {
+    return NextResponse.json({ error: "Player id is required." }, { status: 400 });
   }
 
-  return NextResponse.json({ error: "Player not found" }, { status: 404 });
+  const supabase: any = createAdminClient();
+  if (!supabase) {
+    return NextResponse.json({ error: "Admin service is unavailable." }, { status: 503 });
+  }
+
+  if (designation !== "commissioner") {
+    const { error } = await supabase.from("profiles").update({ role: "player" }).eq("id", profileId);
+    if (error) return NextResponse.json({ error: "Could not update the player." }, { status: 500 });
+    return NextResponse.json({ ok: true, designation: "player" });
+  }
+
+  // Promote to commissioner, scoped to the target's city.
+  const { data: reg } = await supabase
+    .from("registrations")
+    .select("city_id")
+    .eq("profile_id", profileId)
+    .eq("paid_status", "paid")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const cityId = reg?.city_id ?? null;
+
+  // Demote the current commissioner(s) in this city only.
+  if (cityId) {
+    const { data: peers } = await supabase
+      .from("registrations")
+      .select("profile_id, profiles!inner(role)")
+      .eq("city_id", cityId)
+      .eq("paid_status", "paid")
+      .eq("profiles.role", "commissioner");
+    const demote = [
+      ...new Set(((peers ?? []) as any[]).map((r) => r.profile_id).filter((pid: string) => pid && pid !== profileId)),
+    ];
+    if (demote.length) {
+      await supabase.from("profiles").update({ role: "player" }).in("id", demote);
+    }
+  }
+
+  const { error } = await supabase.from("profiles").update({ role: "commissioner" }).eq("id", profileId);
+  if (error) return NextResponse.json({ error: "Could not update the player." }, { status: 500 });
+
+  return NextResponse.json({ ok: true, designation: "commissioner", cityScoped: !!cityId });
 }

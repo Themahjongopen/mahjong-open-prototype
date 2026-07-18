@@ -18,6 +18,8 @@ type RegistrationRow = {
   series: string | null;
   invited: boolean;
   invite_state: InviteState;
+  profile_id?: string | null;
+  role?: string | null;
 };
 
 type Filter = "all" | "paid" | "pending";
@@ -44,6 +46,33 @@ export default function AdminRegistrationsPage() {
   const [filter, setFilter] = useState<Filter>("all");
   const [busyId, setBusyId] = useState<string | null>(null);
   const [bulkBusy, setBulkBusy] = useState(false);
+  const [roleBusyId, setRoleBusyId] = useState<string | null>(null);
+
+  async function toggleCommissioner(row: RegistrationRow) {
+    if (!row.profile_id) return;
+    const makeCommissioner = row.role !== "commissioner";
+    const confirmText = makeCommissioner
+      ? `Make ${row.full_name ?? row.email} the commissioner for ${row.city ?? "their city"}? This replaces the current commissioner there.`
+      : `Remove commissioner from ${row.full_name ?? row.email}?`;
+    if (!window.confirm(confirmText)) return;
+
+    setRoleBusyId(row.id);
+    setMessage(null);
+    const response = await fetch("/api/admin/players", {
+      method: "PUT",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ profileId: row.profile_id, designation: makeCommissioner ? "commissioner" : "player" }),
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (response.ok) {
+      setMessage(makeCommissioner ? "Commissioner updated." : "Commissioner removed.");
+      await loadRows();
+    } else {
+      setMessage(payload.error ?? "Could not update role.");
+    }
+    setRoleBusyId(null);
+  }
 
   async function loadRows() {
     setLoading(true);
@@ -271,6 +300,22 @@ export default function AdminRegistrationsPage() {
                   ) : (
                     <span style={{ fontSize: 12, color: "var(--ink-500)" }}>—</span>
                   )}
+                  {r.profile_id ? (
+                    r.role === "commissioner" ? (
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginTop: 6 }}>
+                        <span className="badge badge-pink" style={{ fontSize: 11 }}>Commissioner</span>
+                        <button type="button" className="btn" style={{ fontSize: 11, padding: "3px 9px" }} disabled={roleBusyId === r.id} onClick={() => toggleCommissioner(r)}>
+                          {roleBusyId === r.id ? "…" : "Remove"}
+                        </button>
+                      </div>
+                    ) : r.role === "admin" ? (
+                      <span className="badge badge-mute" style={{ fontSize: 11, marginTop: 6, alignSelf: "flex-start" }}>Admin</span>
+                    ) : (
+                      <button type="button" className="btn" style={{ fontSize: 11, padding: "3px 9px", marginTop: 6 }} disabled={roleBusyId === r.id} onClick={() => toggleCommissioner(r)}>
+                        {roleBusyId === r.id ? "…" : "Make commissioner"}
+                      </button>
+                    )
+                  ) : null}
                 </div>
               </div>
             ))

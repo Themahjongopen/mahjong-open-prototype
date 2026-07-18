@@ -4,7 +4,7 @@ export type UserRole = "player" | "admin" | "commissioner";
 export type MembershipStatus = "pending" | "active" | "canceled";
 export type PaidStatus = "unpaid" | "paid" | "refunded";
 export type TableStatus = "open" | "full" | "completed" | "canceled";
-export type ScoreStatus = "pending" | "approved" | "rejected" | "edited";
+export type ScoreStatus = "submitted" | "edited" | "voided";
 export type SkillLevel = "beginner" | "intermediate" | "advanced";
 
 export interface Database {

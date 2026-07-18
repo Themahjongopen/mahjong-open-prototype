@@ -1,20 +1,9 @@
 import { NextResponse } from "next/server";
 import { createAdminClient, listAuthUsersByEmail } from "@/lib/supabase/server";
-import { ADMIN_COOKIE_NAME, isValidAdminCookie } from "@/lib/admin/passcode";
+import { isAdminRequest } from "@/lib/admin/auth";
 import { sendPortalInvite } from "@/lib/email/portalInvite";
 
 export const runtime = "nodejs";
-
-// Defense in depth — proxy.ts already gates /api/admin/*, but re-validate here.
-function isAuthorized(request: Request) {
-  const cookieHeader = request.headers.get("cookie") ?? "";
-  const cookie = cookieHeader
-    .split(";")
-    .map((part) => part.trim())
-    .find((part) => part.startsWith(`${ADMIN_COOKIE_NAME}=`));
-  if (!cookie) return false;
-  return isValidAdminCookie(cookie.slice(ADMIN_COOKIE_NAME.length + 1), process.env.ADMIN_PASSCODE);
-}
 
 type Status = "sent" | "skipped" | "error";
 type InviteOutcome = { registrationId: string; email: string | null; status: Status; message?: string };
@@ -25,7 +14,7 @@ type InviteOutcome = { registrationId: string; email: string | null; status: Sta
 // styling. Only PAID registrants are invited; already-active accounts (the user
 // has signed in) are skipped and pointed at the password-reset flow instead.
 export async function POST(request: Request) {
-  if (!isAuthorized(request)) {
+  if (!(await isAdminRequest())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

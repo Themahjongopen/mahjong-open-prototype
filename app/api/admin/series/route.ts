@@ -1,27 +1,11 @@
 import { NextResponse } from "next/server";
-import { ADMIN_COOKIE_NAME, isValidAdminCookie } from "@/lib/admin/passcode";
+import { isAdminRequest } from "@/lib/admin/auth";
 import { createAdminClient } from "@/lib/supabase/server";
 
 // Columns returned to the admin Series page. Matches the live `series` table
 // from migration 003 (league-wide series — no city, no quarter/year).
 const SERIES_COLUMNS =
   "id, name, starts_at, ends_at, registration_closes_at, total_weeks, price_cents, is_active, created_at";
-
-function getCookieValue(request: Request) {
-  const cookieHeader = request.headers.get("cookie") ?? "";
-  const cookieEntries = cookieHeader.split(";").map((entry) => entry.trim()).filter(Boolean);
-  const adminCookie = cookieEntries.find((entry) => entry.startsWith(`${ADMIN_COOKIE_NAME}=`));
-
-  if (!adminCookie) {
-    return undefined;
-  }
-
-  return decodeURIComponent(adminCookie.split("=")[1]);
-}
-
-function isAuthorized(request: Request) {
-  return isValidAdminCookie(getCookieValue(request), process.env.ADMIN_PASSCODE);
-}
 
 // The `name` column is UNIQUE. Guard case-insensitively before writing so the
 // admin gets a friendly 409 instead of a raw Postgres constraint error.
@@ -87,8 +71,8 @@ function parseSeriesBody(body: any) {
   };
 }
 
-export async function GET(request: Request) {
-  if (!isAuthorized(request)) {
+export async function GET() {
+  if (!(await isAdminRequest())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -112,7 +96,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  if (!isAuthorized(request)) {
+  if (!(await isAdminRequest())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -154,7 +138,7 @@ export async function POST(request: Request) {
 }
 
 export async function PUT(request: Request) {
-  if (!isAuthorized(request)) {
+  if (!(await isAdminRequest())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -229,7 +213,7 @@ export async function PUT(request: Request) {
 }
 
 export async function DELETE(request: Request) {
-  if (!isAuthorized(request)) {
+  if (!(await isAdminRequest())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
