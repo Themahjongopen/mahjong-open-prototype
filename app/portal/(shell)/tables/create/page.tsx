@@ -1,7 +1,79 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { Info } from "lucide-react";
+
+const ROUND_TYPE_INFO: { name: string; desc: string }[] = [
+  { name: "Social", desc: "Light conversation, casual play" },
+  { name: "Focused", desc: "Minimal talking, game focused" },
+  { name: "Lightning", desc: "15-minute rounds; a quick way to get in a game when you’re short on time" },
+];
+
+// Hover (desktop) or tap (mobile) info popover describing the round types.
+function RoundTypeInfo() {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLSpanElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function onDocClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("mousedown", onDocClick);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDocClick);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  return (
+    <span
+      ref={ref}
+      style={{ position: "relative", display: "inline-flex" }}
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+    >
+      <button
+        type="button"
+        aria-label="What do the round types mean?"
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
+        style={{ background: "none", border: "none", padding: 0, cursor: "pointer", color: "var(--ink-500)", display: "inline-flex", alignItems: "center" }}
+      >
+        <Info size={14} />
+      </button>
+      {open && (
+        <div
+          role="tooltip"
+          style={{
+            position: "absolute",
+            top: "calc(100% + 8px)",
+            left: 0,
+            zIndex: 30,
+            width: 264,
+            maxWidth: "80vw",
+            background: "#fff",
+            border: "1px solid var(--hair-200)",
+            borderRadius: "var(--radius-md)",
+            boxShadow: "var(--shadow-lg)",
+            padding: "12px 14px",
+          }}
+        >
+          {ROUND_TYPE_INFO.map((t, i) => (
+            <p key={t.name} style={{ margin: i < ROUND_TYPE_INFO.length - 1 ? "0 0 8px" : 0, fontSize: 13, lineHeight: 1.5, color: "var(--ink-700)" }}>
+              <strong style={{ color: "var(--ink-900)" }}>{t.name}</strong> — {t.desc}
+            </p>
+          ))}
+        </div>
+      )}
+    </span>
+  );
+}
 
 export default function CreateTablePage() {
   const router = useRouter();
@@ -43,12 +115,15 @@ export default function CreateTablePage() {
     router.push(`/portal/tables/${payload.id}`);
   }
 
-  function field(label: string, required: boolean, children: React.ReactNode) {
+  function field(label: string, required: boolean, children: React.ReactNode, info?: React.ReactNode) {
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-        <label style={{ fontSize: 13, fontWeight: 600, color: "var(--ink-800)" }}>
-          {label} {required && <span style={{ color: "var(--pink-500)" }}>*</span>}
-        </label>
+        <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+          <label style={{ fontSize: 13, fontWeight: 600, color: "var(--ink-800)" }}>
+            {label} {required && <span style={{ color: "var(--pink-500)" }}>*</span>}
+          </label>
+          {info}
+        </div>
         {children}
       </div>
     );
@@ -93,7 +168,8 @@ export default function CreateTablePage() {
             <option value="social">Social</option>
             <option value="focused">Focused</option>
             <option value="lightning">Lightning</option>
-          </select>
+          </select>,
+          <RoundTypeInfo />
         )}
         {field("Notes", false,
           <textarea className="input-mo" rows={3} placeholder="Anything players should know" value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} style={{ resize: "vertical" }} />
