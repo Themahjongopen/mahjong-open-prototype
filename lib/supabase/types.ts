@@ -4,7 +4,7 @@ export type UserRole = "player" | "admin" | "commissioner";
 export type MembershipStatus = "pending" | "active" | "canceled";
 export type PaidStatus = "unpaid" | "paid" | "refunded";
 export type TableStatus = "open" | "full" | "completed" | "canceled";
-export type ScoreStatus = "pending" | "approved" | "rejected" | "edited";
+export type ScoreStatus = "submitted" | "edited" | "voided";
 export type SkillLevel = "beginner" | "intermediate" | "advanced";
 
 export interface Database {
@@ -16,6 +16,9 @@ export interface Database {
           full_name: string | null;
           email: string | null;
           role: UserRole;
+          skill_level: SkillLevel | null;
+          notification_preferences: Json;
+          avatar_url: string | null;
           created_at: string;
         };
         Insert: {
@@ -23,12 +26,18 @@ export interface Database {
           full_name?: string | null;
           email?: string | null;
           role?: UserRole;
+          skill_level?: SkillLevel | null;
+          notification_preferences?: Json;
+          avatar_url?: string | null;
           created_at?: string;
         };
         Update: {
           full_name?: string | null;
           email?: string | null;
           role?: UserRole;
+          skill_level?: SkillLevel | null;
+          notification_preferences?: Json;
+          avatar_url?: string | null;
         };
         Relationships: [];
       };
@@ -494,7 +503,21 @@ export interface Database {
       };
     };
     Views: {
-      [_ in never]: never;
+      // Directory-safe member roster (migration 009). RLS-scoped to the
+      // viewer's paid city+series cohort; exposes no private columns.
+      directory_members: {
+        Row: {
+          profile_id: string | null;
+          full_name: string | null;
+          city_id: string | null;
+          city_name: string | null;
+          skill_level: SkillLevel | null;
+          is_commissioner: boolean | null;
+          series_id: string | null;
+          avatar_url: string | null;
+        };
+        Relationships: [];
+      };
     };
     Functions: {
       [_ in never]: never;

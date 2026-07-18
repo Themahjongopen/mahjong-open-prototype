@@ -1,16 +1,17 @@
-"use client";
-
-import { usePathname } from "next/navigation";
+import { redirect } from "next/navigation";
 import AdminShell from "@/components/admin/AdminShell";
-import { getDemoUser } from "@/lib/data/auth";
+import { getPortalUser } from "@/lib/portal/session";
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
-  const user = getDemoUser();
+export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+  const session = await getPortalUser();
 
-  if (pathname === "/admin/login") {
-    return <div className="admin-login-shell">{children}</div>;
+  // Middleware guarantees a session for /admin; enforce the admin role here.
+  if (!session) {
+    redirect("/portal/login");
+  }
+  if (session.status !== "active" || !session.isAdmin) {
+    redirect("/portal");
   }
 
-  return <AdminShell adminName={user.full_name}>{children}</AdminShell>;
+  return <AdminShell adminName={session.full_name ?? session.email}>{children}</AdminShell>;
 }

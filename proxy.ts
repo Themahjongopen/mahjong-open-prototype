@@ -1,10 +1,19 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { ADMIN_COOKIE_NAME, isValidAdminCookie } from "@/lib/admin/passcode";
+import { updateSession } from "@/lib/supabase/proxy";
 
 // Coming-soon gate only fires on the live apex domain (www redirects to apex at
 // the platform level). Vercel previews and localhost are never gated.
 const GATED_HOSTS = new Set(["themahjongopen.com", "www.themahjongopen.com"]);
 const PREVIEW_COOKIE = "cs_preview";
+
+// Portal routes that must stay reachable without a session.
+const PORTAL_PUBLIC_PATHS = [
+  "/portal/login",
+  "/portal/set-password",
+  "/portal/reset-password",
+  "/portal/update-password",
+  "/portal/auth/callback",
+];
 
 // Paths that stay reachable even when the coming-soon gate is on.
 function isComingSoonExempt(pathname: string) {
@@ -13,6 +22,8 @@ function isComingSoonExempt(pathname: string) {
     pathname.startsWith("/coming-soon/") ||
     pathname.startsWith("/api/") ||
     pathname.startsWith("/admin") ||
+    // Members reach the portal even while the marketing site is gated.
+    pathname.startsWith("/portal") ||
     // Metadata image routes (extensionless): social crawlers must get the actual
     // image, not the teaser HTML, so share-link previews work while gated.
     pathname.startsWith("/opengraph-image") ||
@@ -24,14 +35,8 @@ function isComingSoonExempt(pathname: string) {
   );
 }
 
-export function proxy(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
-
-  // --- Retire the exposed prototype surfaces on main (always on) ---
-  // The demo /login picker and the mock /portal are not for the public site.
-  if (pathname === "/login" || pathname === "/portal" || pathname.startsWith("/portal/")) {
-    return NextResponse.redirect(new URL("/", request.url));
-  }
 
   // --- Coming-soon gate (OFF unless the COMING_SOON env var is set) ---
   if (process.env.COMING_SOON) {
@@ -46,7 +51,6 @@ export function proxy(request: NextRequest) {
       if (!cookieOk) {
         const previewParam = request.nextUrl.searchParams.get("preview");
         if (token && previewParam === token) {
-          // Grant access: set the cookie and strip the token from the URL.
           const cleanUrl = request.nextUrl.clone();
           cleanUrl.searchParams.delete("preview");
           const res = NextResponse.redirect(cleanUrl);
@@ -65,22 +69,40 @@ export function proxy(request: NextRequest) {
     }
   }
 
-  // --- Admin passcode gate (unchanged) ---
-  const isAdminLoginPage = pathname === "/admin/login";
-  const isAdminLoginRoute = pathname === "/api/admin/login";
-  if (!isAdminLoginPage && !isAdminLoginRoute) {
-    const isAdminApi = pathname.startsWith("/api/admin/");
-    const cookieValue = request.cookies.get(ADMIN_COOKIE_NAME)?.value;
-    if (!isValidAdminCookie(cookieValue, process.env.ADMIN_PASSCODE)) {
-      if (isAdminApi) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-      }
-      if (pathname.startsWith("/admin")) {
-        const loginUrl = new URL("/admin/login", request.url);
+  // --- Portal + admin session gating (Phase 2; passcode retired) ---
+  const isPortal = pathname.startsWith("/portal");
+  const isAdminArea = pathname.startsWith("/admin") || pathname.startsWith("/api/admin/");
+
+  if (isPortal || isAdminArea) {
+    // Refresh the Supabase session and read the current user.
+    const { response, user } = await updateSession(request);
+
+    // Admins sign in through the portal; the admin role (profiles.role='admin')
+    // is enforced in the admin layout and every admin API route.
+    if (isAdminArea) {
+      if (!user) {
+        if (pathname.startsWith("/api/admin/")) {
+          return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+        const loginUrl = new URL("/portal/login", request.url);
         loginUrl.searchParams.set("next", pathname + search);
-        return NextResponse.redirect(loginUrl);
+        const redirect = NextResponse.redirect(loginUrl);
+        response.cookies.getAll().forEach((cookie) => redirect.cookies.set(cookie));
+        return redirect;
       }
+      return response;
     }
+
+    const isPublic = PORTAL_PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(p + "/"));
+    if (!isPublic && !user) {
+      const loginUrl = new URL("/portal/login", request.url);
+      loginUrl.searchParams.set("next", pathname + search);
+      const redirect = NextResponse.redirect(loginUrl);
+      response.cookies.getAll().forEach((cookie) => redirect.cookies.set(cookie));
+      return redirect;
+    }
+
+    return response;
   }
 
   return NextResponse.next();

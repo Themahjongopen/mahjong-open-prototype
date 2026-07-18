@@ -8,7 +8,7 @@ import { getDemoUser } from "@/lib/data/auth";
 
 const SHORTCUTS = [
   { label: "Manage cities", href: "/admin/cities" },
-  { label: "Manage seasons", href: "/admin/seasons" },
+  { label: "Manage series", href: "/admin/series" },
   { label: "View players", href: "/admin/players" },
   { label: "All tables", href: "/admin/tables" },
 ];
