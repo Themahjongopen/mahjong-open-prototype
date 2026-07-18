@@ -106,7 +106,7 @@ export default async function StandingsPage() {
       <Table
         title="Top Leader Score"
         subtitle="Cumulative — your best 7 weekly totals, minus any no-show penalties."
-        valueHeader="Total"
+        valueHeader="Score"
         rows={byCumulative(rows)}
         meId={meId}
         rankOf={(r) => String(r.cumulative_rank ?? "—")}

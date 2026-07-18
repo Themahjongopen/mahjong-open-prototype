@@ -13,7 +13,7 @@ export type StatBlock = { rounds: number; totalScore: number; avgScore: number }
 
 export type ProfileStats = {
   allTime: StatBlock;
-  season: StatBlock & { cumulativeRank: number | null; averageRank: number | null };
+  season: StatBlock & { cumulativeScore: number; cumulativeRank: number | null; averageRank: number | null };
 };
 
 type ScoreRow = { round_score: number; is_no_show: boolean; is_no_show_bonus: boolean };
@@ -45,15 +45,15 @@ export async function getProfileStats(admin: any, userId: string, seriesId: stri
   const allTime = block(playedScores(allRows));
 
   if (!seriesId) {
-    return { allTime, season: { ...EMPTY, cumulativeRank: null, averageRank: null } };
+    return { allTime, season: { ...EMPTY, cumulativeScore: 0, cumulativeRank: null, averageRank: null } };
   }
 
   // Current season: read straight from the standings view so the profile always
-  // matches the standings page (rounds/total/average + both ranks, with the
-  // 5-round gate leaving averageRank null).
+  // matches the standings page (rounds/total/average, the Cumulative score +
+  // rank, and the Average rank — 5-round gate leaves averageRank null).
   const { data: standing } = await admin
     .from("member_series_standings")
-    .select("rounds_played, total_score, average_score, cumulative_rank, average_rank")
+    .select("rounds_played, total_score, average_score, cumulative_score, cumulative_rank, average_rank")
     .eq("series_id", seriesId)
     .eq("user_id", userId)
     .maybeSingle();
@@ -63,10 +63,11 @@ export async function getProfileStats(admin: any, userId: string, seriesId: stri
         rounds: standing.rounds_played ?? 0,
         totalScore: standing.total_score ?? 0,
         avgScore: Number(standing.average_score ?? 0),
+        cumulativeScore: standing.cumulative_score ?? 0,
         cumulativeRank: standing.cumulative_rank ?? null,
         averageRank: standing.average_rank ?? null,
       }
-    : { ...EMPTY, cumulativeRank: null, averageRank: null };
+    : { ...EMPTY, cumulativeScore: 0, cumulativeRank: null, averageRank: null };
 
   return { allTime, season };
 }
