@@ -22,6 +22,15 @@ export default function PolicyEmbed({ embedId }: { embedId: string }) {
     const script = document.createElement("script");
     script.src = src;
     script.async = true;
+    // Termageddon's script renders the policy inside a window "load" listener.
+    // When injected after mount (esp. client-side navigation), that event has
+    // already fired and the listener would never run — so once the script has
+    // registered its listener, nudge it if the page is already loaded.
+    script.onload = () => {
+      if (document.readyState === "complete") {
+        window.dispatchEvent(new Event("load"));
+      }
+    };
     container.insertAdjacentElement("afterend", script);
   }, [embedId]);
 

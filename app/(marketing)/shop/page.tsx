@@ -44,7 +44,7 @@ const PRODUCTS: Product[] = [
     category: "Tiles & sets",
     blurb: "A festive heirloom set — bow-tied ornaments, winter florals, nutcracker jokers, and a candy-cane-red back. Hand-painted holiday cheer for every game night.",
     href: "https://thatmahjongmoment.com/discount/Mahjparlor?redirect=/products/holiday-soiree",
-    image: "https://thatmahjongmoment.com/cdn/shop/files/holiday-soiree-mahjong-tiles-400.webp?v=1778246215",
+    image: "https://thatmahjongmoment.com/cdn/shop/files/HOLIDAY_SOIREE_TILES.jpg?v=1783890580",
     bg: "var(--pink-50)",
   },
   {
@@ -60,7 +60,7 @@ const PRODUCTS: Product[] = [
     category: "Table & decor",
     blurb: "Thick clear acrylic racks with sixteen scallops per pusher and snap-in magnets. A pretty, sturdy upgrade that fits our tiles and most other brands.",
     href: "https://thatmahjongmoment.com/discount/Mahjparlor?redirect=/products/scallop-pusher-mahjong-rack",
-    image: "https://thatmahjongmoment.com/cdn/shop/files/scallop-acrylic-mahjong-racks-and-pushers-694.webp?v=1778247045",
+    image: "https://thatmahjongmoment.com/cdn/shop/files/1488D0CF-7D02-46CE-A9CC-181BB1C00677.jpg?v=1783890821",
     bg: "var(--lime-wash)",
   },
   {

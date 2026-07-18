@@ -316,24 +316,6 @@ export default function RegisterModal({ open, onClose }: RegisterModalProps) {
             </h2>
 
             <form onSubmit={handleSubmit} noValidate style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              <Field label="Profile photo">
-                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  <div style={{ width: 52, height: 52, borderRadius: "50%", overflow: "hidden", background: "var(--hair-200)", flexShrink: 0 }}>
-                    {avatarUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={avatarUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-                    ) : null}
-                  </div>
-                  <div>
-                    <button type="button" className="btn btn-ghost" onClick={() => fileRef.current?.click()} disabled={uploading} style={{ fontSize: 13, padding: "8px 14px" }}>
-                      {uploading ? "Uploading…" : avatarUrl ? "Change photo" : "Upload photo"}
-                    </button>
-                    <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={handlePhoto} style={{ display: "none" }} />
-                    <p style={{ fontSize: 12, color: "var(--ink-500)", marginTop: 4 }}>Required · JPG, PNG, or WebP · up to 3 MB.</p>
-                  </div>
-                </div>
-              </Field>
-
               <Field label="Full name">
                 <input
                   className="input-mo"
@@ -394,6 +376,24 @@ export default function RegisterModal({ open, onClose }: RegisterModalProps) {
                   <option value="intermediate">Intermediate</option>
                   <option value="advanced">Advanced</option>
                 </select>
+              </Field>
+
+              <Field label="Profile photo">
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <div style={{ width: 52, height: 52, borderRadius: "50%", overflow: "hidden", background: "var(--hair-200)", flexShrink: 0 }}>
+                    {avatarUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={avatarUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                    ) : null}
+                  </div>
+                  <div>
+                    <button type="button" className="btn btn-ghost" onClick={() => fileRef.current?.click()} disabled={uploading} style={{ fontSize: 13, padding: "8px 14px" }}>
+                      {uploading ? "Uploading…" : avatarUrl ? "Change photo" : "Upload photo"}
+                    </button>
+                    <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={handlePhoto} style={{ display: "none" }} />
+                    <p style={{ fontSize: 12, color: "var(--ink-500)", marginTop: 4 }}>Required · JPG, PNG, or WebP · up to 3 MB.</p>
+                  </div>
+                </div>
               </Field>
 
               {error && (
