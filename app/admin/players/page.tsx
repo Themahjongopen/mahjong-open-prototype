@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useConfirm } from "@/components/ConfirmProvider";
 
 const PAID_BADGE: Record<string, string> = { paid: "badge-lime", pending: "badge-butter", refunded: "badge-mute" };
 
@@ -47,14 +48,26 @@ export default function AdminRegistrationsPage() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [bulkBusy, setBulkBusy] = useState(false);
   const [roleBusyId, setRoleBusyId] = useState<string | null>(null);
+  const confirm = useConfirm();
 
   async function toggleCommissioner(row: RegistrationRow) {
     if (!row.profile_id) return;
     const makeCommissioner = row.role !== "commissioner";
-    const confirmText = makeCommissioner
-      ? `Make ${row.full_name ?? row.email} the commissioner for ${row.city ?? "their city"}? This replaces the current commissioner there.`
-      : `Remove commissioner from ${row.full_name ?? row.email}?`;
-    if (!window.confirm(confirmText)) return;
+    const ok = await confirm(
+      makeCommissioner
+        ? {
+            title: "Make commissioner?",
+            message: `Make ${row.full_name ?? row.email} the commissioner for ${row.city ?? "their city"}? This replaces the current commissioner there.`,
+            confirmLabel: "Make commissioner",
+          }
+        : {
+            title: "Remove commissioner?",
+            message: `Remove commissioner from ${row.full_name ?? row.email}?`,
+            confirmLabel: "Remove",
+            danger: true,
+          }
+    );
+    if (!ok) return;
 
     setRoleBusyId(row.id);
     setMessage(null);
@@ -145,8 +158,12 @@ export default function AdminRegistrationsPage() {
   }
 
   async function handleRowInvite(row: RegistrationRow, resend: boolean) {
-    const verb = resend ? "Re-send the portal invite to" : "Send a portal invite to";
-    if (!window.confirm(`${verb} ${row.full_name ?? row.email} (${row.email})?`)) return;
+    const confirmed = await confirm({
+      title: resend ? "Re-send invite?" : "Send invite?",
+      message: `${resend ? "Re-send the portal invite to" : "Send a portal invite to"} ${row.full_name ?? row.email} (${row.email})?`,
+      confirmLabel: resend ? "Re-send" : "Send invite",
+    });
+    if (!confirmed) return;
     setBusyId(row.id);
     setMessage(null);
     const { ok, payload } = await postInvites([row.id]);
@@ -162,7 +179,12 @@ export default function AdminRegistrationsPage() {
   async function handleBulkInvite() {
     const targets = uninvitedPaid;
     if (targets.length === 0) return;
-    if (!window.confirm(`Send a portal invite to ${targets.length} paid ${targets.length === 1 ? "player" : "players"} who haven't been invited yet?`)) return;
+    const confirmed = await confirm({
+      title: "Send invites?",
+      message: `Send a portal invite to ${targets.length} paid ${targets.length === 1 ? "player" : "players"} who haven't been invited yet?`,
+      confirmLabel: `Invite ${targets.length}`,
+    });
+    if (!confirmed) return;
     setBulkBusy(true);
     setMessage(null);
     const { ok, payload } = await postInvites(targets.map((r) => r.id));

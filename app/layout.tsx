@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Bodoni_Moda, Quicksand } from "next/font/google";
 import { Analytics } from "@vercel/analytics/react";
+import ConfirmProvider from "@/components/ConfirmProvider";
 import "./globals.css";
 
 const bodoniModa = Bodoni_Moda({
@@ -81,7 +82,7 @@ export default function RootLayout({
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
         />
-        {children}
+        <ConfirmProvider>{children}</ConfirmProvider>
         <Analytics />
       </body>
     </html>

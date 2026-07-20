@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useConfirm } from "@/components/ConfirmProvider";
 import type { AdminScoreSubmission } from "@/lib/admin/scores";
 
 const STATUS_COLORS: Record<string, string> = {
@@ -12,6 +13,7 @@ const STATUS_COLORS: Record<string, string> = {
 
 export default function ScoreCorrectionCard({ submission }: { submission: AdminScoreSubmission }) {
   const router = useRouter();
+  const confirm = useConfirm();
   const [scores, setScores] = useState<Record<string, string>>(
     Object.fromEntries(submission.players.map((p) => [p.id, String(p.round_score)]))
   );
@@ -44,7 +46,7 @@ export default function ScoreCorrectionCard({ submission }: { submission: AdminS
   }
 
   async function voidRound() {
-    if (!window.confirm("Void this round? It will stop counting toward standings.")) return;
+    if (!(await confirm({ title: "Void this round?", message: "It will stop counting toward standings.", confirmLabel: "Void round", danger: true }))) return;
     setLoading("void");
     setError(null);
     const res = await fetch(`/api/admin/scores/${submission.id}`, {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useConfirm } from "@/components/ConfirmProvider";
 
 interface Series {
   id: string;
@@ -68,6 +69,7 @@ export default function AdminSeriesPage() {
   const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const confirm = useConfirm();
 
   async function loadSeries() {
     const response = await fetch("/api/admin/series", { method: "GET" });
@@ -169,7 +171,12 @@ export default function AdminSeriesPage() {
 
   async function handleDelete(seriesId: string) {
     const item = series.find((s) => s.id === seriesId);
-    const confirmed = window.confirm(item ? `Delete ${item.name}? This can't be undone.` : "Delete this series?");
+    const confirmed = await confirm({
+      title: "Delete series?",
+      message: item ? `Delete ${item.name}? This can't be undone.` : "Delete this series? This can't be undone.",
+      confirmLabel: "Delete",
+      danger: true,
+    });
 
     if (!confirmed) {
       return;

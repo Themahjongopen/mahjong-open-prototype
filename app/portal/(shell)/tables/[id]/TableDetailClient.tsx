@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { CalendarDays, MapPin, Clock } from "lucide-react";
 import { useToast } from "@/components/portal/PortalShellClient";
+import { useConfirm } from "@/components/ConfirmProvider";
 import Avatar from "@/components/portal/Avatar";
 import type { LeagueTable } from "@/lib/portal/tables";
 import type { TableSubmission } from "@/lib/portal/scores";
@@ -32,6 +33,7 @@ export default function TableDetailClient({
   submission: TableSubmission | null;
 }) {
   const { showToast } = useToast();
+  const confirm = useConfirm();
   const router = useRouter();
   const [loading, setLoading] = useState<Action>(null);
 
@@ -69,16 +71,33 @@ export default function TableDetailClient({
     run("join", `/api/tables/${table.id}/seats`, { method: "POST" }, "Seat claimed!");
   }
 
-  function handleLeave() {
-    const msg = withinCutoff
-      ? "Leaving within 24 hours of game time: if no one takes your seat, the host may mark it a no-show (−25). Leave anyway?"
-      : "Leave this table? Your seat will reopen for other players.";
-    if (!window.confirm(msg)) return;
+  async function handleLeave() {
+    const ok = await confirm(
+      withinCutoff
+        ? {
+            title: "Leave within 24 hours?",
+            message: "If no one takes your seat before game time, the host may mark it a no-show (−25).",
+            confirmLabel: "Leave anyway",
+            danger: true,
+          }
+        : {
+            title: "Leave this table?",
+            message: "Your seat will reopen for other players.",
+            confirmLabel: "Leave table",
+          }
+    );
+    if (!ok) return;
     run("leave", `/api/tables/${table.id}/seats/cancel`, { method: "POST" }, "Seat cancelled.");
   }
 
-  function handleCancelTable() {
-    if (!window.confirm("Cancel this table for everyone? This can't be undone.")) return;
+  async function handleCancelTable() {
+    const ok = await confirm({
+      title: "Cancel this table?",
+      message: "This cancels the table for everyone and can't be undone.",
+      confirmLabel: "Cancel table",
+      danger: true,
+    });
+    if (!ok) return;
     run(
       "cancel",
       `/api/tables/${table.id}`,
@@ -87,8 +106,13 @@ export default function TableDetailClient({
     );
   }
 
-  function handleMarkPlayed() {
-    if (!window.confirm("Mark this table as played? You'll then enter the round's scores.")) return;
+  async function handleMarkPlayed() {
+    const ok = await confirm({
+      title: "Mark as played?",
+      message: "You'll then enter the round's scores for each player.",
+      confirmLabel: "Mark as played",
+    });
+    if (!ok) return;
     run(
       "complete",
       `/api/tables/${table.id}`,

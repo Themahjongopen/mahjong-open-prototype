@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useConfirm } from "@/components/ConfirmProvider";
 
 interface City {
   id: string;
@@ -18,6 +19,7 @@ export default function AdminCitiesPage() {
   const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const confirm = useConfirm();
 
   async function loadCities() {
     const response = await fetch("/api/admin/cities", { method: "GET" });
@@ -119,7 +121,12 @@ export default function AdminCitiesPage() {
 
   async function handleDelete(cityId: string) {
     const city = cities.find((item) => item.id === cityId);
-    const confirmed = window.confirm(city ? `Delete ${city.name}? This can't be undone.` : "Delete this city?");
+    const confirmed = await confirm({
+      title: "Delete city?",
+      message: city ? `Delete ${city.name}? This can't be undone.` : "Delete this city? This can't be undone.",
+      confirmLabel: "Delete",
+      danger: true,
+    });
 
     if (!confirmed) {
       return;
