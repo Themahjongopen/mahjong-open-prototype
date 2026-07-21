@@ -220,7 +220,10 @@ export default function RegisterModal({ open, onClose }: RegisterModalProps) {
           boxShadow: "var(--shadow-lg)",
           width: "100%",
           maxWidth: 480,
-          padding: "40px 36px",
+          maxHeight: "90vh",
+          display: "flex",
+          flexDirection: "column",
+          overflow: "hidden",
           position: "relative",
         }}
       >
@@ -232,17 +235,28 @@ export default function RegisterModal({ open, onClose }: RegisterModalProps) {
             position: "absolute",
             top: 16,
             right: 16,
-            background: "none",
+            zIndex: 2,
+            background: "#fff",
             border: "none",
             cursor: "pointer",
             color: "var(--ink-500)",
             padding: 4,
-            borderRadius: "var(--radius-sm)",
+            borderRadius: "50%",
+            lineHeight: 0,
           }}
         >
           <X size={18} />
         </button>
 
+        <div
+          style={{
+            flex: "1 1 auto",
+            minHeight: 0,
+            overflowY: "auto",
+            WebkitOverflowScrolling: "touch",
+            padding: "40px 36px",
+          }}
+        >
         {step === "success" ? (
           <div style={{ textAlign: "center", padding: "16px 0" }}>
             <div
@@ -411,6 +425,7 @@ export default function RegisterModal({ open, onClose }: RegisterModalProps) {
             </form>
           </>
         )}
+        </div>
       </div>
     </div>
   );
