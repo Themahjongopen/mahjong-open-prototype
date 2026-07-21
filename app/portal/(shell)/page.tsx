@@ -2,6 +2,7 @@ import Link from "next/link";
 import { CalendarDays, MapPin, Trophy, Plus } from "lucide-react";
 import { getDashboardData } from "@/lib/data";
 import { getDemoUser } from "@/lib/data/auth";
+import HomeStats from "@/components/portal/HomeStats";
 
 function greeting(name: string) {
   const hour = new Date().getHours();
@@ -11,7 +12,7 @@ function greeting(name: string) {
 
 export default async function PortalDashboard() {
   const user = getDemoUser();
-  const { nextSeat, standing } = await getDashboardData(user.id);
+  const { nextSeat } = await getDashboardData(user.id);
   const nextTable = nextSeat?.scramble_tables ?? null;
 
   return (
@@ -72,28 +73,7 @@ export default async function PortalDashboard() {
       )}
 
       {/* Stats */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 24 }}>
-        {[
-          { label: "Rank",         value: standing?.rank ? `#${standing.rank}` : "–" },
-          { label: "Points",       value: standing?.total_points ?? 0 },
-          { label: "Games played", value: standing?.tables_played ?? 0 },
-        ].map((stat) => (
-          <div
-            key={stat.label}
-            style={{
-              background: "#fff",
-              border: "1px solid var(--hair-200)",
-              borderRadius: "var(--radius-lg)",
-              padding: "14px 12px",
-              textAlign: "center",
-              boxShadow: "var(--shadow-xs)",
-            }}
-          >
-            <p style={{ fontFamily: "var(--font-display)", fontSize: 24, color: "var(--pink-700)", lineHeight: 1 }}>{stat.value}</p>
-            <p style={{ fontSize: 11, color: "var(--ink-500)", marginTop: 4 }}>{stat.label}</p>
-          </div>
-        ))}
-      </div>
+      <HomeStats />
 
       {/* Quick actions */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 20 }}>
