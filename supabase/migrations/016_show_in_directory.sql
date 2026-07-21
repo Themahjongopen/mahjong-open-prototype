@@ -6,8 +6,9 @@
 -- BOTH the portal directory and the standings leaderboards.
 --
 -- Only the filter is added — the view bodies are otherwise identical to their
--- originals (009_directory_members_view.sql / 013_standings_views.sql), so
--- columns, scoping, grants, and security_invoker=off semantics are preserved.
+-- current definitions in 015_avatars.sql (which added avatar_url and moved
+-- directory skill_level onto profiles), so columns, scoping, grants, and
+-- security_invoker=off semantics are preserved.
 -- ============================================================
 
 BEGIN;
@@ -27,9 +28,10 @@ SELECT DISTINCT
   p.full_name               AS full_name,
   reg.city_id               AS city_id,
   c.name                    AS city_name,
-  reg.skill_level           AS skill_level,
+  p.skill_level             AS skill_level,
   (p.role = 'commissioner') AS is_commissioner,
-  reg.series_id             AS series_id
+  reg.series_id             AS series_id,
+  p.avatar_url              AS avatar_url
 FROM public.registrations reg
 JOIN public.profiles p ON p.id = reg.profile_id
 JOIN public.cities   c ON c.id = reg.city_id
@@ -57,14 +59,17 @@ REVOKE ALL ON public.directory_members FROM anon;
 GRANT SELECT ON public.directory_members TO authenticated;
 
 -- 3) Recreate member_series_standings with the show_in_directory filter.
---    Only the `base` CTE changes (adds AND p.show_in_directory = true); every
---    other CTE, column, rank, and tiebreaker is unchanged. Depends on the
---    unchanged member_weekly_scores view. CREATE OR REPLACE preserves grants,
---    but we re-REVOKE for parity with 013.
-CREATE OR REPLACE VIEW public.member_series_standings
+--    Only the `base` CTE gains AND p.show_in_directory = true; every other CTE,
+--    column (incl. avatar_url), rank, and tiebreaker matches 015. Depends on the
+--    unchanged member_weekly_scores view. DROP ... CASCADE + CREATE is required
+--    because CREATE OR REPLACE cannot change a view's column set (Postgres
+--    42P16); DROP wipes grants, so we re-REVOKE.
+DROP VIEW IF EXISTS public.member_series_standings CASCADE;
+
+CREATE VIEW public.member_series_standings
 WITH (security_invoker = off) AS
 WITH base AS (   -- every paid, directory-visible member of a series, with their city + name
-  SELECT DISTINCT r.series_id, r.city_id, r.profile_id AS user_id, p.full_name
+  SELECT DISTINCT r.series_id, r.city_id, r.profile_id AS user_id, p.full_name, p.avatar_url
   FROM public.registrations r
   JOIN public.profiles p ON p.id = r.profile_id
   WHERE r.paid_status = 'paid' AND r.profile_id IS NOT NULL AND p.show_in_directory = true
@@ -91,7 +96,7 @@ cume AS (        -- best-7-of-8 weekly totals minus all penalties
   GROUP BY series_id, user_id
 ),
 agg AS (
-  SELECT b.series_id, b.city_id, b.user_id, b.full_name,
+  SELECT b.series_id, b.city_id, b.user_id, b.full_name, b.avatar_url,
          COALESCE(pl.rounds_played, 0) AS rounds_played,
          COALESCE(pl.total_score, 0) AS total_score,
          CASE WHEN COALESCE(pl.rounds_played, 0) > 0
