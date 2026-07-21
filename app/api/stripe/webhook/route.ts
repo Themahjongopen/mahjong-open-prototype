@@ -173,10 +173,16 @@ export async function POST(request: Request) {
       const cityName = cityData?.name ?? "Unknown city";
       const seriesName = seriesData?.name ?? "The Mahjong Open";
       const firstName = (registrationData.full_name || "there").split(" ")[0];
+      // Real amount charged (after discount codes), not the series list price —
+      // so a 100%-off coupon correctly shows $0.00. Falls back to the series
+      // price only if amount_total is somehow absent (shouldn't happen for a
+      // completed session).
       const amountPaid =
-        typeof seriesData?.price_cents === "number"
-          ? `$${(seriesData.price_cents / 100).toFixed(2)}`
-          : "$80.00";
+        typeof session.amount_total === "number"
+          ? `$${(session.amount_total / 100).toFixed(2)}`
+          : typeof seriesData?.price_cents === "number"
+            ? `$${(seriesData.price_cents / 100).toFixed(2)}`
+            : "$80.00";
       const formatDate = (value?: string) =>
         value
           ? new Date(`${value}T00:00:00`).toLocaleDateString("en-US", {
