@@ -25,8 +25,8 @@ const FORMAT_STEPS = [
   },
   {
     icon: Trophy,
-    title: "Track your average score",
-    body: "Scores are self-reported after each game. Standings reflect average score over the full series.",
+    title: "Track your scores",
+    body: "Scores are self-reported each round — Top Leader Score sums your best 7 weekly totals, and Top Average Score ranks your per-round average (minimum 5 rounds).",
   },
   {
     icon: Repeat2,
@@ -73,6 +73,51 @@ const WHY_LOVE = [
   },
 ];
 
+// Series One launch cities. Add another object here and the grid below
+// accommodates it automatically — no layout changes needed.
+const LAUNCH_CITIES = [
+  { name: "Madison", state: "Mississippi", photo: "/brand-photo-2.jpg" },
+  { name: "Ocean Springs", state: "Mississippi", photo: "/brand-photo-3.jpg" },
+];
+
+type LaunchCity = (typeof LAUNCH_CITIES)[number];
+
+function LaunchCityCard({ city }: { city: LaunchCity }) {
+  return (
+    <div
+      style={{
+        borderRadius: "var(--radius-xl)",
+        overflow: "hidden",
+        border: "1px solid var(--hair-200)",
+        boxShadow: "var(--shadow-sm)",
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      {/* Top half — brand photo */}
+      <div style={{ position: "relative", width: "100%", aspectRatio: "4 / 3", background: "var(--pink-100)" }}>
+        <Image
+          src={city.photo}
+          alt={`Players enjoying American mahjong at a styled table in ${city.name}.`}
+          fill
+          style={{ objectFit: "cover" }}
+          sizes="(max-width: 900px) 90vw, 340px"
+        />
+      </div>
+      {/* Bottom half — soft sage */}
+      <div style={{ background: "var(--lime-200)", padding: "30px 28px 34px", textAlign: "center" }}>
+        <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.16em", textTransform: "uppercase", color: "var(--lime-700)", marginBottom: 10 }}>
+          Launch city
+        </p>
+        <h3 style={{ fontFamily: "var(--font-display)", fontSize: 30, fontWeight: 400, color: "var(--ink-900)", lineHeight: 1.05, marginBottom: 8 }}>
+          {city.name}
+        </h3>
+        <p style={{ fontSize: 15, color: "var(--ink-700)", margin: 0 }}>{city.state}</p>
+      </div>
+    </div>
+  );
+}
+
 const FAQS = [
   {
     q: "What is The Mahjong Open?",
@@ -92,7 +137,7 @@ const FAQS = [
   },
   {
     q: "How do standings work?",
-    a: "Scores are self-reported after each game, and standings rank by your average score across the series.",
+    a: "Top Leader Score sums your best 7 weekly totals across the 8-week series — a weekly total is your top two round scores that week. Top Average Score ranks your average points per round, once you've played at least five rounds.",
   },
 ];
 
@@ -335,6 +380,39 @@ export default function HomePage() {
                 </div>
               );
             })}
+          </div>
+        </div>
+      </section>
+
+      {/* Launch cities */}
+      <section style={{ padding: "96px 0", background: "var(--bg)" }}>
+        <div className="container-mo">
+          <div style={{ textAlign: "center", marginBottom: 52 }}>
+            <p className="eyebrow" style={{ display: "inline-flex", alignItems: "center", gap: 7, marginBottom: 14 }}>
+              <Sparkles size={14} /> Now launching
+            </p>
+            <h2 className="h2">Series One starts in{" "}<em className="serif-italic">two cities</em></h2>
+            <p className="body-lg" style={{ marginTop: 16, maxWidth: 540, marginInline: "auto" }}>
+              Our inaugural 8-week series kicks off this August. Be one of the first to take a seat at the table in your city.
+            </p>
+          </div>
+
+          <div className="launch-cities-grid">
+            {LAUNCH_CITIES.map((city) => (
+              <LaunchCityCard key={city.name} city={city} />
+            ))}
+          </div>
+
+          <p style={{ textAlign: "center", marginTop: 40 }}>
+            <span style={{ display: "inline-block", fontSize: 12, fontWeight: 600, letterSpacing: "0.03em", color: "var(--pink-700)", background: "#fff", border: "1px solid var(--pink-100)", borderRadius: "999px", padding: "7px 16px" }}>
+              Series One · Aug 17 – Oct 11, 2026
+            </span>
+          </p>
+
+          <div style={{ textAlign: "center", marginTop: 40 }}>
+            <button className="btn btn-primary" onClick={() => setModalOpen(true)} style={{ fontSize: 15 }}>
+              Save my spot →
+            </button>
           </div>
         </div>
       </section>
@@ -660,6 +738,16 @@ export default function HomePage() {
           grid-template-columns: repeat(2, 1fr);
           gap: 24px;
           max-width: 760px;
+          margin-inline: auto;
+        }
+        /* Flexible card grid — auto-fits any number of cities, centered.
+           Add a city to LAUNCH_CITIES and the grid absorbs it automatically. */
+        .launch-cities-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(260px, 340px));
+          gap: 28px;
+          justify-content: center;
+          max-width: 1080px;
           margin-inline: auto;
         }
         .format-card {

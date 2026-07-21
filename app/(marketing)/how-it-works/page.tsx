@@ -10,8 +10,8 @@ const STEPS = [
   { n: "02", title: "Get access to the player portal", body: "Once you're paid and confirmed, you'll receive login credentials for the private player portal. This is where your tables and standings live." },
   { n: "03", title: "Sign up for your weekly table", body: "Each week, browse open tables in your city — or create one. Pick your date, time, and location. You fill seat 1 automatically." },
   { n: "04", title: "Play your game", body: "Your foursome meets at the chosen spot. Play a full session of American mahjong. The table creator records the result." },
-  { n: "05", title: "Submit the score", body: "After the game, the table creator enters each player's score. Scores are visible in the portal immediately and update the leaderboard within the series." },
-  { n: "06", title: "Watch your standings update", body: "Your average score updates as the series progresses, with a minimum of 5 rounds played. Keep playing each week to climb the city leaderboard." },
+  { n: "05", title: "Submit the score", body: "After the round, the host enters each player's score. Scores are visible in the portal immediately and update the standings within the series." },
+  { n: "06", title: "Watch your standings update", body: "Both leaderboards update live as the series runs — Top Leader Score from your best weekly totals, and Top Average Score once you've played at least five rounds. Keep playing to climb your city's standings." },
 ];
 
 const FAQS = [
@@ -97,12 +97,12 @@ export default function HowItWorksPage() {
       <section style={{ padding: "72px 0" }}>
         <div className="container-mo" style={{ maxWidth: 800 }}>
           <p className="eyebrow" style={{ marginBottom: 16 }}>Scoring &amp; standings</p>
-          <h2 className="h2" style={{ marginBottom: 24 }}>Averages decide the leaderboard</h2>
+          <h2 className="h2" style={{ marginBottom: 24 }}>How the leaderboard works</h2>
           <p style={{ fontSize: 16, color: "var(--ink-700)", lineHeight: 1.65, marginBottom: 16 }}>
-            After each game, the table creator submits results — wins and points per player. Scores are visible in the portal immediately and update the leaderboard within the series.
+            After each round, the host submits every player&rsquo;s score. Results post to the portal immediately and update the standings within the series — no approval delay.
           </p>
           <p style={{ fontSize: 16, color: "var(--ink-700)", lineHeight: 1.65 }}>
-            Standings rank players by average score across all games played in the 8-week series. Keep playing to improve your position and finish strong.
+            <strong>Top Leader Score</strong>{" "}sums your best 7 weekly totals over the 8-week series — a weekly total is your top two round scores that week. <strong>Top Average Score</strong>{" "}ranks your average points per round, once you&rsquo;ve played at least five rounds.
           </p>
         </div>
       </section>
