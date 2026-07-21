@@ -31,7 +31,6 @@ export default function PortalShellClient({
   userName: string;
   isAdminRole: boolean;
 }) {
-  const [isAdmin, setIsAdmin] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const pathname = usePathname();
 
@@ -45,28 +44,11 @@ export default function PortalShellClient({
   return (
     <ToastContext.Provider value={{ showToast }}>
       <PortalAppBar
-        title={isAdmin ? "Admin View" : title}
-        isAdmin={isAdmin}
-        onToggleAdmin={isAdminRole ? () => setIsAdmin((v) => !v) : undefined}
+        title={title}
+        isAdminRole={isAdminRole}
         userName={userName}
       />
       <div className="portal-content">
-        {isAdmin && (
-          <div
-            style={{
-              background: "var(--ink-900)",
-              color: "var(--crimson-400)",
-              fontSize: 12,
-              fontWeight: 700,
-              letterSpacing: "0.12em",
-              textTransform: "uppercase",
-              textAlign: "center",
-              padding: "8px",
-            }}
-          >
-            Admin view — {userName}
-          </div>
-        )}
         {children}
       </div>
       <BottomTabBar />

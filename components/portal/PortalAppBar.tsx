@@ -8,12 +8,12 @@ import { useRouter } from "next/navigation";
 
 interface PortalAppBarProps {
   title: string;
-  isAdmin?: boolean;
-  onToggleAdmin?: () => void;
   userName?: string;
+  // Admins get a "Switch to admin view" link that navigates to /admin.
+  isAdminRole?: boolean;
 }
 
-export default function PortalAppBar({ title, isAdmin, onToggleAdmin, userName }: PortalAppBarProps) {
+export default function PortalAppBar({ title, userName, isAdminRole }: PortalAppBarProps) {
   const [popoverOpen, setPopoverOpen] = useState(false);
   const router = useRouter();
 
@@ -45,14 +45,14 @@ export default function PortalAppBar({ title, isAdmin, onToggleAdmin, userName }
               width: 32,
               height: 32,
               borderRadius: "50%",
-              background: isAdmin ? "var(--ink-900)" : "var(--pink-100)",
-              border: "2px solid " + (isAdmin ? "var(--crimson-400)" : "var(--pink-300)"),
+              background: "var(--pink-100)",
+              border: "2px solid var(--pink-300)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               fontSize: 12,
               fontWeight: 700,
-              color: isAdmin ? "var(--crimson-400)" : "var(--pink-700)",
+              color: "var(--pink-700)",
               cursor: "pointer",
             }}
           >
@@ -78,9 +78,9 @@ export default function PortalAppBar({ title, isAdmin, onToggleAdmin, userName }
                 <p style={{ fontSize: 13, fontWeight: 600, color: "var(--ink-900)" }}>{userName || "Player"}</p>
                 <p style={{ fontSize: 12, color: "var(--ink-500)" }}>Spring 2026 Season</p>
               </div>
-              {onToggleAdmin && (
+              {isAdminRole && (
                 <button
-                  onClick={() => { onToggleAdmin(); setPopoverOpen(false); }}
+                  onClick={() => { setPopoverOpen(false); router.push("/admin"); }}
                   style={{
                     width: "100%",
                     display: "flex",
@@ -97,7 +97,7 @@ export default function PortalAppBar({ title, isAdmin, onToggleAdmin, userName }
                   }}
                 >
                   <ShieldCheck size={15} color="var(--peri-400)" />
-                  {isAdmin ? "Switch to player view" : "Switch to admin view"}
+                  Switch to admin view
                 </button>
               )}
               <button
