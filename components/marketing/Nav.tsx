@@ -87,17 +87,6 @@ export default function Nav({ activePage, onRegisterClick }: NavProps) {
 
           {/* Actions */}
           <div style={{ display: "flex", alignItems: "center", gap: 16 }} className="hidden-mobile">
-            <Link
-              href="/portal/login"
-              style={{
-                fontSize: 14,
-                fontWeight: 600,
-                color: "var(--pink-600)",
-                textDecoration: "none",
-              }}
-            >
-              Sign In
-            </Link>
             <button className="btn btn-primary" style={{ fontSize: 14, padding: "9px 20px" }} onClick={onRegisterClick}>
               Register
             </button>
@@ -151,20 +140,6 @@ export default function Nav({ activePage, onRegisterClick }: NavProps) {
             </Link>
           ))}
           <div style={{ marginTop: 24, display: "flex", flexDirection: "column", gap: 12 }}>
-            <Link
-              href="/portal/login"
-              onClick={() => setMobileOpen(false)}
-              style={{
-                fontSize: 15,
-                fontWeight: 600,
-                color: "var(--pink-600)",
-                textDecoration: "none",
-                textAlign: "center",
-                padding: "10px",
-              }}
-            >
-              Sign In
-            </Link>
             <button
               className="btn btn-primary"
               style={{ fontSize: 15, padding: "12px 24px" }}
