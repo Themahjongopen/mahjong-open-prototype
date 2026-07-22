@@ -41,6 +41,7 @@ export const metadata: Metadata = {
   ],
   alternates: { canonical: "/" },
   robots: isIndexable ? undefined : { index: false, follow: false },
+  verification: { google: "kN2Y9zGfQ8wL_Ln8Wk-L0j0RX5zm6DfFIlptpWf9uBY" },
   openGraph: {
     title: "The Mahjong Open — City-Based Mahjong Social League",
     description:
