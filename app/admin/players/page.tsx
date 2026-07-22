@@ -45,6 +45,7 @@ export default function AdminRegistrationsPage() {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
   const [filter, setFilter] = useState<Filter>("all");
+  const [cityFilter, setCityFilter] = useState<string>("all");
   const [busyId, setBusyId] = useState<string | null>(null);
   const [bulkBusy, setBulkBusy] = useState(false);
   const [roleBusyId, setRoleBusyId] = useState<string | null>(null);
@@ -112,10 +113,28 @@ export default function AdminRegistrationsPage() {
     [rows]
   );
 
-  const filteredRows = useMemo(() => {
+  // Rows after the paid/pending status filter only — the base set the city
+  // breakdown counts against, so switching status updates the per-city counts too.
+  const statusFilteredRows = useMemo(() => {
     if (filter === "all") return rows;
     return rows.filter((r) => r.paid_status === filter);
   }, [rows, filter]);
+
+  // Per-city counts (label -> count) over statusFilteredRows, sorted by count
+  // descending. Rows with no city on file are grouped under "No city".
+  const cityCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const r of statusFilteredRows) {
+      const label = r.city ?? "No city";
+      counts.set(label, (counts.get(label) ?? 0) + 1);
+    }
+    return Array.from(counts.entries()).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+  }, [statusFilteredRows]);
+
+  const filteredRows = useMemo(() => {
+    if (cityFilter === "all") return statusFilteredRows;
+    return statusFilteredRows.filter((r) => (r.city ?? "No city") === cityFilter);
+  }, [statusFilteredRows, cityFilter]);
 
   function handleExport() {
     const header = ["Name", "Email", "Phone", "City", "Series", "Skill", "Payment status", "Registered date"];
@@ -242,6 +261,33 @@ export default function AdminRegistrationsPage() {
             {f.label}
           </button>
         ))}
+      </div>
+
+      <div style={{ marginBottom: 16 }}>
+        <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--ink-500)", marginBottom: 8 }}>
+          By city
+        </p>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <button
+            type="button"
+            onClick={() => setCityFilter("all")}
+            className={`badge ${cityFilter === "all" ? "badge-pink" : "badge-mute"}`}
+            style={{ cursor: "pointer", border: "1px solid var(--hair-200)", background: cityFilter === "all" ? undefined : "#fff" }}
+          >
+            All cities ({statusFilteredRows.length})
+          </button>
+          {cityCounts.map(([city, count]) => (
+            <button
+              key={city}
+              type="button"
+              onClick={() => setCityFilter(city)}
+              className={`badge ${cityFilter === city ? "badge-pink" : "badge-mute"}`}
+              style={{ cursor: "pointer", border: "1px solid var(--hair-200)", background: cityFilter === city ? undefined : "#fff" }}
+            >
+              {city} ({count})
+            </button>
+          ))}
+        </div>
       </div>
 
       <div style={{ background: "#fff", border: "1px solid var(--hair-200)", borderRadius: "var(--radius-lg)", overflow: "hidden", boxShadow: "var(--shadow-xs)" }}>

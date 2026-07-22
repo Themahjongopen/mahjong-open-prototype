@@ -50,6 +50,7 @@ export default function AdminDashboard() {
   // placeholder in each tile until the query returns.
   const metricCards = [
     { label: "Registrations this series", value: metrics ? metrics.registrationsThisSeries.toLocaleString() : "—" },
+    { label: "Paid this series", value: metrics ? metrics.paidRegistrationsThisSeries.toLocaleString() : "—" },
     { label: "Registrations all-time", value: metrics ? metrics.registrationsAllTime.toLocaleString() : "—" },
     { label: "Active players", value: metrics ? metrics.activePlayers.toLocaleString() : "—" },
     { label: "Revenue this month", value: metrics ? usd(metrics.revenueThisMonth) : "—" },
@@ -57,6 +58,8 @@ export default function AdminDashboard() {
     { label: "Active cities", value: metrics ? metrics.activeCities.toLocaleString() : "—" },
     { label: "Table fill rate", value: metrics ? `${Math.round(metrics.tableFillRate * 100)}%` : "—" },
   ];
+
+  const cityMax = metrics ? Math.max(1, ...metrics.playersByCity.map((r) => r.paid + r.pending)) : 1;
 
   return (
     <div style={{ maxWidth: 980 }}>
@@ -100,11 +103,61 @@ export default function AdminDashboard() {
         <div style={{ display: "grid", gap: 24 }}>
           <div className="admin-dashboard-metrics">
             {metricCards.map((metric) => (
-              <div key={metric.label} style={{ background: "#fff", border: "1px solid var(--hair-200)", borderRadius: "var(--radius-lg)", padding: 16, boxShadow: "var(--shadow-xs)" }}>
+              <div key={metric.label} style={{ background: "#fff", border: "1px solid var(--hair-200)", borderRadius: "var(--radius-lg)", padding: 16, boxShadow: "var(--shadow-xs)", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
                 <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--ink-500)", marginBottom: 8 }}>{metric.label}</p>
                 <p style={{ fontFamily: "var(--font-display)", fontSize: 24, color: "var(--ink-900)", margin: 0 }}>{metric.value}</p>
               </div>
             ))}
+          </div>
+
+          <div style={{ background: "#fff", border: "1px solid var(--hair-200)", borderRadius: "var(--radius-lg)", padding: 20, boxShadow: "var(--shadow-sm)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+              <div>
+                <p className="eyebrow" style={{ marginBottom: 6 }}>Registrations</p>
+                <h2 style={{ fontFamily: "var(--font-display)", fontSize: 20, color: "var(--ink-900)", margin: 0 }}>Players by city</h2>
+              </div>
+              <Link href="/admin/players" style={{ fontSize: 13, fontWeight: 600, color: "var(--pink-600)", display: "inline-flex", alignItems: "center", gap: 4, textDecoration: "none" }}>
+                View players <ArrowUpRight size={14} />
+              </Link>
+            </div>
+            {!metrics ? (
+              <p style={{ fontSize: 13, color: "var(--ink-500)" }}>Loading…</p>
+            ) : metrics.playersByCity.length === 0 ? (
+              <p style={{ fontSize: 13, color: "var(--ink-500)" }}>No registrations yet.</p>
+            ) : (
+              <>
+                {/* Legend */}
+                <div style={{ display: "flex", gap: 16, marginBottom: 14, fontSize: 12, color: "var(--ink-600)" }}>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                    <span style={{ width: 10, height: 10, borderRadius: 3, background: "var(--pink-500)" }} /> Paid
+                  </span>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                    <span style={{ width: 10, height: 10, borderRadius: 3, background: "var(--pink-200)" }} /> Pending
+                  </span>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  {metrics.playersByCity.map((row) => {
+                    const paidPct = Math.round((row.paid / cityMax) * 100);
+                    const pendingPct = Math.round((row.pending / cityMax) * 100);
+                    return (
+                      <div key={row.city}>
+                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 4 }}>
+                          <span style={{ color: "var(--ink-800)", fontWeight: 500 }}>{row.city}</span>
+                          <span style={{ color: "var(--ink-500)", fontWeight: 600 }}>
+                            <span style={{ color: "var(--ink-900)", fontWeight: 700 }}>{row.paid}</span> paid
+                            {row.pending > 0 ? <> · {row.pending} pending</> : null}
+                          </span>
+                        </div>
+                        <div style={{ display: "flex", background: "var(--paper-50)", border: "1px solid var(--hair-200)", borderRadius: "999px", height: 8, overflow: "hidden" }}>
+                          <div style={{ width: `${paidPct}%`, height: "100%", background: "var(--pink-500)" }} />
+                          <div style={{ width: `${pendingPct}%`, height: "100%", background: "var(--pink-200)" }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
           </div>
 
           <div style={{ background: "#fff", border: "1px solid var(--hair-200)", borderRadius: "var(--radius-lg)", padding: 20, boxShadow: "var(--shadow-sm)" }}>
