@@ -58,6 +58,8 @@ export default function AdminDashboard() {
     { label: "Table fill rate", value: metrics ? `${Math.round(metrics.tableFillRate * 100)}%` : "—" },
   ];
 
+  const cityMax = metrics ? Math.max(1, ...metrics.playersByCity.map((r) => r.count)) : 1;
+
   return (
     <div style={{ maxWidth: 980 }}>
       <div style={{ background: "var(--ink-900)", color: "#fff", borderRadius: "var(--radius-lg)", padding: "24px 24px 28px", marginBottom: 24, display: "flex", flexDirection: "column", gap: 16 }}>
@@ -105,6 +107,40 @@ export default function AdminDashboard() {
                 <p style={{ fontFamily: "var(--font-display)", fontSize: 24, color: "var(--ink-900)", margin: 0 }}>{metric.value}</p>
               </div>
             ))}
+          </div>
+
+          <div style={{ background: "#fff", border: "1px solid var(--hair-200)", borderRadius: "var(--radius-lg)", padding: 20, boxShadow: "var(--shadow-sm)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+              <div>
+                <p className="eyebrow" style={{ marginBottom: 6 }}>Registrations</p>
+                <h2 style={{ fontFamily: "var(--font-display)", fontSize: 20, color: "var(--ink-900)", margin: 0 }}>Players by city</h2>
+              </div>
+              <Link href="/admin/players" style={{ fontSize: 13, fontWeight: 600, color: "var(--pink-600)", display: "inline-flex", alignItems: "center", gap: 4, textDecoration: "none" }}>
+                View players <ArrowUpRight size={14} />
+              </Link>
+            </div>
+            {!metrics ? (
+              <p style={{ fontSize: 13, color: "var(--ink-500)" }}>Loading…</p>
+            ) : metrics.playersByCity.length === 0 ? (
+              <p style={{ fontSize: 13, color: "var(--ink-500)" }}>No registrations yet.</p>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {metrics.playersByCity.map((row) => {
+                  const pct = Math.round((row.count / cityMax) * 100);
+                  return (
+                    <div key={row.city}>
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 4 }}>
+                        <span style={{ color: "var(--ink-800)", fontWeight: 500 }}>{row.city}</span>
+                        <span style={{ color: "var(--ink-900)", fontWeight: 700 }}>{row.count}</span>
+                      </div>
+                      <div style={{ background: "var(--paper-50)", border: "1px solid var(--hair-200)", borderRadius: "999px", height: 8, overflow: "hidden" }}>
+                        <div style={{ width: `${pct}%`, height: "100%", background: "var(--pink-500)", borderRadius: "999px" }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           <div style={{ background: "#fff", border: "1px solid var(--hair-200)", borderRadius: "var(--radius-lg)", padding: 20, boxShadow: "var(--shadow-sm)" }}>

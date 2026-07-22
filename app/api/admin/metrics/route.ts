@@ -11,6 +11,7 @@ export type AdminMetrics = {
   tableFillRate: number; // 0..1 — filled seats / (4 × active tables)
   revenueThisSeries: number; // USD dollars
   revenueThisMonth: number; // USD dollars
+  playersByCity: { city: string; count: number }[]; // registrations in the active series, grouped by city, highest first
 };
 
 const EMPTY_METRICS: AdminMetrics = {
@@ -21,6 +22,7 @@ const EMPTY_METRICS: AdminMetrics = {
   tableFillRate: 0,
   revenueThisSeries: 0,
   revenueThisMonth: 0,
+  playersByCity: [],
 };
 
 // A table is "active" (its seats count toward fill rate) while it's still
@@ -78,6 +80,25 @@ export async function GET() {
     countExact("cities", (q) => q.eq("is_active", true)),
   ]);
 
+  // Registrations by city — scoped to the active series (same cohort as
+  // registrationsThisSeries above) so it answers "how many players per city
+  // are registered for the current series." Falls back to all registrations
+  // if no series is currently marked active.
+  let cityCountQuery = supabase.from("registrations").select("cities(name, state)");
+  if (activeSeriesId) cityCountQuery = cityCountQuery.eq("series_id", activeSeriesId);
+  const { data: cityRows } = (await cityCountQuery) as {
+    data: { cities: { name: string | null; state: string | null } | { name: string | null; state: string | null }[] | null }[] | null;
+  };
+  const cityCountMap = new Map<string, number>();
+  for (const row of cityRows ?? []) {
+    const city = Array.isArray(row.cities) ? row.cities[0] : row.cities;
+    const label = city?.name ? (city.state ? `${city.name}, ${city.state}` : city.name) : "No city";
+    cityCountMap.set(label, (cityCountMap.get(label) ?? 0) + 1);
+  }
+  const playersByCity = Array.from(cityCountMap.entries())
+    .map(([city, count]) => ({ city, count }))
+    .sort((a, b) => b.count - a.count || a.city.localeCompare(b.city));
+
   // Table fill rate — filled (non-canceled) seats across all active tables.
   let tableFillRate = 0;
   const { data: activeTables } = await supabase
@@ -127,6 +148,7 @@ export async function GET() {
     tableFillRate,
     revenueThisSeries: revenueThisSeriesCents / 100,
     revenueThisMonth: revenueThisMonthCents / 100,
+    playersByCity,
   };
 
   return NextResponse.json({ metrics, adminName });
