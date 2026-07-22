@@ -101,6 +101,41 @@ This is the only backend work included in the first launch pass, and it is inten
 - Do not start from the old `001_initial_schema.sql`/`002_rls_policies.sql` baseline for this launch; create a new focused migration that only includes the launch-1 data model.
 - Preserve the current mock preview UI as needed, but the backend path for Launch 1 must be real Supabase-backed registration storage.
 
+## Go-Live & Post-Launch — July 22, 2026
+
+The site is **live in production at https://themahjongopen.com** (canonical host
+`https://www.themahjongopen.com`).
+
+### Completed this session
+- **Launched to production** — site live at themahjongopen.com; the `COMING_SOON`
+  env var was **deleted** in Vercel (coming-soon gate off).
+- **Search visibility** — `SITE_INDEXABLE=true` added in Vercel (site is now
+  indexable). **Google Search Console verified** — verification meta tag added to
+  `app/layout.tsx` (`verification.google` in the metadata object) — and the
+  **sitemap submitted**.
+- **Waitlist blast sent** — launch announcement emailed to the waitlist.
+- **Admin access granted** (via SQL, `profiles.role = 'admin'`) to
+  `shariskelly@gmail.com`, `abirdsong75@gmail.com`, and `afgolfgirl@gmail.com`.
+- **Supabase auth config** — Site URL updated to
+  `https://www.themahjongopen.com`; production redirect URLs added.
+- **Stripe webhook fix** — the confirmation/owner emails now show the real amount
+  charged (`session.amount_total / 100`) instead of the series list price, so
+  coupon registrations correctly display **$0.00**.
+- **Mobile scroll fix** — `RegisterModal` capped at `90vh` with an inner
+  `overflow-y: auto` region so the submit button is reachable on narrow
+  (375px) viewports.
+
+### Pending / follow-up
+- **Admin passwords** — the three newly granted admins must use **"Forgot
+  Password"** on the portal login to set their passwords (SQL-granted accounts
+  have no password yet).
+- **Commissioner role** — assignment approach still **under discussion**.
+  Migration 017 added a standalone `is_commissioner` flag decoupling the
+  directory badge from `role`; the final workflow is TBD.
+- **`/sign-in` page (Phase 2)** — currently redirects unauthenticated visitors to
+  the homepage (admins pass through to `/admin`). Phase 2 should render an actual
+  sign-in **form** for unauthenticated users.
+
 ## Review checklist
 - [ ] `app/(marketing)` no longer includes Scramble Events.
 - [ ] Portal bottom nav shows Directory instead of Alerts.
