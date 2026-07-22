@@ -147,11 +147,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ received: true });
     }
 
+    // Persist the REAL amount charged (after discount codes) so revenue reporting
+    // is accurate — a 100%-off comp stores 0, not the series list price. The row
+    // was created at the list price when checkout started; only overwrite when
+    // Stripe gives us a concrete amount_total.
+    const paidCents = typeof session.amount_total === "number" ? session.amount_total : null;
     await supabase
       .from("payments")
       .update({
         status: "succeeded",
         provider_payment_id: paymentIntentId,
+        ...(paidCents !== null ? { amount_cents: paidCents } : {}),
       })
       .eq("registration_id", registrationData.id);
 
