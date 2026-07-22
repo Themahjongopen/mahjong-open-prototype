@@ -103,7 +103,7 @@ export default function AdminDashboard() {
         <div style={{ display: "grid", gap: 24 }}>
           <div className="admin-dashboard-metrics">
             {metricCards.map((metric) => (
-              <div key={metric.label} style={{ background: "#fff", border: "1px solid var(--hair-200)", borderRadius: "var(--radius-lg)", padding: 16, boxShadow: "var(--shadow-xs)" }}>
+              <div key={metric.label} style={{ background: "#fff", border: "1px solid var(--hair-200)", borderRadius: "var(--radius-lg)", padding: 16, boxShadow: "var(--shadow-xs)", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
                 <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--ink-500)", marginBottom: 8 }}>{metric.label}</p>
                 <p style={{ fontFamily: "var(--font-display)", fontSize: 24, color: "var(--ink-900)", margin: 0 }}>{metric.value}</p>
               </div>
