@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { getPortalUser } from "@/lib/portal/session";
+import { getAdminContext } from "@/lib/portal/adminCity";
 import { getProfileStats, type StatBlock } from "@/lib/portal/profileStats";
 import { resolvePrefs } from "@/lib/portal/notificationPrefs";
 import ProfileEditForm from "@/components/portal/ProfileEditForm";
@@ -58,14 +59,19 @@ export default async function PlayerProfilePage({ params }: { params: Promise<{ 
   const session = await getPortalUser();
   const viewerId = session && session.status === "active" ? session.id : null;
   const isOwn = !!viewerId && id === viewerId;
+  // Admins have no home cohort and see every city; resolve their active city so
+  // the target row (which may now exist in multiple cities) stays a single row.
+  const isAdminViewer = session?.status === "active" && session.isAdmin;
+  const adminCtx = isAdminViewer ? await getAdminContext() : null;
 
   // Directory-safe view of the target, scoped to the viewer's cohort (member JWT).
   const supabase = await createClient();
-  const { data: dirRow } = await supabase
+  let dirQuery = supabase
     .from("directory_members")
-    .select("profile_id, full_name, city_name, skill_level, is_commissioner, series_id, avatar_url")
-    .eq("profile_id", id)
-    .maybeSingle();
+    .select("profile_id, full_name, city_id, city_name, skill_level, is_commissioner, series_id, avatar_url")
+    .eq("profile_id", id);
+  if (adminCtx?.cityId) dirQuery = dirQuery.eq("city_id", adminCtx.cityId);
+  const { data: dirRow } = await dirQuery.maybeSingle();
 
   // You can view yourself, or any member who shares your directory cohort.
   if (!dirRow && !isOwn) {
@@ -90,9 +96,15 @@ export default async function PlayerProfilePage({ params }: { params: Promise<{ 
   const skill = (dirRow?.skill_level ?? ownProfile?.skill_level ?? null) as string | null;
   const avatarUrl = (dirRow?.avatar_url ?? ownProfile?.avatar_url ?? null) as string | null;
   const isCommissioner = dirRow?.is_commissioner ?? ownProfile?.role === "commissioner";
-  const seriesId = dirRow?.series_id ?? (isOwn && session?.status === "active" ? session.series_id : null);
+  // Scope season stats to a single (series, city). Prefer the directory row we
+  // matched; for your own profile fall back to your active city (admin) or your
+  // registration cohort (regular member) so opted-out members still see stats.
+  const ownSeriesId = adminCtx ? adminCtx.seriesId : session?.status === "active" ? session.series_id : null;
+  const ownCityId = adminCtx ? adminCtx.cityId : session?.status === "active" ? session.city_id : null;
+  const seriesId = dirRow?.series_id ?? (isOwn ? ownSeriesId : null);
+  const cityId = dirRow?.city_id ?? (isOwn ? ownCityId : null);
 
-  const stats = admin ? await getProfileStats(admin, id, seriesId) : null;
+  const stats = admin ? await getProfileStats(admin, id, seriesId, cityId) : null;
 
   return (
     <div style={{ padding: "24px 16px", maxWidth: 640, margin: "0 auto", display: "flex", flexDirection: "column", gap: 20 }}>

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getPortalUser } from "@/lib/portal/session";
+import { getAdminContext } from "@/lib/portal/adminCity";
 import Avatar from "@/components/portal/Avatar";
 
 type DirectoryRow = {
@@ -20,19 +21,23 @@ function skillLabel(skill: string | null) {
 export default async function DirectoryPage() {
   const session = await getPortalUser();
   const viewerId = session && session.status === "active" ? session.id : null;
+  // Admins see every city via RLS, so scope the roster to their active city.
+  const adminCtx = session && session.status === "active" && session.isAdmin ? await getAdminContext() : null;
 
   // Read the directory through the member's own JWT: the directory_members view
   // is RLS-scoped to the viewer's paid city+series cohort and exposes only
   // safe columns (no email/phone).
   const supabase = await createClient();
-  const { data, error } = await supabase
+  let query = supabase
     .from("directory_members")
     .select("profile_id, full_name, city_name, skill_level, is_commissioner, avatar_url")
     .order("full_name", { ascending: true });
+  if (adminCtx?.cityId) query = query.eq("city_id", adminCtx.cityId);
+  const { data, error } = await query;
 
   const members = (data ?? []) as DirectoryRow[];
   const viewerRow = members.find((m) => m.profile_id === viewerId);
-  const cityName = viewerRow?.city_name ?? members[0]?.city_name ?? null;
+  const cityName = adminCtx?.cityName ?? viewerRow?.city_name ?? members[0]?.city_name ?? null;
 
   return (
     <div style={{ padding: "20px 16px", maxWidth: 640, margin: "0 auto" }}>

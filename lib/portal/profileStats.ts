@@ -36,7 +36,7 @@ function block(scores: number[]): StatBlock {
 const EMPTY: StatBlock = { rounds: 0, totalScore: 0, avgScore: 0 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export async function getProfileStats(admin: any, userId: string, seriesId: string | null): Promise<ProfileStats> {
+export async function getProfileStats(admin: any, userId: string, seriesId: string | null, cityId: string | null): Promise<ProfileStats> {
   // All-time: every played round for this player, across all series.
   const { data: allRows } = await admin
     .from("score_submission_players")
@@ -44,7 +44,9 @@ export async function getProfileStats(admin: any, userId: string, seriesId: stri
     .eq("user_id", userId);
   const allTime = block(playedScores(allRows));
 
-  if (!seriesId) {
+  // Season stats are per (series, city): member_series_standings has one row per
+  // city a player has been active in, so both are required to pick the right row.
+  if (!seriesId || !cityId) {
     return { allTime, season: { ...EMPTY, cumulativeScore: 0, cumulativeRank: null, averageRank: null } };
   }
 
@@ -55,6 +57,7 @@ export async function getProfileStats(admin: any, userId: string, seriesId: stri
     .from("member_series_standings")
     .select("rounds_played, total_score, average_score, cumulative_score, cumulative_rank, average_rank")
     .eq("series_id", seriesId)
+    .eq("city_id", cityId)
     .eq("user_id", userId)
     .maybeSingle();
 

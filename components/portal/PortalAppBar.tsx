@@ -5,15 +5,20 @@ import Image from "next/image";
 import { LogOut, ShieldCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
+import AdminCitySwitcher from "./AdminCitySwitcher";
 
 interface PortalAppBarProps {
   title: string;
   userName?: string;
   // Admins get a "Switch to admin view" link that navigates to /admin.
   isAdminRole?: boolean;
+  // Admin-only active-city switcher data (empty for non-admins).
+  adminCities?: { id: string; name: string }[];
+  activeCityId?: string | null;
+  activeCityName?: string | null;
 }
 
-export default function PortalAppBar({ title, userName, isAdminRole }: PortalAppBarProps) {
+export default function PortalAppBar({ title, userName, isAdminRole, adminCities = [], activeCityId = null, activeCityName = null }: PortalAppBarProps) {
   const [popoverOpen, setPopoverOpen] = useState(false);
   const router = useRouter();
 
@@ -36,6 +41,9 @@ export default function PortalAppBar({ title, userName, isAdminRole }: PortalApp
       </div>
 
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        {isAdminRole ? (
+          <AdminCitySwitcher cities={adminCities} activeCityId={activeCityId} activeCityName={activeCityName} />
+        ) : null}
         {/* Avatar */}
         <div style={{ position: "relative" }}>
           <button

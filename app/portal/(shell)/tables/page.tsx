@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { MapPin, Clock, Users, Plus } from "lucide-react";
 import { getPortalUser } from "@/lib/portal/session";
+import { withAdminCity } from "@/lib/portal/adminCity";
 import { getOpenTables, activeSeats, type LeagueTable } from "@/lib/portal/tables";
 
 const SKILL_COLORS: Record<string, string> = {
@@ -11,7 +12,8 @@ const SKILL_COLORS: Record<string, string> = {
 
 export default async function TablesPage() {
   const session = await getPortalUser();
-  const member = session && session.status === "active" ? session : null;
+  // Admins have no home city; getOpenTables reads their active-city selection.
+  const member = session && session.status === "active" ? await withAdminCity(session) : null;
   const openTables = member ? await getOpenTables(member) : [];
 
   const byWeek = openTables.reduce<Record<number, LeagueTable[]>>((acc, t) => {

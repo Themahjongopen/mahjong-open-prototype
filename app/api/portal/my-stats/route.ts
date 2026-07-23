@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
 import { getPortalUser } from "@/lib/portal/session";
+import { getAdminContext } from "@/lib/portal/adminCity";
 
 // The logged-in player's three dashboard tiles, read from the service-role-only
 // member_series_standings view. Same shape as the admin metrics route: resolve
@@ -19,9 +20,16 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Standings are per (series, city). A member without a paid city+series
-  // registration (e.g. an admin) has no standing row — return the empty state.
-  if (!session.series_id || !session.city_id) {
+  // Standings are per (series, city). Regular members use their registration
+  // cohort; admins have none, so use their current active-city selection.
+  let seriesId = session.series_id;
+  let cityId = session.city_id;
+  if (session.isAdmin) {
+    const ctx = await getAdminContext();
+    seriesId = ctx.seriesId;
+    cityId = ctx.cityId;
+  }
+  if (!seriesId || !cityId) {
     return NextResponse.json({ stats: EMPTY_STATS });
   }
 
@@ -36,8 +44,8 @@ export async function GET() {
     .from("member_series_standings")
     .select("cumulative_rank, cumulative_score, rounds_played")
     .eq("user_id", session.id)
-    .eq("series_id", session.series_id)
-    .eq("city_id", session.city_id)
+    .eq("series_id", seriesId)
+    .eq("city_id", cityId)
     .maybeSingle();
 
   const stats: MyStats = data

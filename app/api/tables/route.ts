@@ -1,17 +1,30 @@
 import { NextResponse } from "next/server";
 import { getPortalUser } from "@/lib/portal/session";
+import { getAdminContext } from "@/lib/portal/adminCity";
 import { createAdminClient } from "@/lib/supabase/server";
 
 const SKILLS = new Set(["beginner", "intermediate", "advanced"]);
 const ROUND_TYPES = new Set(["social", "focused", "lightning"]);
 
-// Create a table in the member's own city+series and seat them at seat 1.
+// Create a table in the member's own city+series (or, for admins, their current
+// active city + the active series) and seat them at seat 1.
 export async function POST(request: Request) {
   const session = await getPortalUser();
   if (!session || session.status !== "active") {
     return NextResponse.json({ error: "Please sign in." }, { status: 401 });
   }
-  if (!session.series_id || !session.city_id) {
+
+  // Admins have no home cohort — create in the city they're currently acting in.
+  let cityId = session.city_id;
+  let seriesId = session.series_id;
+  if (session.isAdmin) {
+    const ctx = await getAdminContext();
+    cityId = ctx.cityId;
+    seriesId = ctx.seriesId;
+    if (!cityId || !seriesId) {
+      return NextResponse.json({ error: "Select an active city first." }, { status: 403 });
+    }
+  } else if (!seriesId || !cityId) {
     return NextResponse.json({ error: "You need an active paid registration to create a table." }, { status: 403 });
   }
 
@@ -46,8 +59,8 @@ export async function POST(request: Request) {
   const { data: table, error: tableError } = await admin
     .from("league_tables")
     .insert({
-      city_id: session.city_id,
-      series_id: session.series_id,
+      city_id: cityId,
+      series_id: seriesId,
       creator_id: session.id,
       week_number: weekNumber,
       table_date: tableDate,
