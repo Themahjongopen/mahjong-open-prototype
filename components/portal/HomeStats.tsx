@@ -6,7 +6,12 @@ import type { MyStats } from "@/app/api/portal/my-stats/route";
 // Live Rank / Points / Games-played tiles for the logged-in player, fetched
 // from the service-role-only /api/portal/my-stats route. Until it loads (and
 // for a player with no standing yet) rank shows "—" and the others show 0.
-export default function HomeStats() {
+//
+// activeCityId is the city the page is currently showing (an admin's active
+// city, or a regular member's own city). It's included in the effect deps so
+// switching cities via the app-bar switcher re-fetches this player's stats for
+// the new city instead of leaving the tiles stale.
+export default function HomeStats({ activeCityId = null }: { activeCityId?: string | null }) {
   const [stats, setStats] = useState<MyStats | null>(null);
 
   useEffect(() => {
@@ -20,7 +25,7 @@ export default function HomeStats() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [activeCityId]);
 
   const tiles = [
     { label: "Rank", value: stats && stats.rank != null ? `#${stats.rank}` : "—" },

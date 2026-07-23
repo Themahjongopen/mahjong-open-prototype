@@ -1,24 +1,29 @@
 import Link from "next/link";
 import { CalendarDays, MapPin, Trophy, Plus } from "lucide-react";
-import { getDashboardData } from "@/lib/data";
-import { getDemoUser } from "@/lib/data/auth";
+import { getPortalUser } from "@/lib/portal/session";
+import { withAdminCity } from "@/lib/portal/adminCity";
+import { getNextTable } from "@/lib/portal/tables";
 import HomeStats from "@/components/portal/HomeStats";
 
 function greeting(name: string) {
   const hour = new Date().getHours();
   const part = hour < 12 ? "morning" : hour < 17 ? "afternoon" : "evening";
-  return `Good ${part}, ${name.split(" ")[0]}`;
+  return `Good ${part}, ${name}`;
 }
 
 export default async function PortalDashboard() {
-  const user = getDemoUser();
-  const { nextSeat } = await getDashboardData(user.id);
-  const nextTable = nextSeat?.scramble_tables ?? null;
+  const session = await getPortalUser();
+  // Admins have no home city; withAdminCity fills in their active-city
+  // selection (a no-op for regular members).
+  const member = session && session.status === "active" ? await withAdminCity(session) : null;
+  const next = member ? await getNextTable(member) : null;
+  const nextTable = next?.table ?? null;
+  const firstName = (member?.full_name ?? "").trim().split(" ")[0] || "there";
 
   return (
     <div style={{ padding: "20px 16px", maxWidth: 480, margin: "0 auto" }}>
       <p style={{ fontSize: 22, fontFamily: "var(--font-display)", color: "var(--ink-900)", marginBottom: 20 }}>
-        {greeting(user.full_name)}
+        {greeting(firstName)}
       </p>
 
       {/* Next table hero card */}
@@ -40,7 +45,8 @@ export default async function PortalDashboard() {
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <CalendarDays size={16} color="rgba(234,242,242,0.8)" />
                 <span style={{ fontSize: 15 }}>
-                  {new Date(nextTable.table_date).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })} · {nextTable.table_time.slice(0, 5)}
+                  {new Date(`${nextTable.table_date}T12:00:00`).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
+                  {nextTable.table_time ? ` · ${nextTable.table_time.slice(0, 5)}` : ""}
                 </span>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -49,7 +55,7 @@ export default async function PortalDashboard() {
               </div>
             </div>
             <p style={{ fontSize: 13, marginTop: 12, color: "rgba(234,242,242,0.7)" }}>
-              Seat {nextSeat?.seat_number} · Tap for details →
+              Seat {next?.seat_number} · Tap for details →
             </p>
           </div>
         </Link>
@@ -72,8 +78,8 @@ export default async function PortalDashboard() {
         </div>
       )}
 
-      {/* Stats */}
-      <HomeStats />
+      {/* Stats — activeCityId drives a re-fetch when an admin switches cities */}
+      <HomeStats activeCityId={member?.city_id ?? null} />
 
       {/* Quick actions */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 20 }}>

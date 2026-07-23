@@ -95,3 +95,58 @@ export async function getMyTables(member: PortalMember): Promise<MyTableSeat[]> 
     .map((r) => ({ seat_number: r.seat_number, table: r.league_tables as LeagueTable }))
     .sort((a, b) => b.table.table_date.localeCompare(a.table.table_date));
 }
+
+export type NextTable = {
+  seat_number: number;
+  table: {
+    id: string;
+    week_number: number;
+    table_date: string;
+    table_time: string | null;
+    location_name: string;
+  };
+};
+
+// The member's soonest upcoming table — a seat they hold in a non-canceled table
+// dated today or later. Scoped to the member's city+series: for admins that's
+// their active-city selection (via withAdminCity); for regular players it's
+// their own registration cohort, which is a no-op since they only ever sit in
+// tables there. Returns null if they have none.
+export async function getNextTable(member: PortalMember): Promise<NextTable | null> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const admin: any = createAdminClient();
+  if (!admin) return null;
+
+  let query = admin
+    .from("table_seats")
+    .select("seat_number, league_tables!inner(id, week_number, table_date, table_time, location_name, city_id, series_id, status)")
+    .eq("user_id", member.id)
+    .is("canceled_at", null)
+    .neq("league_tables.status", "canceled")
+    .gte("league_tables.table_date", today())
+    .order("table_date", { referencedTable: "league_tables", ascending: true })
+    .limit(1);
+
+  if (member.city_id) query = query.eq("league_tables.city_id", member.city_id);
+  if (member.series_id) query = query.eq("league_tables.series_id", member.series_id);
+
+  const { data } = await query;
+  const row = (data ?? [])[0] as { seat_number: number; league_tables: unknown } | undefined;
+  if (!row) return null;
+
+  const t = (Array.isArray(row.league_tables) ? row.league_tables[0] : row.league_tables) as
+    | { id: string; week_number: number; table_date: string; table_time: string | null; location_name: string }
+    | undefined;
+  if (!t) return null;
+
+  return {
+    seat_number: row.seat_number,
+    table: {
+      id: t.id,
+      week_number: t.week_number,
+      table_date: t.table_date,
+      table_time: t.table_time,
+      location_name: t.location_name,
+    },
+  };
+}
