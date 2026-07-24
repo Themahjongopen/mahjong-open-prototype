@@ -80,6 +80,7 @@ const LAUNCH_CITIES = [
   { name: "Ocean Springs", state: "Mississippi", photo: "/brand-photo-3.jpg" },
   { name: "Meridian", state: "Mississippi", photo: "/brand-photo-1.jpg" },
   { name: "Rankin County", state: "Mississippi", photo: "/brand-photo-4.jpg" },
+  { name: "Starkville", state: "Mississippi", photo: "/brand-photo-5.jpg" },
 ];
 
 type LaunchCity = (typeof LAUNCH_CITIES)[number];
@@ -393,7 +394,7 @@ export default function HomePage() {
             <p className="eyebrow" style={{ display: "inline-flex", alignItems: "center", gap: 7, marginBottom: 14 }}>
               <Sparkles size={14} /> Now launching
             </p>
-            <h2 className="h2">Series One starts in{" "}<em className="serif-italic">four cities</em></h2>
+            <h2 className="h2">Series One starts in{" "}<em className="serif-italic">five cities</em></h2>
             <p className="body-lg" style={{ marginTop: 16, maxWidth: 540, marginInline: "auto" }}>
               Our inaugural 8-week series kicks off this August. Be one of the first to take a seat at the table in your city.
             </p>
@@ -749,9 +750,9 @@ export default function HomePage() {
           grid-template-columns: repeat(auto-fit, minmax(260px, 340px));
           gap: 28px;
           justify-content: center;
-          /* Caps at two 340px columns so four cities render a balanced 2x2
-             (instead of an orphaned 3+1). Narrower viewports drop to 1 column. */
-          max-width: 720px;
+          /* Up to three 340px columns, so five cities render 3 + 2 on desktop.
+             Narrower viewports collapse to 2, then 1 column. */
+          max-width: 1080px;
           margin-inline: auto;
         }
         .format-card {
