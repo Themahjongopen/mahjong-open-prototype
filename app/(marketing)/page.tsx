@@ -80,7 +80,7 @@ const LAUNCH_CITIES = [
   { name: "Ocean Springs", state: "Mississippi", photo: "/brand-photo-3.jpg" },
   { name: "Meridian", state: "Mississippi", photo: "/brand-photo-1.jpg" },
   { name: "Rankin County", state: "Mississippi", photo: "/brand-photo-4.jpg" },
-  { name: "Starkville", state: "Mississippi", photo: "/brand-photo-5.jpg" },
+  { name: "Golden Triangle", state: "Mississippi", photo: "/brand-photo-5.jpg" },
 ];
 
 type LaunchCity = (typeof LAUNCH_CITIES)[number];
