@@ -746,14 +746,19 @@ export default function HomePage() {
         /* Flexible card grid — auto-fits any number of cities, centered.
            Add a city to LAUNCH_CITIES and the grid absorbs it automatically. */
         .launch-cities-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(260px, 340px));
-          gap: 28px;
+          /* Flex (not grid) so a short final row stays centered: five cities
+             render 3 + 2 on desktop with the second row of two centered.
+             Cards wrap to fewer per row on narrower/mobile viewports. */
+          display: flex;
+          flex-wrap: wrap;
           justify-content: center;
-          /* Up to three 340px columns, so five cities render 3 + 2 on desktop.
-             Narrower viewports collapse to 2, then 1 column. */
+          gap: 28px;
           max-width: 1080px;
           margin-inline: auto;
+        }
+        .launch-cities-grid > * {
+          flex: 0 1 340px;
+          min-width: 260px;
         }
         .format-card {
           opacity: 0;
