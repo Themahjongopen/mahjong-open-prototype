@@ -4,12 +4,13 @@ import { useState } from "react";
 import PageBanner from "@/components/marketing/PageBanner";
 import { ExternalLink } from "lucide-react";
 
-type Category = "All favorites" | "Tiles & sets" | "Table & decor";
+type Category = "All favorites" | "Tiles & sets" | "Table & decor" | "Books & mats";
 
 const CATEGORIES: Category[] = [
   "All favorites",
   "Tiles & sets",
   "Table & decor",
+  "Books & mats",
 ];
 
 type Product = {
@@ -71,6 +72,14 @@ const PRODUCTS: Product[] = [
     image: "https://www.macandmillermahjong.com/cdn/shop/files/IMG_5750_1500x.jpg?v=1777589747",
     bg: "var(--peri-50)",
     comingSoon: true,
+  },
+  {
+    title: "Universal Tropics Bundle",
+    category: "Books & mats",
+    blurb: "A coordinated Universal Tropics scorebook and premium mat pairing — tropical color and gold Art Deco details wrapped around an open cream table center.",
+    href: "https://www.mahj-nificant.com/index.html#universal-tropics-release",
+    image: "https://www.mahj-nificant.com/assets/optimized/universal-tropics-mat-1200.webp",
+    bg: "var(--pink-50)",
   },
 ];
 
