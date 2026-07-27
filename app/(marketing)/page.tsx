@@ -81,6 +81,7 @@ const LAUNCH_CITIES = [
   { name: "Meridian", state: "Mississippi", photo: "/brand-photo-1.jpg" },
   { name: "Rankin County", state: "Mississippi", photo: "/brand-photo-4.jpg" },
   { name: "Golden Triangle", state: "Mississippi", photo: "/brand-photo-5.jpg" },
+  { name: "Hattiesburg", state: "Mississippi", photo: "/brand-photo-6.jpg" },
 ];
 
 type LaunchCity = (typeof LAUNCH_CITIES)[number];
@@ -97,8 +98,8 @@ function LaunchCityCard({ city }: { city: LaunchCity }) {
         flexDirection: "column",
       }}
     >
-      {/* Top half — brand photo */}
-      <div style={{ position: "relative", width: "100%", aspectRatio: "4 / 3", background: "var(--pink-100)" }}>
+      {/* Top half — brand photo (aspect-ratio in CSS so it can shrink on mobile) */}
+      <div className="launch-card-photo" style={{ position: "relative", width: "100%", background: "var(--pink-100)" }}>
         <Image
           src={city.photo}
           alt={`Players enjoying American mahjong at a styled table in ${city.name}.`}
@@ -107,8 +108,8 @@ function LaunchCityCard({ city }: { city: LaunchCity }) {
           sizes="(max-width: 900px) 90vw, 340px"
         />
       </div>
-      {/* Bottom half — soft sage */}
-      <div style={{ background: "var(--lime-200)", padding: "30px 28px 34px", textAlign: "center" }}>
+      {/* Bottom half — soft sage (padding in CSS so it can tighten on mobile) */}
+      <div className="launch-card-body" style={{ background: "var(--lime-200)", textAlign: "center" }}>
         <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.16em", textTransform: "uppercase", color: "var(--lime-700)", marginBottom: 10 }}>
           Launch city
         </p>
@@ -394,7 +395,7 @@ export default function HomePage() {
             <p className="eyebrow" style={{ display: "inline-flex", alignItems: "center", gap: 7, marginBottom: 14 }}>
               <Sparkles size={14} /> Now launching
             </p>
-            <h2 className="h2">Series One starts in{" "}<em className="serif-italic">five cities</em></h2>
+            <h2 className="h2">Series One starts in{" "}<em className="serif-italic">six cities</em></h2>
             <p className="body-lg" style={{ marginTop: 16, maxWidth: 540, marginInline: "auto" }}>
               Our inaugural 8-week series kicks off this August. Be one of the first to take a seat at the table in your city.
             </p>
@@ -746,9 +747,9 @@ export default function HomePage() {
         /* Flexible card grid — auto-fits any number of cities, centered.
            Add a city to LAUNCH_CITIES and the grid absorbs it automatically. */
         .launch-cities-grid {
-          /* Flex (not grid) so a short final row stays centered: five cities
-             render 3 + 2 on desktop with the second row of two centered.
-             Cards wrap to fewer per row on narrower/mobile viewports. */
+          /* Flex (not grid) so a short final row stays centered (e.g. a 3 + 2
+             split); six cities divide evenly into 3 + 3. Cards wrap to fewer
+             per row on narrower/mobile viewports. */
           display: flex;
           flex-wrap: wrap;
           justify-content: center;
@@ -759,6 +760,18 @@ export default function HomePage() {
         .launch-cities-grid > * {
           flex: 0 1 340px;
           min-width: 260px;
+        }
+        /* Card photo aspect + body padding live here (not inline) so the mobile
+           media query below can shorten cards. These base values match the
+           previous inline styles, so desktop is unchanged. */
+        .launch-card-photo { aspect-ratio: 4 / 3; }
+        .launch-card-body { padding: 30px 28px 34px; }
+        @media (max-width: 600px) {
+          /* Six cards stack one-per-row on mobile and get long to scroll —
+             shorten each with a wider/shorter photo crop + tighter text
+             padding. Desktop (>600px) is untouched. */
+          .launch-card-photo { aspect-ratio: 16 / 9; }
+          .launch-card-body { padding: 16px 24px 20px; }
         }
         .format-card {
           opacity: 0;
