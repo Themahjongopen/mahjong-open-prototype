@@ -1,9 +1,13 @@
 -- ============================================================
 -- THE MAHJONG OPEN — Multi-city registration · Stage 1 (schema only)
 -- ============================================================
--- PROPOSAL — review before applying. Run by hand in the Supabase SQL editor.
--- SCHEMA-ONLY: no app code ships with this, same as 018 (the SQL landed ahead
--- of its app-layer work).
+-- APPLIED to production 2026-07-28. Schema-only — no app code ships with this,
+-- same pattern as 018 (the SQL landed ahead of its app-layer work). Before
+-- applying, scripts/verify_019_multi_city_safe.sql was run against the live DB
+-- and all three checks passed: the old constraint was
+-- registrations_email_series_id_key, zero (email, series_id, city_id)
+-- duplicates, and zero rows with city_id IS NULL. The ALTER succeeded, which
+-- Postgres only permits over non-violating data.
 --
 -- Eventual goal: let one player hold a PAID registration in more than one city
 -- within the SAME series. Today registrations has, from 003:
@@ -17,9 +21,10 @@
 -- The new key is a SUPERSET of the old key's columns, so every pair of rows the
 -- old (email, series_id) constraint already allowed stays unique under the wider
 -- (email, series_id, city_id) key. No existing row can violate the new rule, so
--- ADD CONSTRAINT cannot fail. Run scripts/verify_019_multi_city_safe.sql FIRST
--- to confirm against the real table (expected: zero (email, series_id, city_id)
--- duplicates) rather than just trusting the argument.
+-- ADD CONSTRAINT cannot fail — and it succeeded on production, which Postgres
+-- only allows over non-violating data. scripts/verify_019_multi_city_safe.sql
+-- confirmed zero (email, series_id, city_id) duplicates against the real table
+-- (kept for the record / any future rollback + re-apply).
 --
 -- ── INERT BY ITSELF: applying this alone changes no live behavior ──
 -- app/api/register/route.ts enforces one-registration-per-(email, series) at the
@@ -35,8 +40,8 @@
 -- city_id IS NULL. In practice city_id is never null — the register form
 -- requires a city, and a city that has registrations can't be deleted (see
 -- /api/admin/cities, which forces deactivate-instead-of-delete). Flagging for
--- completeness; the verify script counts any NULL-city rows so this is checked
--- against real data before applying. If NULL-city rows ever exist and must be
+-- completeness; the verify check confirmed zero NULL-city rows in production at
+-- apply time. If NULL-city rows ever exist and must be
 -- deduped, Postgres 15+ `UNIQUE NULLS NOT DISTINCT` is the tool — deliberately
 -- NOT used here to keep the change minimal.
 --
