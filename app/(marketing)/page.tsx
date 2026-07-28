@@ -77,14 +77,40 @@ const WHY_LOVE = [
 // accommodates it automatically — no layout changes needed.
 const LAUNCH_CITIES = [
   { name: "Madison", state: "Mississippi", photo: "/brand-photo-2.jpg" },
-  { name: "Ocean Springs", state: "Mississippi", photo: "/brand-photo-3.jpg" },
+  { name: "Gulf Coast", state: "Mississippi", photo: "/brand-photo-3.jpg" },
   { name: "Meridian", state: "Mississippi", photo: "/brand-photo-1.jpg" },
   { name: "Rankin County", state: "Mississippi", photo: "/brand-photo-4.jpg" },
   { name: "Golden Triangle", state: "Mississippi", photo: "/brand-photo-5.jpg" },
   { name: "Hattiesburg", state: "Mississippi", photo: "/brand-photo-6.jpg" },
+  { name: "East Alabama", state: "Alabama", photo: "/brand-photo-7.jpg" },
 ];
 
 type LaunchCity = (typeof LAUNCH_CITIES)[number];
+
+// Split the launch cities into balanced, symmetric rows of at most 3, with the
+// larger rows toward the center (a centered pyramid) — e.g.
+//   4 -> 2+2, 5 -> 3+2, 6 -> 3+3, 7 -> 2+3+2, 8 -> 3+3+2, 10 -> 2+3+3+2, ...
+// (reproduces the layouts shipped for 4/5/6 cities). Each row is centered in CSS.
+function launchCityRows<T>(cities: T[]): T[][] {
+  const n = cities.length;
+  if (n === 0) return [];
+  const rowCount = Math.ceil(n / 3);
+  const base = Math.floor(n / rowCount);
+  const sizes = new Array<number>(rowCount).fill(base);
+  // Hand the remainder to the rows nearest the center first, so the middle
+  // row(s) are the largest (seven cities -> 2 + 3 + 2, not 3 + 2 + 2).
+  const mid = (rowCount - 1) / 2;
+  const byCenter = [...sizes.keys()].sort((a, b) => Math.abs(a - mid) - Math.abs(b - mid) || a - b);
+  for (let k = 0; k < n - base * rowCount; k++) sizes[byCenter[k]]++;
+
+  const rows: T[][] = [];
+  let i = 0;
+  for (const size of sizes) {
+    rows.push(cities.slice(i, i + size));
+    i += size;
+  }
+  return rows;
+}
 
 function LaunchCityCard({ city }: { city: LaunchCity }) {
   return (
@@ -395,15 +421,19 @@ export default function HomePage() {
             <p className="eyebrow" style={{ display: "inline-flex", alignItems: "center", gap: 7, marginBottom: 14 }}>
               <Sparkles size={14} /> Now launching
             </p>
-            <h2 className="h2">Series One starts in{" "}<em className="serif-italic">six cities</em></h2>
+            <h2 className="h2">Series One starts in{" "}<em className="serif-italic">seven cities</em></h2>
             <p className="body-lg" style={{ marginTop: 16, maxWidth: 540, marginInline: "auto" }}>
               Our inaugural 8-week series kicks off this August. Be one of the first to take a seat at the table in your city.
             </p>
           </div>
 
           <div className="launch-cities-grid">
-            {LAUNCH_CITIES.map((city) => (
-              <LaunchCityCard key={city.name} city={city} />
+            {launchCityRows(LAUNCH_CITIES).map((row, i) => (
+              <div className="launch-cities-row" key={i}>
+                {row.map((city) => (
+                  <LaunchCityCard key={city.name} city={city} />
+                ))}
+              </div>
             ))}
           </div>
 
@@ -744,32 +774,41 @@ export default function HomePage() {
           max-width: 760px;
           margin-inline: auto;
         }
-        /* Flexible card grid — auto-fits any number of cities, centered.
-           Add a city to LAUNCH_CITIES and the grid absorbs it automatically. */
+        /* Launch cities render as explicit balanced rows (max 3 per row) via
+           launchCityRows() — e.g. 7 -> 3 + 2 + 2; it also reproduces the earlier
+           4 -> 2+2, 5 -> 3+2, 6 -> 3+3 layouts and avoids a trailing orphan row
+           of one. Every row centers, and cards keep full width so long names
+           (e.g. "Golden Triangle") stay on one line. On mobile each row's cards
+           go full-width -> a clean single-column stack. */
         .launch-cities-grid {
-          /* Flex (not grid) so a short final row stays centered (e.g. a 3 + 2
-             split); six cities divide evenly into 3 + 3. Cards wrap to fewer
-             per row on narrower/mobile viewports. */
+          /* Column of rows; rows stretch to the full container width so each
+             row's justify-content:center can center its cards (don't set
+             align-items:center here — it shrink-wraps rows and breaks wrapping). */
+          display: flex;
+          flex-direction: column;
+          gap: 28px;
+          max-width: 1132px;
+          margin-inline: auto;
+        }
+        .launch-cities-row {
           display: flex;
           flex-wrap: wrap;
           justify-content: center;
           gap: 28px;
-          max-width: 1080px;
-          margin-inline: auto;
         }
-        .launch-cities-grid > * {
+        .launch-cities-row > * {
           flex: 0 1 340px;
           min-width: 260px;
         }
-        /* Card photo aspect + body padding live here (not inline) so the mobile
-           media query below can shorten cards. These base values match the
-           previous inline styles, so desktop is unchanged. */
+        /* Card photo aspect + body padding live in CSS (not inline) so the mobile
+           media query can shorten cards. Base values match the original inline
+           styles, so desktop card sizing is unchanged. */
         .launch-card-photo { aspect-ratio: 4 / 3; }
         .launch-card-body { padding: 30px 28px 34px; }
         @media (max-width: 600px) {
-          /* Six cards stack one-per-row on mobile and get long to scroll —
-             shorten each with a wider/shorter photo crop + tighter text
-             padding. Desktop (>600px) is untouched. */
+          /* One card per row on mobile: fill the column width and shorten each
+             (wider/shorter photo crop + tighter text padding). Desktop untouched. */
+          .launch-cities-row > * { flex-basis: 100%; }
           .launch-card-photo { aspect-ratio: 16 / 9; }
           .launch-card-body { padding: 16px 24px 20px; }
         }
