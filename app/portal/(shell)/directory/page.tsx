@@ -24,6 +24,16 @@ export default async function DirectoryPage() {
   // Admins see every city via RLS, so scope the roster to their active city.
   const adminCtx = session && session.status === "active" && session.isAdmin ? await getAdminContext() : null;
 
+  // Scope the roster to a single city: the admin's active city, or the player's
+  // resolved active city. A multi-city player's RLS cohort now spans both of
+  // their cities, so without this the two rosters would merge; for a single-city
+  // player it filters to the only city they'd see anyway (unchanged result).
+  const activeCityId = adminCtx
+    ? adminCtx.cityId
+    : session && session.status === "active"
+      ? session.city_id
+      : null;
+
   // Read the directory through the member's own JWT: the directory_members view
   // is RLS-scoped to the viewer's paid city+series cohort and exposes only
   // safe columns (no email/phone).
@@ -32,7 +42,7 @@ export default async function DirectoryPage() {
     .from("directory_members")
     .select("profile_id, full_name, city_name, skill_level, is_commissioner, avatar_url")
     .order("full_name", { ascending: true });
-  if (adminCtx?.cityId) query = query.eq("city_id", adminCtx.cityId);
+  if (activeCityId) query = query.eq("city_id", activeCityId);
   const { data, error } = await query;
 
   const members = (data ?? []) as DirectoryRow[];

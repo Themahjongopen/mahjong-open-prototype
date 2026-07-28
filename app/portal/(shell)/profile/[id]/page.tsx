@@ -64,13 +64,23 @@ export default async function PlayerProfilePage({ params }: { params: Promise<{ 
   const isAdminViewer = session?.status === "active" && session.isAdmin;
   const adminCtx = isAdminViewer ? await getAdminContext() : null;
 
+  // Scope the lookup to one city: the admin's active city, or the viewer's
+  // resolved active city. A multi-city viewer's RLS cohort spans both of their
+  // cities, so the target could match two rows and .maybeSingle() would throw
+  // without this; for a single-city viewer it's their only city (unchanged).
+  const activeCityId = adminCtx
+    ? adminCtx.cityId
+    : session && session.status === "active"
+      ? session.city_id
+      : null;
+
   // Directory-safe view of the target, scoped to the viewer's cohort (member JWT).
   const supabase = await createClient();
   let dirQuery = supabase
     .from("directory_members")
     .select("profile_id, full_name, city_id, city_name, skill_level, is_commissioner, series_id, avatar_url")
     .eq("profile_id", id);
-  if (adminCtx?.cityId) dirQuery = dirQuery.eq("city_id", adminCtx.cityId);
+  if (activeCityId) dirQuery = dirQuery.eq("city_id", activeCityId);
   const { data: dirRow } = await dirQuery.maybeSingle();
 
   // You can view yourself, or any member who shares your directory cohort.

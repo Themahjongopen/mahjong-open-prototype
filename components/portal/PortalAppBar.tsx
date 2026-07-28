@@ -6,6 +6,7 @@ import { LogOut, ShieldCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import AdminCitySwitcher from "./AdminCitySwitcher";
+import PlayerCitySwitcher from "./PlayerCitySwitcher";
 
 interface PortalAppBarProps {
   title: string;
@@ -16,9 +17,13 @@ interface PortalAppBarProps {
   adminCities?: { id: string; name: string }[];
   activeCityId?: string | null;
   activeCityName?: string | null;
+  // Multi-city player's own cities (>1 renders the player city switcher).
+  playerCities?: { id: string; name: string }[];
+  playerActiveCityId?: string | null;
+  playerActiveCityName?: string | null;
 }
 
-export default function PortalAppBar({ title, userName, isAdminRole, adminCities = [], activeCityId = null, activeCityName = null }: PortalAppBarProps) {
+export default function PortalAppBar({ title, userName, isAdminRole, adminCities = [], activeCityId = null, activeCityName = null, playerCities = [], playerActiveCityId = null, playerActiveCityName = null }: PortalAppBarProps) {
   const [popoverOpen, setPopoverOpen] = useState(false);
   const router = useRouter();
 
@@ -43,6 +48,8 @@ export default function PortalAppBar({ title, userName, isAdminRole, adminCities
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
         {isAdminRole ? (
           <AdminCitySwitcher cities={adminCities} activeCityId={activeCityId} activeCityName={activeCityName} />
+        ) : playerCities.length > 1 ? (
+          <PlayerCitySwitcher cities={playerCities} activeCityId={playerActiveCityId} activeCityName={playerActiveCityName} />
         ) : null}
         {/* Avatar */}
         <div style={{ position: "relative" }}>

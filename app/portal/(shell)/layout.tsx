@@ -21,6 +21,12 @@ export default async function PortalLayout({ children }: { children: React.React
   // switcher in the app bar sets a cookie this reads.
   const adminCtx = session.isAdmin ? await getAdminContext() : null;
 
+  // Multi-city players get their own "viewing city" switcher, driven by the
+  // cities they hold paid seats in. Single-city players (the common case) pass a
+  // one-entry list, so the app bar renders no switcher.
+  const playerCities = session.isAdmin ? [] : session.memberships.map((m) => ({ id: m.city_id, name: m.city_name ?? "Your city" }));
+  const activePlayerCity = session.isAdmin ? null : session.memberships.find((m) => m.city_id === session.city_id) ?? null;
+
   return (
     <PortalShellClient
       userName={session.full_name ?? session.email}
@@ -28,6 +34,9 @@ export default async function PortalLayout({ children }: { children: React.React
       adminCities={adminCtx?.cities ?? []}
       activeCityId={adminCtx?.cityId ?? null}
       activeCityName={adminCtx?.cityName ?? null}
+      playerCities={playerCities}
+      playerActiveCityId={session.city_id}
+      playerActiveCityName={activePlayerCity?.city_name ?? null}
     >
       {children}
     </PortalShellClient>

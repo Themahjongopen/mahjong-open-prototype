@@ -1,5 +1,6 @@
 import { cache } from "react";
 import { createClient, createAdminClient } from "@/lib/supabase/server";
+import { resolvePlayerCity, type Membership } from "@/lib/portal/playerCity";
 
 export type PortalMember = {
   status: "active";
@@ -9,8 +10,14 @@ export type PortalMember = {
   role: string;
   isCommissioner: boolean;
   isAdmin: boolean;
+  // The player's active city+series (cookie-resolved for multi-city players;
+  // their sole registration otherwise). Downstream read helpers scope by these.
   city_id: string | null;
   series_id: string | null;
+  // Every distinct city the player holds a paid registration in (most recent
+  // first). Length > 1 drives the city switcher; length <= 1 keeps the pre-Stage-2
+  // single-city behavior. Empty for admins (no registration).
+  memberships: Membership[];
 };
 
 // Authenticated but no paid registration (unpaid / unknown email) -> "register first".
@@ -40,23 +47,38 @@ export const getPortalUser = cache(async (): Promise<PortalSession> => {
     .eq("id", user.id)
     .maybeSingle();
 
-  // Latest paid registration for this account = active membership.
-  const { data: membership } = await admin
+  // All paid registrations for this account (most recent first). A player may
+  // now hold one per city within a series (migration 019), so this is a list.
+  const { data: paidRows } = await admin
     .from("registrations")
-    .select("city_id, series_id, paid_status, created_at")
+    .select("city_id, series_id, created_at, cities(name)")
     .eq("profile_id", user.id)
     .eq("paid_status", "paid")
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .order("created_at", { ascending: false });
+
+  // Reduce to one membership per distinct city, keeping the most recent (list is
+  // already created_at DESC). memberships[0] is therefore the latest city — the
+  // same row the old .limit(1) query returned.
+  const memberships: Membership[] = [];
+  const seenCities = new Set<string>();
+  for (const row of (paidRows ?? []) as Array<{ city_id: string | null; series_id: string | null; cities: { name: string } | { name: string }[] | null }>) {
+    if (!row.city_id || seenCities.has(row.city_id)) continue;
+    seenCities.add(row.city_id);
+    const cityName = Array.isArray(row.cities) ? (row.cities[0]?.name ?? null) : (row.cities?.name ?? null);
+    memberships.push({ city_id: row.city_id, city_name: cityName, series_id: row.series_id ?? null });
+  }
 
   const role = profile?.role ?? "player";
   const isAdmin = role === "admin";
 
   // Admins always get in; everyone else needs a paid registration.
-  if (!membership && !isAdmin) {
+  if (memberships.length === 0 && !isAdmin) {
     return { status: "unpaid", email: user.email ?? profile?.email ?? "" };
   }
+
+  // Resolve which city the player is acting in. For a single-city player this is
+  // just their one membership (no cookie read) — identical to the old behavior.
+  const active = await resolvePlayerCity(memberships);
 
   return {
     status: "active",
@@ -66,7 +88,8 @@ export const getPortalUser = cache(async (): Promise<PortalSession> => {
     role,
     isCommissioner: role === "commissioner",
     isAdmin,
-    city_id: membership?.city_id ?? null,
-    series_id: membership?.series_id ?? null,
+    city_id: active.city_id,
+    series_id: active.series_id,
+    memberships,
   };
 });

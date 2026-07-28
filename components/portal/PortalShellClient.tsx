@@ -29,6 +29,9 @@ export default function PortalShellClient({
   adminCities = [],
   activeCityId = null,
   activeCityName = null,
+  playerCities = [],
+  playerActiveCityId = null,
+  playerActiveCityName = null,
 }: {
   children: React.ReactNode;
   userName: string;
@@ -36,6 +39,9 @@ export default function PortalShellClient({
   adminCities?: { id: string; name: string }[];
   activeCityId?: string | null;
   activeCityName?: string | null;
+  playerCities?: { id: string; name: string }[];
+  playerActiveCityId?: string | null;
+  playerActiveCityName?: string | null;
 }) {
   const [toast, setToast] = useState<string | null>(null);
   const pathname = usePathname();
@@ -56,6 +62,9 @@ export default function PortalShellClient({
         adminCities={adminCities}
         activeCityId={activeCityId}
         activeCityName={activeCityName}
+        playerCities={playerCities}
+        playerActiveCityId={playerActiveCityId}
+        playerActiveCityName={playerActiveCityName}
       />
       <div className="portal-content">
         {children}
