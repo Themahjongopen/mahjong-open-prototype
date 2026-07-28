@@ -48,11 +48,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Registration for this series has closed." }, { status: 400 });
     }
 
+    // Scope the lookup to (email, series_id, city_id) — NOT just (email,
+    // series_id). Migration 019 loosened the UNIQUE constraint so a player can
+    // hold one paid registration PER CITY within a series. Keying only on
+    // (email, series_id) here would coalesce a second city onto the first city's
+    // row (overwriting its city_id); keying on the city too means registering
+    // for a new city inserts a NEW row and leaves the first city untouched.
     const { data: existingRegistration, error: lookupError } = await supabase
       .from("registrations")
       .select("id, paid_status")
       .eq("email", email)
       .eq("series_id", series_id)
+      .eq("city_id", city_id)
       .maybeSingle();
 
     if (lookupError) {
@@ -61,8 +68,10 @@ export async function POST(request: Request) {
 
     let registrationId = existingRegistration?.id;
 
+    // Already paid for THIS city — block. A player paid for another city in the
+    // same series doesn't match this row, so they can still register here.
     if (existingRegistration?.paid_status === "paid") {
-      return NextResponse.json({ error: "You’re already registered for this series." }, { status: 409 });
+      return NextResponse.json({ error: "You’re already registered for this city." }, { status: 409 });
     }
 
     if (registrationId) {
@@ -99,7 +108,7 @@ export async function POST(request: Request) {
 
       if (insertError) {
         if (insertError.code === "23505") {
-          return NextResponse.json({ error: "You are already registered for this series." }, { status: 409 });
+          return NextResponse.json({ error: "You are already registered for this city." }, { status: 409 });
         }
 
         return NextResponse.json({ error: "Registration could not be saved. Please try again." }, { status: 500 });
