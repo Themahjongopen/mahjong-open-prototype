@@ -16,12 +16,15 @@ type RegistrationRow = {
   paid_status: string;
   created_at: string;
   city: string | null;
+  city_id: string | null;
   series: string | null;
   invited: boolean;
   invite_state: InviteState;
   profile_id?: string | null;
   role?: string | null;
 };
+
+type CityChoice = { city_id: string; label: string };
 
 type Filter = "all" | "paid" | "pending";
 
@@ -49,43 +52,85 @@ export default function AdminRegistrationsPage() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [bulkBusy, setBulkBusy] = useState(false);
   const [roleBusyId, setRoleBusyId] = useState<string | null>(null);
+  // When promoting a player who has paid in more than one city, we ask which
+  // city rather than guessing. This holds the pending promotion + its choices.
+  const [cityPicker, setCityPicker] = useState<{ row: RegistrationRow; cities: CityChoice[] } | null>(null);
   const confirm = useConfirm();
 
-  async function toggleCommissioner(row: RegistrationRow) {
-    if (!row.profile_id) return;
-    const makeCommissioner = row.role !== "commissioner";
-    const ok = await confirm(
-      makeCommissioner
-        ? {
-            title: "Make commissioner?",
-            message: `Make ${row.full_name ?? row.email} the commissioner for ${row.city ?? "their city"}? This replaces the current commissioner there.`,
-            confirmLabel: "Make commissioner",
-          }
-        : {
-            title: "Remove commissioner?",
-            message: `Remove commissioner from ${row.full_name ?? row.email}?`,
-            confirmLabel: "Remove",
-            danger: true,
-          }
-    );
-    if (!ok) return;
+  // Distinct paid cities for a profile, drawn from the already-loaded rows.
+  function paidCitiesFor(profileId: string): CityChoice[] {
+    const byCity = new Map<string, string>();
+    for (const r of rows) {
+      if (r.profile_id === profileId && r.paid_status === "paid" && r.city_id) {
+        if (!byCity.has(r.city_id)) byCity.set(r.city_id, r.city ?? "Their city");
+      }
+    }
+    return Array.from(byCity, ([city_id, label]) => ({ city_id, label }));
+  }
 
+  // Send the designation change. cityId is required for "commissioner".
+  async function designate(row: RegistrationRow, designation: "commissioner" | "player", city?: CityChoice) {
+    if (!row.profile_id) return;
     setRoleBusyId(row.id);
     setMessage(null);
     const response = await fetch("/api/admin/players", {
       method: "PUT",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ profileId: row.profile_id, designation: makeCommissioner ? "commissioner" : "player" }),
+      body: JSON.stringify({
+        profileId: row.profile_id,
+        designation,
+        ...(designation === "commissioner" && city ? { cityId: city.city_id } : {}),
+      }),
     });
     const payload = await response.json().catch(() => ({}));
     if (response.ok) {
-      setMessage(makeCommissioner ? "Commissioner updated." : "Commissioner removed.");
+      setMessage(
+        designation === "commissioner"
+          ? `Commissioner updated${city ? ` for ${city.label}` : ""}.`
+          : "Commissioner removed."
+      );
       await loadRows();
     } else {
       setMessage(payload.error ?? "Could not update role.");
     }
     setRoleBusyId(null);
+  }
+
+  async function toggleCommissioner(row: RegistrationRow) {
+    if (!row.profile_id) return;
+
+    // Demote — no city needed.
+    if (row.role === "commissioner") {
+      const ok = await confirm({
+        title: "Remove commissioner?",
+        message: `Remove commissioner from ${row.full_name ?? row.email}?`,
+        confirmLabel: "Remove",
+        danger: true,
+      });
+      if (ok) await designate(row, "player");
+      return;
+    }
+
+    // Promote — the commissioner leads a PAID city, so choose among those.
+    const cities = paidCitiesFor(row.profile_id);
+    if (cities.length === 0) {
+      setMessage("This player has no paid registration yet, so they can't lead a city.");
+      return;
+    }
+    if (cities.length > 1) {
+      // Ambiguous — ask which city instead of guessing.
+      setCityPicker({ row, cities });
+      return;
+    }
+    // Exactly one paid city — keep the existing one-click confirm.
+    const only = cities[0];
+    const ok = await confirm({
+      title: "Make commissioner?",
+      message: `Make ${row.full_name ?? row.email} the commissioner for ${only.label}? This replaces the current commissioner there.`,
+      confirmLabel: "Make commissioner",
+    });
+    if (ok) await designate(row, "commissioner", only);
   }
 
   async function loadRows() {
@@ -390,6 +435,67 @@ export default function AdminRegistrationsPage() {
           )}
         </div>
       </div>
+
+      {cityPicker ? (
+        <div
+          role="presentation"
+          onClick={(e) => { if (e.target === e.currentTarget) setCityPicker(null); }}
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 300,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 16,
+            backgroundColor: "var(--overlay-scrim, rgba(20,20,20,0.45))",
+            backdropFilter: "blur(4px)",
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Choose a city"
+            style={{
+              background: "#fff",
+              borderRadius: "var(--radius-xl)",
+              boxShadow: "var(--shadow-lg)",
+              width: "100%",
+              maxWidth: 400,
+              padding: "28px 28px 24px",
+            }}
+          >
+            <h2 style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 400, color: "var(--ink-900)", margin: "0 0 10px" }}>
+              Which city?
+            </h2>
+            <p style={{ fontSize: 15, lineHeight: 1.6, color: "var(--ink-700)", margin: "0 0 20px" }}>
+              {cityPicker.row.full_name ?? cityPicker.row.email} is registered in more than one city. Pick the city they’ll be commissioner of — this replaces the current commissioner there.
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 }}>
+              {cityPicker.cities.map((c) => (
+                <button
+                  key={c.city_id}
+                  type="button"
+                  className="btn"
+                  style={{ justifyContent: "flex-start", padding: "12px 16px", textAlign: "left" }}
+                  onClick={() => {
+                    const { row } = cityPicker;
+                    setCityPicker(null);
+                    void designate(row, "commissioner", c);
+                  }}
+                >
+                  {c.label}
+                </button>
+              ))}
+            </div>
+            <div style={{ display: "flex", justifyContent: "flex-end" }}>
+              <button type="button" className="btn btn-ghost" onClick={() => setCityPicker(null)} style={{ justifyContent: "center", padding: "11px 20px" }}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

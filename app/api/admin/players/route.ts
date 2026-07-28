@@ -18,6 +18,7 @@ type RegistrationRow = {
   paid_status: string;
   created_at: string;
   city: string | null;
+  city_id: string | null;
   series: string | null;
   invited: boolean; // convenience: invite_state !== "none"
   invite_state: InviteState;
@@ -28,10 +29,10 @@ type RegistrationRow = {
 // Local-preview fallback used only when no service-role client is configured.
 // Reshaped to look like real registrations (name/email/phone/city/series/paid_status/date).
 const MOCK_REGISTRATIONS: RegistrationRow[] = [
-  { id: "reg-1", full_name: "Morgan Park", email: "morgan@example.com", phone: "(213) 555-0142", skill_level: "advanced", paid_status: "paid", created_at: "2026-06-28T18:30:00Z", city: "Los Angeles, CA", series: "Spring 2026", invited: true, invite_state: "active" },
-  { id: "reg-2", full_name: "Alex Kim", email: "alex@example.com", phone: "(310) 555-0199", skill_level: "intermediate", paid_status: "paid", created_at: "2026-06-27T14:05:00Z", city: "Los Angeles, CA", series: "Spring 2026", invited: true, invite_state: "invited" },
-  { id: "reg-3", full_name: "Sam Rivera", email: "sam@example.com", phone: null, skill_level: "beginner", paid_status: "pending", created_at: "2026-06-26T21:12:00Z", city: "San Francisco, CA", series: "Spring 2026", invited: false, invite_state: "none" },
-  { id: "reg-4", full_name: "Taylor Brooks", email: "taylor@example.com", phone: "(415) 555-0173", skill_level: "intermediate", paid_status: "refunded", created_at: "2026-06-24T09:47:00Z", city: "San Francisco, CA", series: "Spring 2026", invited: false, invite_state: "none" },
+  { id: "reg-1", full_name: "Morgan Park", email: "morgan@example.com", phone: "(213) 555-0142", skill_level: "advanced", paid_status: "paid", created_at: "2026-06-28T18:30:00Z", city: "Los Angeles, CA", city_id: null, series: "Spring 2026", invited: true, invite_state: "active" },
+  { id: "reg-2", full_name: "Alex Kim", email: "alex@example.com", phone: "(310) 555-0199", skill_level: "intermediate", paid_status: "paid", created_at: "2026-06-27T14:05:00Z", city: "Los Angeles, CA", city_id: null, series: "Spring 2026", invited: true, invite_state: "invited" },
+  { id: "reg-3", full_name: "Sam Rivera", email: "sam@example.com", phone: null, skill_level: "beginner", paid_status: "pending", created_at: "2026-06-26T21:12:00Z", city: "San Francisco, CA", city_id: null, series: "Spring 2026", invited: false, invite_state: "none" },
+  { id: "reg-4", full_name: "Taylor Brooks", email: "taylor@example.com", phone: "(415) 555-0173", skill_level: "intermediate", paid_status: "refunded", created_at: "2026-06-24T09:47:00Z", city: "San Francisco, CA", city_id: null, series: "Spring 2026", invited: false, invite_state: "none" },
 ];
 
 function formatCity(city: { name: string | null; state: string | null } | null | undefined): string | null {
@@ -51,7 +52,7 @@ export async function GET() {
   if (supabase) {
     const { data, error } = await supabase
       .from("registrations")
-      .select("id, full_name, email, phone, skill_level, paid_status, created_at, profile_id, cities(name, state), series(name), profiles(role)")
+      .select("id, full_name, email, phone, skill_level, paid_status, created_at, profile_id, city_id, cities(name, state), series(name), profiles(role)")
       .order("created_at", { ascending: false });
 
     if (!error && data) {
@@ -89,6 +90,7 @@ export async function GET() {
           paid_status: row.paid_status,
           created_at: row.created_at,
           city: formatCity(city),
+          city_id: row.city_id ?? null,
           series: series?.name ?? null,
           invited: invite_state !== "none",
           invite_state,
@@ -105,9 +107,11 @@ export async function GET() {
 }
 
 // Player↔Commissioner designation against real profiles. One commissioner PER
-// CITY: promoting a player demotes only the current commissioner(s) in that same
-// city (derived from the target's paid registration), not every commissioner
-// system-wide (the old bug).
+// CITY, tracked explicitly by profiles.commissioner_city_id. Promoting requires
+// the caller to name the city (cityId) — we no longer guess it from the target's
+// most-recent registration, which could pick the wrong city once a player is
+// registered in more than one (migration 019). Promoting demotes only the
+// current commissioner of THAT city, not every commissioner system-wide.
 export async function PUT(request: Request) {
   if (!(await isAdminRequest())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -126,40 +130,49 @@ export async function PUT(request: Request) {
   }
 
   if (designation !== "commissioner") {
-    const { error } = await supabase.from("profiles").update({ role: "player" }).eq("id", profileId);
+    // Demote: clear both the role and the city link.
+    const { error } = await supabase
+      .from("profiles")
+      .update({ role: "player", commissioner_city_id: null })
+      .eq("id", profileId);
     if (error) return NextResponse.json({ error: "Could not update the player." }, { status: 500 });
     return NextResponse.json({ ok: true, designation: "player" });
   }
 
-  // Promote to commissioner, scoped to the target's city.
-  const { data: reg } = await supabase
-    .from("registrations")
-    .select("city_id")
-    .eq("profile_id", profileId)
-    .eq("paid_status", "paid")
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  const cityId = reg?.city_id ?? null;
-
-  // Demote the current commissioner(s) in this city only.
-  if (cityId) {
-    const { data: peers } = await supabase
-      .from("registrations")
-      .select("profile_id, profiles!inner(role)")
-      .eq("city_id", cityId)
-      .eq("paid_status", "paid")
-      .eq("profiles.role", "commissioner");
-    const demote = [
-      ...new Set(((peers ?? []) as any[]).map((r) => r.profile_id).filter((pid: string) => pid && pid !== profileId)),
-    ];
-    if (demote.length) {
-      await supabase.from("profiles").update({ role: "player" }).in("id", demote);
-    }
+  // Promote to commissioner — the city must be named explicitly, not guessed.
+  const cityId = (body?.cityId)?.toString();
+  if (!cityId) {
+    return NextResponse.json({ error: "A city is required to make someone a commissioner." }, { status: 400 });
   }
 
-  const { error } = await supabase.from("profiles").update({ role: "commissioner" }).eq("id", profileId);
+  // The named city must be one the target actually holds a paid registration in.
+  const { data: reg } = await supabase
+    .from("registrations")
+    .select("id")
+    .eq("profile_id", profileId)
+    .eq("city_id", cityId)
+    .eq("paid_status", "paid")
+    .limit(1)
+    .maybeSingle();
+  if (!reg) {
+    return NextResponse.json({ error: "That city isn't one of this player's paid registrations." }, { status: 400 });
+  }
+
+  // Demote the current commissioner of THIS city only (by commissioner_city_id).
+  const { error: demoteError } = await supabase
+    .from("profiles")
+    .update({ role: "player", commissioner_city_id: null })
+    .eq("commissioner_city_id", cityId)
+    .neq("id", profileId);
+  if (demoteError) {
+    return NextResponse.json({ error: "Could not update the current commissioner." }, { status: 500 });
+  }
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({ role: "commissioner", commissioner_city_id: cityId })
+    .eq("id", profileId);
   if (error) return NextResponse.json({ error: "Could not update the player." }, { status: 500 });
 
-  return NextResponse.json({ ok: true, designation: "commissioner", cityScoped: !!cityId });
+  return NextResponse.json({ ok: true, designation: "commissioner", cityId });
 }
