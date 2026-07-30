@@ -106,8 +106,8 @@ export default async function PortalDashboard() {
       {canAddCity ? (
         <div style={{ background: "var(--pink-50)", border: "1px solid var(--pink-100)", borderRadius: "var(--radius-lg)", padding: "14px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 12 }}>
           <div>
-            <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--pink-600)", marginBottom: 4 }}>Another city</p>
-            <p style={{ fontSize: 13, color: "var(--ink-700)", margin: 0 }}>Play in more than one city? Register for another this series.</p>
+            <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--pink-600)", marginBottom: 4 }}>Play in an additional city</p>
+            <p style={{ fontSize: 13, color: "var(--ink-700)", margin: 0 }}>Want to play in more than one city? Register for another city this series. Use code <strong>2NDCITY</strong> at checkout to register in your second city for only $35.</p>
           </div>
           <Link href="/portal/register-city" className="btn btn-primary" style={{ fontSize: 13, padding: "10px 14px", whiteSpace: "nowrap" }}>
             Add city

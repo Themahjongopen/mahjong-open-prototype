@@ -39,9 +39,12 @@ export default async function RegisterCityPage() {
           ← Back to your profile
         </Link>
         {series ? <p className="eyebrow" style={{ marginBottom: 4 }}>{series.name}</p> : null}
-        <h2 style={{ fontFamily: "var(--font-display)", fontSize: 24, color: "var(--ink-900)", margin: 0 }}>Register another city</h2>
+        <h2 style={{ fontFamily: "var(--font-display)", fontSize: 24, color: "var(--ink-900)", margin: 0 }}>Register to play in another city</h2>
         <p style={{ fontSize: 15, color: "var(--ink-500)", marginTop: 8 }}>
           Join a second city in this series — a separate registration and payment. We&rsquo;ll reuse your profile details; just pick the city.
+        </p>
+        <p style={{ fontSize: 14, color: "var(--ink-700)", marginTop: 10 }}>
+          Use code <strong>2NDCITY</strong> at checkout to register in your second city for only $35.
         </p>
       </div>
 
