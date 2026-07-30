@@ -65,7 +65,11 @@ export async function getProfileStats(admin: any, userId: string, seriesId: stri
     ? {
         rounds: standing.rounds_played ?? 0,
         totalScore: standing.total_score ?? 0,
-        avgScore: Number(standing.average_score ?? 0),
+        // Average is only meaningful with a full sample: the standings view gates
+        // average_rank at rounds_played >= 5, so mirror that here — otherwise the
+        // profile's "Average score" tile would show a raw sub-5-round average
+        // (e.g. 100.0 off 4 rounds) that the standings board correctly hides.
+        avgScore: (standing.rounds_played ?? 0) >= 5 ? Number(standing.average_score ?? 0) : 0,
         cumulativeScore: standing.cumulative_score ?? 0,
         cumulativeRank: standing.cumulative_rank ?? null,
         averageRank: standing.average_rank ?? null,
