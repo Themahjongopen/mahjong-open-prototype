@@ -83,17 +83,33 @@ const LAUNCH_CITIES = [
   { name: "Golden Triangle", state: "Mississippi", photo: "/brand-photo-5.jpg" },
   { name: "Hattiesburg", state: "Mississippi", photo: "/brand-photo-6.jpg" },
   { name: "East Alabama", state: "Alabama", photo: "/brand-photo-7.jpg" },
+  { name: "Franklin", state: "Tennessee", photo: "/brand-photo-8.jpg" },
 ];
 
 type LaunchCity = (typeof LAUNCH_CITIES)[number];
 
 // Split the launch cities into balanced, symmetric rows of at most 3, with the
 // larger rows toward the center (a centered pyramid) — e.g.
-//   4 -> 2+2, 5 -> 3+2, 6 -> 3+3, 7 -> 2+3+2, 8 -> 3+3+2, 10 -> 2+3+3+2, ...
+//   4 -> 2+2, 5 -> 3+2, 6 -> 3+3, 7 -> 2+3+2, 10 -> 2+3+3+2, ...
 // (reproduces the layouts shipped for 4/5/6 cities). Each row is centered in CSS.
 function launchCityRows<T>(cities: T[]): T[][] {
   const n = cities.length;
   if (n === 0) return [];
+
+  // Special-case: exactly 8 cities render as 3+2+3 (edges-first) rather than
+  // the center-first 3+3+2 the general algorithm below would produce. This is
+  // a deliberate stepping stone toward the 3+3+3 layout at 9 cities, which the
+  // general algorithm already produces correctly and unchanged.
+  if (n === 8) {
+    const rows: T[][] = [];
+    let i = 0;
+    for (const size of [3, 2, 3]) {
+      rows.push(cities.slice(i, i + size));
+      i += size;
+    }
+    return rows;
+  }
+
   const rowCount = Math.ceil(n / 3);
   const base = Math.floor(n / rowCount);
   const sizes = new Array<number>(rowCount).fill(base);
@@ -421,7 +437,7 @@ export default function HomePage() {
             <p className="eyebrow" style={{ display: "inline-flex", alignItems: "center", gap: 7, marginBottom: 14 }}>
               <Sparkles size={14} /> Now launching
             </p>
-            <h2 className="h2">Series One starts in{" "}<em className="serif-italic">seven cities</em></h2>
+            <h2 className="h2">Series One starts in{" "}<em className="serif-italic">eight cities</em></h2>
             <p className="body-lg" style={{ marginTop: 16, maxWidth: 540, marginInline: "auto" }}>
               Our inaugural 8-week series kicks off this August. Be one of the first to take a seat at the table in your city.
             </p>
@@ -803,8 +819,8 @@ export default function HomePage() {
         /* Card photo aspect + body padding live in CSS (not inline) so the mobile
            media query can shorten cards. Base values match the original inline
            styles, so desktop card sizing is unchanged. */
-        .launch-card-photo { aspect-ratio: 4 / 3; }
-        .launch-card-body { padding: 30px 28px 34px; }
+        .launch-card-photo { aspect-ratio: 3 / 2; }
+        .launch-card-body { padding: 22px 28px 26px; }
         @media (max-width: 600px) {
           /* One card per row on mobile: fill the column width and shorten each
              (wider/shorter photo crop + tighter text padding). Desktop untouched. */
