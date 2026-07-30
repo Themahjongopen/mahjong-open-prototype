@@ -3,6 +3,7 @@ import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { getPortalUser } from "@/lib/portal/session";
 import { getAdminContext } from "@/lib/portal/adminCity";
 import { getProfileStats, type StatBlock } from "@/lib/portal/profileStats";
+import { getRegisterCityOptions } from "@/lib/portal/registerCity";
 import { resolvePrefs } from "@/lib/portal/notificationPrefs";
 import ProfileEditForm from "@/components/portal/ProfileEditForm";
 import Avatar from "@/components/portal/Avatar";
@@ -59,6 +60,11 @@ export default async function PlayerProfilePage({ params }: { params: Promise<{ 
   const session = await getPortalUser();
   const viewerId = session && session.status === "active" ? session.id : null;
   const isOwn = !!viewerId && id === viewerId;
+
+  // Own-profile only: is there at least one more city this player can register
+  // for in the active series? Gates the "register another city" entry point.
+  const addCity = isOwn && session?.status === "active" ? await getRegisterCityOptions(session.memberships) : null;
+  const canAddCity = !!addCity?.series && !addCity.registrationClosed && addCity.eligibleCities.length > 0;
   // Admins have no home cohort and see every city; resolve their active city so
   // the target row (which may now exist in multiple cities) stays a single row.
   const isAdminViewer = session?.status === "active" && session.isAdmin;
@@ -167,6 +173,19 @@ export default async function PlayerProfilePage({ params }: { params: Promise<{ 
           <p style={{ fontSize: 14, color: "var(--ink-500)" }}>Stats aren&rsquo;t available right now.</p>
         )}
       </div>
+
+      {/* Register another city (own profile, when something's eligible) */}
+      {canAddCity ? (
+        <div style={cardStyle}>
+          <h3 style={{ fontFamily: "var(--font-display)", fontSize: 18, color: "var(--ink-900)", margin: "0 0 4px" }}>Playing in another city?</h3>
+          <p style={{ fontSize: 14, color: "var(--ink-500)", margin: "0 0 16px", lineHeight: 1.6 }}>
+            You can register for additional cities in this series — each is its own registration and payment.
+          </p>
+          <Link href="/portal/register-city" className="btn btn-primary" style={{ display: "inline-flex", fontSize: 14 }}>
+            Register another city
+          </Link>
+        </div>
+      ) : null}
 
       {/* Own-profile editing */}
       {isOwn ? (

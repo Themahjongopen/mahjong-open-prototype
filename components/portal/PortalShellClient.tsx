@@ -14,6 +14,7 @@ const PAGE_TITLES: Record<string, string> = {
   "/portal/scores": "Submit Score",
   "/portal/directory": "Directory",
   "/portal/payment": "Complete Payment",
+  "/portal/register-city": "Register Another City",
 };
 
 interface ToastContextType {

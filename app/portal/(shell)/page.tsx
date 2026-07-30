@@ -3,6 +3,7 @@ import { CalendarDays, MapPin, Trophy, Plus } from "lucide-react";
 import { getPortalUser } from "@/lib/portal/session";
 import { withAdminCity } from "@/lib/portal/adminCity";
 import { getNextTable } from "@/lib/portal/tables";
+import { getRegisterCityOptions } from "@/lib/portal/registerCity";
 import HomeStats from "@/components/portal/HomeStats";
 
 function greeting(name: string) {
@@ -19,6 +20,11 @@ export default async function PortalDashboard() {
   const next = member ? await getNextTable(member) : null;
   const nextTable = next?.table ?? null;
   const firstName = (member?.full_name ?? "").trim().split(" ")[0] || "there";
+
+  // Regular players can register for more cities in the active series; only
+  // surface the prompt when at least one city is still eligible.
+  const addCity = session?.status === "active" && !session.isAdmin ? await getRegisterCityOptions(session.memberships) : null;
+  const canAddCity = !!addCity?.series && !addCity.registrationClosed && addCity.eligibleCities.length > 0;
 
   return (
     <div style={{ padding: "20px 16px", maxWidth: 480, margin: "0 auto" }}>
@@ -96,6 +102,18 @@ export default async function PortalDashboard() {
           My tables
         </Link>
       </div>
+
+      {canAddCity ? (
+        <div style={{ background: "var(--pink-50)", border: "1px solid var(--pink-100)", borderRadius: "var(--radius-lg)", padding: "14px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 12 }}>
+          <div>
+            <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--pink-600)", marginBottom: 4 }}>Another city</p>
+            <p style={{ fontSize: 13, color: "var(--ink-700)", margin: 0 }}>Play in more than one city? Register for another this series.</p>
+          </div>
+          <Link href="/portal/register-city" className="btn btn-primary" style={{ fontSize: 13, padding: "10px 14px", whiteSpace: "nowrap" }}>
+            Add city
+          </Link>
+        </div>
+      ) : null}
 
       <div style={{ background: "var(--pink-50)", border: "1px solid var(--pink-100)", borderRadius: "var(--radius-lg)", padding: "14px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 12 }}>
         <div>
