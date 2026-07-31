@@ -26,7 +26,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
 
   const { data: table } = await admin
     .from("league_tables")
-    .select("id, creator_id, status")
+    .select("id, creator_id, status, table_seats(canceled_at)")
     .eq("id", id)
     .maybeSingle();
 
@@ -44,7 +44,12 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     return NextResponse.json({ ok: true });
   }
 
-  // complete
+  // complete — an official round needs all 4 seats actively held (handbook's
+  // "Four Players" rule). Checked ahead of the status early-returns.
+  const activeSeats = (table.table_seats ?? []).filter((s: any) => !s.canceled_at).length;
+  if (activeSeats < 4) {
+    return NextResponse.json({ error: "This round needs 4 seated players before it can be marked as played." }, { status: 409 });
+  }
   if (table.status === "completed") return NextResponse.json({ ok: true });
   if (table.status === "canceled") {
     return NextResponse.json({ error: "This table was cancelled." }, { status: 409 });

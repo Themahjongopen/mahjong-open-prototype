@@ -51,6 +51,12 @@ export async function POST(request: Request) {
 
   // The submission must cover exactly the actively-seated players.
   const seatedIds = new Set<string>((table.table_seats ?? []).filter((s: any) => !s.canceled_at).map((s: any) => String(s.user_id)));
+  // An official round needs all 4 seats actively held. Defense-in-depth: a seat
+  // can be cancelled after the table is marked "completed" but before scores are
+  // submitted (seats/cancel doesn't check table status), so re-check here.
+  if (seatedIds.size < 4) {
+    return NextResponse.json({ error: "A round needs exactly 4 seated players before scores can be submitted." }, { status: 400 });
+  }
   const inputIds = new Set<string>(inputPlayers.map((p) => p.user_id));
   if (seatedIds.size !== inputIds.size || [...seatedIds].some((id) => !inputIds.has(id))) {
     return NextResponse.json({ error: "Scores must be entered for every seated player." }, { status: 400 });

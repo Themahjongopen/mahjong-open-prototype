@@ -44,7 +44,7 @@ export default function TableDetailClient({
   const canJoin = !myActiveSeat && seatsFilled < 4 && table.status === "open" && !isCreator;
   const canLeave = !!myActiveSeat && !isCreator && (table.status === "open" || table.status === "full");
   const canCancelTable = isCreator && (table.status === "open" || table.status === "full");
-  const canMarkPlayed = isCreator && (table.status === "open" || table.status === "full");
+  const canMarkPlayed = isCreator && seatsFilled >= 4 && (table.status === "open" || table.status === "full");
   const canSubmitScores = isCreator && table.status === "completed" && !submission;
 
   const tableDateTime = new Date(`${table.table_date}T${table.table_time ?? "12:00:00"}`);
@@ -238,6 +238,12 @@ export default function TableDetailClient({
             Google Calendar
           </a>
         </div>
+
+        {isCreator && seatsFilled < 4 && (table.status === "open" || table.status === "full") && (
+          <div style={{ fontSize: 13, color: "var(--ink-500)", textAlign: "center", padding: "0 8px" }}>
+            Waiting for {4 - seatsFilled} more player{4 - seatsFilled === 1 ? "" : "s"} before this round can be marked as played.
+          </div>
+        )}
 
         {canMarkPlayed && (
           <button className="btn btn-primary" onClick={handleMarkPlayed} disabled={loading === "complete"} style={{ justifyContent: "center", padding: "13px" }}>
