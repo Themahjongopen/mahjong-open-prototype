@@ -20,6 +20,10 @@ type RegistrationRow = {
   city: string | null;
   city_id: string | null;
   series: string | null;
+  series_id: string | null;
+  // Distinct cities this email holds a PAID registration in (multi-city, per the
+  // migration 019 membership model). Same value on every row for that email.
+  paid_city_count: number;
   invited: boolean; // convenience: invite_state !== "none"
   invite_state: InviteState;
   profile_id?: string | null;
@@ -29,10 +33,10 @@ type RegistrationRow = {
 // Local-preview fallback used only when no service-role client is configured.
 // Reshaped to look like real registrations (name/email/phone/city/series/paid_status/date).
 const MOCK_REGISTRATIONS: RegistrationRow[] = [
-  { id: "reg-1", full_name: "Morgan Park", email: "morgan@example.com", phone: "(213) 555-0142", skill_level: "advanced", paid_status: "paid", created_at: "2026-06-28T18:30:00Z", city: "Los Angeles, CA", city_id: null, series: "Spring 2026", invited: true, invite_state: "active" },
-  { id: "reg-2", full_name: "Alex Kim", email: "alex@example.com", phone: "(310) 555-0199", skill_level: "intermediate", paid_status: "paid", created_at: "2026-06-27T14:05:00Z", city: "Los Angeles, CA", city_id: null, series: "Spring 2026", invited: true, invite_state: "invited" },
-  { id: "reg-3", full_name: "Sam Rivera", email: "sam@example.com", phone: null, skill_level: "beginner", paid_status: "pending", created_at: "2026-06-26T21:12:00Z", city: "San Francisco, CA", city_id: null, series: "Spring 2026", invited: false, invite_state: "none" },
-  { id: "reg-4", full_name: "Taylor Brooks", email: "taylor@example.com", phone: "(415) 555-0173", skill_level: "intermediate", paid_status: "refunded", created_at: "2026-06-24T09:47:00Z", city: "San Francisco, CA", city_id: null, series: "Spring 2026", invited: false, invite_state: "none" },
+  { id: "reg-1", full_name: "Morgan Park", email: "morgan@example.com", phone: "(213) 555-0142", skill_level: "advanced", paid_status: "paid", created_at: "2026-06-28T18:30:00Z", city: "Los Angeles, CA", city_id: null, series: "Spring 2026", series_id: null, paid_city_count: 1, invited: true, invite_state: "active" },
+  { id: "reg-2", full_name: "Alex Kim", email: "alex@example.com", phone: "(310) 555-0199", skill_level: "intermediate", paid_status: "paid", created_at: "2026-06-27T14:05:00Z", city: "Los Angeles, CA", city_id: null, series: "Spring 2026", series_id: null, paid_city_count: 1, invited: true, invite_state: "invited" },
+  { id: "reg-3", full_name: "Sam Rivera", email: "sam@example.com", phone: null, skill_level: "beginner", paid_status: "pending", created_at: "2026-06-26T21:12:00Z", city: "San Francisco, CA", city_id: null, series: "Spring 2026", series_id: null, paid_city_count: 0, invited: false, invite_state: "none" },
+  { id: "reg-4", full_name: "Taylor Brooks", email: "taylor@example.com", phone: "(415) 555-0173", skill_level: "intermediate", paid_status: "refunded", created_at: "2026-06-24T09:47:00Z", city: "San Francisco, CA", city_id: null, series: "Spring 2026", series_id: null, paid_city_count: 0, invited: false, invite_state: "none" },
 ];
 
 function formatCity(city: { name: string | null; state: string | null } | null | undefined): string | null {
@@ -52,7 +56,7 @@ export async function GET() {
   if (supabase) {
     const { data, error } = await supabase
       .from("registrations")
-      .select("id, full_name, email, phone, skill_level, paid_status, created_at, profile_id, city_id, cities(name, state), series(name), profiles(role)")
+      .select("id, full_name, email, phone, skill_level, paid_status, created_at, profile_id, city_id, series_id, cities(name, state), series(name), profiles(role)")
       .order("created_at", { ascending: false });
 
     if (!error && data) {
@@ -64,6 +68,19 @@ export async function GET() {
         usersByEmail = await listAuthUsersByEmail(supabase);
       } catch {
         usersByEmail = new Map();
+      }
+
+      // Multi-city membership per migration 019: count DISTINCT cities each email
+      // holds a PAID registration in. Keyed by lowercased email; same count is
+      // attached to every one of that email's rows below.
+      const paidCitiesByEmail = new Map<string, Set<string>>();
+      for (const row of data as any[]) {
+        if (row.paid_status === "paid" && row.city_id) {
+          const key = String(row.email).toLowerCase();
+          const set = paidCitiesByEmail.get(key) ?? new Set<string>();
+          set.add(row.city_id);
+          paidCitiesByEmail.set(key, set);
+        }
       }
 
       const players: RegistrationRow[] = data.map((row: any) => {
@@ -92,6 +109,8 @@ export async function GET() {
           city: formatCity(city),
           city_id: row.city_id ?? null,
           series: series?.name ?? null,
+          series_id: row.series_id ?? null,
+          paid_city_count: paidCitiesByEmail.get(String(row.email).toLowerCase())?.size ?? 0,
           invited: invite_state !== "none",
           invite_state,
           profile_id: row.profile_id ?? null,

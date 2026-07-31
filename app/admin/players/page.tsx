@@ -18,6 +18,8 @@ type RegistrationRow = {
   city: string | null;
   city_id: string | null;
   series: string | null;
+  series_id: string | null;
+  paid_city_count: number;
   invited: boolean;
   invite_state: InviteState;
   profile_id?: string | null;
@@ -48,7 +50,11 @@ export default function AdminRegistrationsPage() {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
   const [filter, setFilter] = useState<Filter>("all");
+  const [search, setSearch] = useState<string>("");
+  // cityFilter / seriesFilter hold a city_id / series_id ("all" = no filter).
   const [cityFilter, setCityFilter] = useState<string>("all");
+  const [seriesFilter, setSeriesFilter] = useState<string>("all");
+  const [multiCityOnly, setMultiCityOnly] = useState<boolean>(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [bulkBusy, setBulkBusy] = useState(false);
   const [roleBusyId, setRoleBusyId] = useState<string | null>(null);
@@ -158,28 +164,37 @@ export default function AdminRegistrationsPage() {
     [rows]
   );
 
-  // Rows after the paid/pending status filter only — the base set the city
-  // breakdown counts against, so switching status updates the per-city counts too.
-  const statusFilteredRows = useMemo(() => {
-    if (filter === "all") return rows;
-    return rows.filter((r) => r.paid_status === filter);
-  }, [rows, filter]);
+  // Distinct (city_id, label) pairs present in the loaded rows, for the City
+  // dropdown. Sorted by label; rows with no city are skipped.
+  const cityOptions = useMemo(() => {
+    const byId = new Map<string, string>();
+    for (const r of rows) if (r.city_id) byId.set(r.city_id, r.city ?? r.city_id);
+    return Array.from(byId, ([id, label]) => ({ id, label })).sort((a, b) => a.label.localeCompare(b.label));
+  }, [rows]);
 
-  // Per-city counts (label -> count) over statusFilteredRows, sorted by count
-  // descending. Rows with no city on file are grouped under "No city".
-  const cityCounts = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const r of statusFilteredRows) {
-      const label = r.city ?? "No city";
-      counts.set(label, (counts.get(label) ?? 0) + 1);
-    }
-    return Array.from(counts.entries()).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
-  }, [statusFilteredRows]);
+  // Distinct (series_id, name) pairs present in the loaded rows, for the Series
+  // dropdown — matters once a second series' registration opens alongside the first.
+  const seriesOptions = useMemo(() => {
+    const byId = new Map<string, string>();
+    for (const r of rows) if (r.series_id) byId.set(r.series_id, r.series ?? r.series_id);
+    return Array.from(byId, ([id, label]) => ({ id, label })).sort((a, b) => a.label.localeCompare(b.label));
+  }, [rows]);
 
+  // All filters combine with AND: a row must match every active one to show.
   const filteredRows = useMemo(() => {
-    if (cityFilter === "all") return statusFilteredRows;
-    return statusFilteredRows.filter((r) => (r.city ?? "No city") === cityFilter);
-  }, [statusFilteredRows, cityFilter]);
+    const q = search.trim().toLowerCase();
+    return rows.filter((r) => {
+      if (filter !== "all" && r.paid_status !== filter) return false;
+      if (cityFilter !== "all" && r.city_id !== cityFilter) return false;
+      if (seriesFilter !== "all" && r.series_id !== seriesFilter) return false;
+      if (multiCityOnly && r.paid_city_count < 2) return false;
+      if (q) {
+        const hay = `${r.full_name ?? ""} ${r.email} ${r.phone ?? ""}`.toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [rows, filter, search, cityFilter, seriesFilter, multiCityOnly]);
 
   function handleExport() {
     const header = ["Name", "Email", "Phone", "City", "Series", "Skill", "Payment status", "Registered date"];
@@ -294,7 +309,21 @@ export default function AdminRegistrationsPage() {
 
       {message ? <p style={{ fontSize: 13, color: "var(--ink-700)", marginBottom: 16 }}>{message}</p> : null}
 
-      <div style={{ display: "flex", gap: 8, margin: "16px 0" }}>
+      {/* Search */}
+      <div style={{ margin: "16px 0 12px" }}>
+        <input
+          type="search"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search name, email, or phone…"
+          aria-label="Search registrations"
+          className="input-mo"
+          style={{ maxWidth: 360 }}
+        />
+      </div>
+
+      {/* Payment status + multi-city toggle (same badge-button pattern) */}
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: 12 }}>
         {filters.map((f) => (
           <button
             key={f.key}
@@ -306,33 +335,32 @@ export default function AdminRegistrationsPage() {
             {f.label}
           </button>
         ))}
+        <span aria-hidden style={{ width: 1, alignSelf: "stretch", background: "var(--hair-200)", margin: "0 4px" }} />
+        <button
+          type="button"
+          onClick={() => setMultiCityOnly((v) => !v)}
+          aria-pressed={multiCityOnly}
+          className={`badge ${multiCityOnly ? "badge-pink" : "badge-mute"}`}
+          style={{ cursor: "pointer", border: "1px solid var(--hair-200)", background: multiCityOnly ? undefined : "#fff" }}
+        >
+          Registered in multiple cities
+        </button>
       </div>
 
-      <div style={{ marginBottom: 16 }}>
-        <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--ink-500)", marginBottom: 8 }}>
-          By city
-        </p>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <button
-            type="button"
-            onClick={() => setCityFilter("all")}
-            className={`badge ${cityFilter === "all" ? "badge-pink" : "badge-mute"}`}
-            style={{ cursor: "pointer", border: "1px solid var(--hair-200)", background: cityFilter === "all" ? undefined : "#fff" }}
-          >
-            All cities ({statusFilteredRows.length})
-          </button>
-          {cityCounts.map(([city, count]) => (
-            <button
-              key={city}
-              type="button"
-              onClick={() => setCityFilter(city)}
-              className={`badge ${cityFilter === city ? "badge-pink" : "badge-mute"}`}
-              style={{ cursor: "pointer", border: "1px solid var(--hair-200)", background: cityFilter === city ? undefined : "#fff" }}
-            >
-              {city} ({count})
-            </button>
+      {/* City + series dropdowns */}
+      <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 16 }}>
+        <select aria-label="Filter by city" className="input-mo" style={{ maxWidth: 260 }} value={cityFilter} onChange={(e) => setCityFilter(e.target.value)}>
+          <option value="all">All cities</option>
+          {cityOptions.map((c) => (
+            <option key={c.id} value={c.id}>{c.label}</option>
           ))}
-        </div>
+        </select>
+        <select aria-label="Filter by series" className="input-mo" style={{ maxWidth: 340 }} value={seriesFilter} onChange={(e) => setSeriesFilter(e.target.value)}>
+          <option value="all">All series</option>
+          {seriesOptions.map((s) => (
+            <option key={s.id} value={s.id}>{s.label}</option>
+          ))}
+        </select>
       </div>
 
       <div style={{ background: "#fff", border: "1px solid var(--hair-200)", borderRadius: "var(--radius-lg)", overflow: "hidden", boxShadow: "var(--shadow-xs)" }}>
