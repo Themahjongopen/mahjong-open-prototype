@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
-import { LayoutDashboard, Building2, CalendarRange, Users, Table2, ClipboardCheck, LogOut, ExternalLink, Menu, X } from "lucide-react";
+import { LayoutDashboard, Building2, CalendarRange, Users, Table2, ClipboardCheck, Trophy, LogOut, ExternalLink, Menu, X } from "lucide-react";
 
 const NAV_ITEMS = [
   { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
@@ -15,6 +15,7 @@ const NAV_ITEMS = [
   { label: "Players", href: "/admin/players", icon: Users },
   { label: "Tables", href: "/admin/tables", icon: Table2 },
   { label: "Scores", href: "/admin/scores", icon: ClipboardCheck },
+  { label: "Standings", href: "/admin/standings", icon: Trophy },
 ];
 
 export default function AdminShell({ children, adminName }: { children: React.ReactNode; adminName: string }) {

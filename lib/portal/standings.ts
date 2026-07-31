@@ -1,21 +1,15 @@
 import { createAdminClient } from "@/lib/supabase/server";
 import type { PortalMember } from "@/lib/portal/session";
+import type { StandingRow } from "@/lib/portal/standingsSort";
 
 // Server-only standings read. Both leaderboards are computed by the
 // member_series_standings view (migration 013); this just fetches the viewer's
 // city+series slice via service-role.
-
-export type StandingRow = {
-  user_id: string;
-  full_name: string | null;
-  avatar_url: string | null;
-  rounds_played: number;
-  total_score: number;
-  average_score: number;
-  cumulative_score: number;
-  cumulative_rank: number | null;
-  average_rank: number | null;
-};
+//
+// The row shape + orderings (StandingRow, byCumulative, byAverage) live in the
+// client-safe standingsSort module and are re-exported here for existing callers.
+export type { StandingRow } from "@/lib/portal/standingsSort";
+export { byCumulative, byAverage } from "@/lib/portal/standingsSort";
 
 export async function getStandings(member: PortalMember): Promise<{ cityName: string | null; rows: StandingRow[] }> {
   const admin: any = createAdminClient();
@@ -43,17 +37,4 @@ export async function getStandings(member: PortalMember): Promise<{ cityName: st
   }));
 
   return { cityName: city?.name ?? null, rows: normalized };
-}
-
-// Cumulative order: by computed rank.
-export function byCumulative(rows: StandingRow[]): StandingRow[] {
-  return [...rows].sort((a, b) => (a.cumulative_rank ?? 9999) - (b.cumulative_rank ?? 9999));
-}
-
-// Average order: ranked players (>=5 rounds) first by average_rank, then the
-// unranked (<5 rounds) below, alphabetically.
-export function byAverage(rows: StandingRow[]): StandingRow[] {
-  const ranked = rows.filter((r) => r.average_rank != null).sort((a, b) => (a.average_rank ?? 0) - (b.average_rank ?? 0));
-  const unranked = rows.filter((r) => r.average_rank == null).sort((a, b) => (a.full_name ?? "").localeCompare(b.full_name ?? ""));
-  return [...ranked, ...unranked];
 }
