@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { getPortalUser } from "@/lib/portal/session";
 import { createAdminClient } from "@/lib/supabase/server";
+import { resolvePrefs } from "@/lib/portal/notificationPrefs";
+import { sendScorePostedEmail } from "@/lib/email/scorePostedEmail";
 
 const NO_SHOW_STAY_BONUS = 25;
 
@@ -32,7 +34,7 @@ export async function POST(request: Request) {
 
   const { data: table } = await admin
     .from("league_tables")
-    .select("id, creator_id, status, table_seats(user_id, canceled_at), score_submissions(id)")
+    .select("id, creator_id, status, table_date, location_name, table_seats(user_id, canceled_at), score_submissions(id)")
     .eq("id", tableId)
     .maybeSingle();
 
@@ -94,6 +96,37 @@ export async function POST(request: Request) {
   if (playersError) {
     await admin.from("score_submissions").delete().eq("id", submission.id);
     return NextResponse.json({ error: "Scores could not be submitted. Please try again." }, { status: 500 });
+  }
+
+  // Best-effort "scores posted" emails to each seated player EXCEPT the host who
+  // just entered them. Scores are already committed above — email delivery is a
+  // secondary effect and must never block or fail the submission, so everything
+  // here is wrapped in try/catch and we always return { ok: true } below.
+  try {
+    const { data: profiles } = await admin
+      .from("profiles")
+      .select("id, email, full_name, notification_preferences")
+      .in("id", [...seatedIds]);
+    const rowByUser = new Map(rows.map((r) => [r.user_id, r]));
+    for (const profile of (profiles ?? []) as any[]) {
+      if (profile.id === session.id) continue; // the host already knows — they entered the scores
+      if (!profile.email) continue;
+      if (!resolvePrefs(profile.notification_preferences).email_score_posted) continue;
+      const row = rowByUser.get(profile.id);
+      if (!row) continue;
+      try {
+        const res = await sendScorePostedEmail(
+          { email: profile.email, fullName: profile.full_name },
+          { tableId: table.id, tableDate: table.table_date, locationName: table.location_name },
+          { roundScore: row.round_score, isNoShow: row.is_no_show, isNoShowBonus: row.is_no_show_bonus }
+        );
+        if (!res.ok) console.error("scorePostedEmail not sent", profile.email, res.error);
+      } catch (err) {
+        console.error("scorePostedEmail send failed", profile.email, err);
+      }
+    }
+  } catch (err) {
+    console.error("scorePostedEmail batch failed", err);
   }
 
   return NextResponse.json({ ok: true });
