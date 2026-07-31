@@ -165,11 +165,25 @@ export default function AdminRegistrationsPage() {
   );
 
   // Distinct (city_id, label) pairs present in the loaded rows, for the City
-  // dropdown. Sorted by label; rows with no city are skipped.
-  const cityOptions = useMemo(() => {
-    const byId = new Map<string, string>();
-    for (const r of rows) if (r.city_id) byId.set(r.city_id, r.city ?? r.city_id);
-    return Array.from(byId, ([id, label]) => ({ id, label })).sort((a, b) => a.label.localeCompare(b.label));
+  // dropdown, each with paid/pending counts (refunded excluded). Counts are over
+  // the full `rows` dataset — NOT filteredRows — so they don't shift as the
+  // active filters change, matching the old label-keyed badge behavior. `allPaid`
+  // / `allPending` are the whole-dataset totals for the "All cities" option.
+  const { cityOptions, allPaid, allPending } = useMemo(() => {
+    const byId = new Map<string, { label: string; paid: number; pending: number }>();
+    let allPaid = 0;
+    let allPending = 0;
+    for (const r of rows) {
+      if (r.paid_status === "paid") allPaid += 1;
+      else if (r.paid_status === "pending") allPending += 1;
+      if (!r.city_id) continue;
+      const entry = byId.get(r.city_id) ?? { label: r.city ?? r.city_id, paid: 0, pending: 0 };
+      if (r.paid_status === "paid") entry.paid += 1;
+      else if (r.paid_status === "pending") entry.pending += 1;
+      byId.set(r.city_id, entry);
+    }
+    const cityOptions = Array.from(byId, ([id, v]) => ({ id, ...v })).sort((a, b) => a.label.localeCompare(b.label));
+    return { cityOptions, allPaid, allPending };
   }, [rows]);
 
   // Distinct (series_id, name) pairs present in the loaded rows, for the Series
@@ -349,10 +363,10 @@ export default function AdminRegistrationsPage() {
 
       {/* City + series dropdowns */}
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 16 }}>
-        <select aria-label="Filter by city" className="input-mo" style={{ maxWidth: 260 }} value={cityFilter} onChange={(e) => setCityFilter(e.target.value)}>
-          <option value="all">All cities</option>
+        <select aria-label="Filter by city" className="input-mo" style={{ maxWidth: 320 }} value={cityFilter} onChange={(e) => setCityFilter(e.target.value)}>
+          <option value="all">All cities — {allPaid} paid, {allPending} pending</option>
           {cityOptions.map((c) => (
-            <option key={c.id} value={c.id}>{c.label}</option>
+            <option key={c.id} value={c.id}>{c.label} — {c.paid} paid, {c.pending} pending</option>
           ))}
         </select>
         <select aria-label="Filter by series" className="input-mo" style={{ maxWidth: 340 }} value={seriesFilter} onChange={(e) => setSeriesFilter(e.target.value)}>
