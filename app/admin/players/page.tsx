@@ -438,7 +438,24 @@ export default function AdminRegistrationsPage() {
                 </div>
                 <div>
                   <span className="admin-mobile-label">Payment</span>
-                  <span className={`badge ${PAID_BADGE[r.paid_status] ?? "badge-mute"}`} style={{ alignSelf: "center" }}>{r.paid_status}</span>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                    <span className={`badge ${PAID_BADGE[r.paid_status] ?? "badge-mute"}`} style={{ alignSelf: "center" }}>{r.paid_status}</span>
+                    {r.paid_status === "pending" ? (
+                      <>
+                        <button
+                          type="button"
+                          className="btn"
+                          style={{ fontSize: 12, padding: "5px 11px" }}
+                          disabled={resendBusyId === r.id}
+                          onClick={() => resendLink(r)}
+                          title="Send a fresh checkout link + reminder email"
+                        >
+                          {resendBusyId === r.id ? "Sending…" : "Resend link"}
+                        </button>
+                        {resendMsg[r.id] ? <span style={{ fontSize: 12, color: "var(--ink-500)" }}>{resendMsg[r.id]}</span> : null}
+                      </>
+                    ) : null}
+                  </div>
                 </div>
                 <div>
                   <span className="admin-mobile-label">Registered</span>
@@ -471,20 +488,6 @@ export default function AdminRegistrationsPage() {
                     >
                       {busyId === r.id ? "Sending…" : "Invite"}
                     </button>
-                  ) : r.paid_status === "pending" ? (
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                      <button
-                        type="button"
-                        className="btn"
-                        style={{ fontSize: 12, padding: "5px 11px" }}
-                        disabled={resendBusyId === r.id}
-                        onClick={() => resendLink(r)}
-                        title="Send a fresh checkout link + reminder email"
-                      >
-                        {resendBusyId === r.id ? "Sending…" : "Resend link"}
-                      </button>
-                      {resendMsg[r.id] ? <span style={{ fontSize: 12, color: "var(--ink-500)" }}>{resendMsg[r.id]}</span> : null}
-                    </div>
                   ) : (
                     <span style={{ fontSize: 12, color: "var(--ink-500)" }}>—</span>
                   )}
