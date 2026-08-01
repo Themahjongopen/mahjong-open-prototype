@@ -84,9 +84,13 @@ const LAUNCH_CITIES = [
   { name: "Hattiesburg", state: "Mississippi", photo: "/brand-photo-6.jpg" },
   { name: "East Alabama", state: "Alabama", photo: "/brand-photo-7.jpg" },
   { name: "Franklin", state: "Tennessee", photo: "/brand-photo-8.jpg" },
-  { name: "Tuscaloosa", state: "Alabama", photo: "/brand-photo-9.jpg" },
+  { name: "Greater Tuscaloosa", state: "Alabama", photo: "/brand-photo-9.jpg" },
   { name: "Charleston", state: "South Carolina", photo: "/brand-photo-10.jpg" },
   { name: "Pensacola", state: "Florida", photo: "/brand-photo-11.jpg" },
+  { name: "Mobile", state: "Alabama", photo: "/brand-photo-12.jpg" },
+  { name: "Baldwin County", state: "Alabama", photo: "/brand-photo-13.jpg" },
+  { name: "30A", state: "Florida", photo: "/brand-photo-14.jpg" },
+  { name: "Greenbrier Region", state: "West Virginia", photo: "/brand-photo-15.jpg" },
 ];
 
 type LaunchCity = (typeof LAUNCH_CITIES)[number];
@@ -440,7 +444,7 @@ export default function HomePage() {
             <p className="eyebrow" style={{ display: "inline-flex", alignItems: "center", gap: 7, marginBottom: 14 }}>
               <Sparkles size={14} /> Now launching
             </p>
-            <h2 className="h2">Series One starts in{" "}<em className="serif-italic">eleven cities</em></h2>
+            <h2 className="h2">Series One starts in{" "}<em className="serif-italic">fifteen cities</em></h2>
             <p className="body-lg" style={{ marginTop: 16, maxWidth: 540, marginInline: "auto" }}>
               Our inaugural 8-week series kicks off this August. Be one of the first to take a seat at the table in your city.
             </p>
