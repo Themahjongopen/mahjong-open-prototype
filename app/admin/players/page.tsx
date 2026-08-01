@@ -5,6 +5,15 @@ import { useConfirm } from "@/components/ConfirmProvider";
 
 const PAID_BADGE: Record<string, string> = { paid: "badge-lime", pending: "badge-butter", refunded: "badge-mute" };
 
+// "Demo — Portal Screenshots (not live)" series — the isolated demo roster kept
+// long-term per portal-screenshots-mobile/. Excluded from the default "all series"
+// view (headline counts, City dropdown, unfiltered table) so it doesn't pollute
+// real registration numbers, but still LISTED and selectable in the Series
+// dropdown — picking it there shows its rows normally, like any other series.
+// NOTE: if a general `series.is_demo` flag is ever added (deferred per the
+// 2026-08-01 admin-metrics decision), replace this hardcoded id with that flag.
+const DEMO_SERIES_ID = "3ea14344-cc5e-4b6d-aaec-2eb143003c96";
+
 type InviteState = "none" | "invited" | "active";
 
 type RegistrationRow = {
@@ -175,24 +184,36 @@ export default function AdminRegistrationsPage() {
     void loadRows();
   }, []);
 
-  const paidCount = useMemo(() => rows.filter((r) => r.paid_status === "paid").length, [rows]);
+  // The demo series is hidden from the default view; it's only visible when the
+  // admin explicitly picks it in the Series dropdown. Everything the "all series"
+  // view summarizes (headline counts, City dropdown, unfiltered table) is derived
+  // from `visibleRows` rather than raw `rows` so the demo roster stays out by
+  // default and appears normally the moment its series is selected.
+  const showingDemoSeries = seriesFilter === DEMO_SERIES_ID;
+  const visibleRows = useMemo(
+    () => (showingDemoSeries ? rows : rows.filter((r) => r.series_id !== DEMO_SERIES_ID)),
+    [rows, showingDemoSeries]
+  );
+
+  const paidCount = useMemo(() => visibleRows.filter((r) => r.paid_status === "paid").length, [visibleRows]);
 
   // Paid registrants with no portal account yet — the target set for bulk invite.
   const uninvitedPaid = useMemo(
-    () => rows.filter((r) => r.paid_status === "paid" && r.invite_state === "none"),
-    [rows]
+    () => visibleRows.filter((r) => r.paid_status === "paid" && r.invite_state === "none"),
+    [visibleRows]
   );
 
   // Distinct (city_id, label) pairs present in the loaded rows, for the City
   // dropdown, each with paid/pending counts (refunded excluded). Counts are over
-  // the full `rows` dataset — NOT filteredRows — so they don't shift as the
-  // active filters change, matching the old label-keyed badge behavior. `allPaid`
-  // / `allPending` are the whole-dataset totals for the "All cities" option.
+  // `visibleRows` (the demo series is excluded by default) — NOT filteredRows —
+  // so they don't shift as the payment/city filters change, matching the old
+  // label-keyed badge behavior. `allPaid` / `allPending` are the whole-visible
+  // totals for the "All cities" option.
   const { cityOptions, allPaid, allPending } = useMemo(() => {
     const byId = new Map<string, { label: string; paid: number; pending: number }>();
     let allPaid = 0;
     let allPending = 0;
-    for (const r of rows) {
+    for (const r of visibleRows) {
       if (r.paid_status === "paid") allPaid += 1;
       else if (r.paid_status === "pending") allPending += 1;
       if (!r.city_id) continue;
@@ -203,7 +224,7 @@ export default function AdminRegistrationsPage() {
     }
     const cityOptions = Array.from(byId, ([id, v]) => ({ id, ...v })).sort((a, b) => a.label.localeCompare(b.label));
     return { cityOptions, allPaid, allPending };
-  }, [rows]);
+  }, [visibleRows]);
 
   // Distinct (series_id, name) pairs present in the loaded rows, for the Series
   // dropdown — matters once a second series' registration opens alongside the first.
@@ -216,7 +237,7 @@ export default function AdminRegistrationsPage() {
   // All filters combine with AND: a row must match every active one to show.
   const filteredRows = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return rows.filter((r) => {
+    return visibleRows.filter((r) => {
       if (filter !== "all" && r.paid_status !== filter) return false;
       if (cityFilter !== "all" && r.city_id !== cityFilter) return false;
       if (seriesFilter !== "all" && r.series_id !== seriesFilter) return false;
@@ -227,7 +248,7 @@ export default function AdminRegistrationsPage() {
       }
       return true;
     });
-  }, [rows, filter, search, cityFilter, seriesFilter, multiCityOnly]);
+  }, [visibleRows, filter, search, cityFilter, seriesFilter, multiCityOnly]);
 
   function handleExport() {
     const header = ["Name", "Email", "Phone", "City", "Series", "Skill", "Payment status", "Registered date"];
@@ -323,7 +344,7 @@ export default function AdminRegistrationsPage() {
       <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginBottom: 8 }}>
         <div>
           <h1 style={{ fontFamily: "var(--font-display)", fontSize: 26, color: "var(--ink-900)", marginBottom: 8 }}>Registrations</h1>
-          <p style={{ fontSize: 15, color: "var(--ink-500)" }}>{paidCount} paid · {rows.length} total</p>
+          <p style={{ fontSize: 15, color: "var(--ink-500)" }}>{paidCount} paid · {visibleRows.length} total</p>
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <button
