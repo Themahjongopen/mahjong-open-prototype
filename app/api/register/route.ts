@@ -174,6 +174,11 @@ export async function POST(request: Request) {
       },
     });
 
+    // Point the registration at its current live session (migration 022) so the
+    // admin "resend link" flow can expire THIS exact session later. Best-effort:
+    // an error here (e.g. column not yet migrated) never fails the registration.
+    await supabase.from("registrations").update({ stripe_session_id: session.id }).eq("id", registrationId);
+
     const { data: existingPayment, error: paymentLookupError } = await supabase
       .from("payments")
       .select("id")

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { Resend } from "resend";
 import Stripe from "stripe";
 import { buildBrandedEmail } from "@/lib/email/brandedEmail";
+import { sendRegistrationReminderEmail } from "@/lib/email/registrationReminderEmail";
 import { createAdminClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
@@ -318,41 +319,16 @@ export async function POST(request: Request) {
         .single();
 
       const seriesName = seriesData?.name ?? "The Mahjong Open";
-      const firstName = (registrationData.full_name || "there").split(" ")[0];
-      const resendApiKey = process.env.RESEND_API_KEY;
 
-      if (resendApiKey) {
-        try {
-          const resend = new Resend(resendApiKey);
-          const innerHtml = `
-            <p style="margin:0 0 12px 0;font-size:15px;line-height:1.65;color:#3a4a4f;">Hi ${firstName}, you’re almost in — your spot for <strong style="color:#1d4d59;">${seriesName}</strong> isn’t confirmed until payment is complete.</p>
-            <p style="margin:0 0 20px 0;font-size:15px;line-height:1.65;color:#3a4a4f;">Complete your registration to hold your place and keep your series plans moving.</p>
-            <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0;">
-              <tr>
-                <td align="center" style="background-color:#ec466e;border-radius:999px;">
-                  <a href="${recoveryUrl}" style="display:inline-block;padding:13px 32px;font-family:Helvetica,Arial,sans-serif;font-size:15px;color:#ffffff;text-decoration:none;font-weight:bold;">Complete your registration</a>
-                </td>
-              </tr>
-            </table>
-          `;
-
-          const html = buildBrandedEmail({
-            title: "Your registration is still waiting",
-            innerHtml,
-            footerNote: "A city-based mahjong social league. You’re receiving this because your registration was left unfinished.",
-          });
-
-          await resend.emails.send({
-            from: "The Mahjong Open <welcome@themahjongopen.com>",
-            to: [registrationData.email],
-            subject: "Your Mahjong Open registration isn't finished",
-            html,
-          });
-
-          await supabase.from("registrations").update({ reminder_sent_at: new Date().toISOString() }).eq("id", registrationId);
-        } catch (emailError) {
-          console.error("Abandoned registration reminder email failed.", emailError);
-        }
+      // Shared template — identical email to the admin manual-resend path.
+      const res = await sendRegistrationReminderEmail(
+        { email: registrationData.email, fullName: registrationData.full_name },
+        { seriesName, checkoutUrl: recoveryUrl }
+      );
+      if (res.ok) {
+        await supabase.from("registrations").update({ reminder_sent_at: new Date().toISOString() }).eq("id", registrationId);
+      } else {
+        console.error("Abandoned registration reminder email failed.", res.error);
       }
     }
   }

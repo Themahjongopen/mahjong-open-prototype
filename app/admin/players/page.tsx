@@ -56,6 +56,8 @@ export default function AdminRegistrationsPage() {
   const [seriesFilter, setSeriesFilter] = useState<string>("all");
   const [multiCityOnly, setMultiCityOnly] = useState<boolean>(false);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [resendBusyId, setResendBusyId] = useState<string | null>(null);
+  const [resendMsg, setResendMsg] = useState<Record<string, string>>({});
   const [bulkBusy, setBulkBusy] = useState(false);
   const [roleBusyId, setRoleBusyId] = useState<string | null>(null);
   // When promoting a player who has paid in more than one city, we ask which
@@ -137,6 +139,23 @@ export default function AdminRegistrationsPage() {
       confirmLabel: "Make commissioner",
     });
     if (ok) await designate(row, "commissioner", only);
+  }
+
+  // Instantly re-issue a pending registration's checkout link + reminder email.
+  async function resendLink(row: RegistrationRow) {
+    setResendBusyId(row.id);
+    setResendMsg((m) => ({ ...m, [row.id]: "" }));
+    try {
+      const res = await fetch(`/api/admin/registrations/${row.id}/resend`, { method: "POST", credentials: "include" });
+      const payload = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setResendMsg((m) => ({ ...m, [row.id]: payload.emailSent ? "Reminder sent" : "Link created, but the email failed to send — check Resend" }));
+      } else {
+        setResendMsg((m) => ({ ...m, [row.id]: payload.error ?? "Could not resend the link." }));
+      }
+    } finally {
+      setResendBusyId(null);
+    }
   }
 
   async function loadRows() {
@@ -452,6 +471,20 @@ export default function AdminRegistrationsPage() {
                     >
                       {busyId === r.id ? "Sending…" : "Invite"}
                     </button>
+                  ) : r.paid_status === "pending" ? (
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                      <button
+                        type="button"
+                        className="btn"
+                        style={{ fontSize: 12, padding: "5px 11px" }}
+                        disabled={resendBusyId === r.id}
+                        onClick={() => resendLink(r)}
+                        title="Send a fresh checkout link + reminder email"
+                      >
+                        {resendBusyId === r.id ? "Sending…" : "Resend link"}
+                      </button>
+                      {resendMsg[r.id] ? <span style={{ fontSize: 12, color: "var(--ink-500)" }}>{resendMsg[r.id]}</span> : null}
+                    </div>
                   ) : (
                     <span style={{ fontSize: 12, color: "var(--ink-500)" }}>—</span>
                   )}
