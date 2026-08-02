@@ -80,7 +80,6 @@ const PRODUCTS: Product[] = [
     href: "https://www.macandmillermahjong.com/discount/TSMJP?redirect=/products/coming-soon-red-white-blues-collection",
     image: "https://www.macandmillermahjong.com/cdn/shop/files/red-white-blues-collection-tile-set-tiles-806.webp?v=1780610094",
     bg: "var(--lime-wash)",
-    comingSoon: true,
   },
   {
     title: "Universal Tropics Bundle",
