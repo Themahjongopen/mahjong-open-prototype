@@ -78,7 +78,7 @@ const PRODUCTS: Product[] = [
     category: "Tiles & sets",
     blurb: "A love letter to summer nights and fireworks — 160 tiles in nostalgic red-white-and-blue Americana, arriving in a magnetic keepsake box with a tile guide and matching dice.",
     href: "https://www.macandmillermahjong.com/discount/TSMJP?redirect=/products/coming-soon-red-white-blues-collection",
-    image: "https://www.macandmillermahjong.com/cdn/shop/files/red-white-blues-collection-tile-set-tiles-806.webp?v=1780610094",
+    image: "https://www.macandmillermahjong.com/cdn/shop/files/red-white-blues-collection-tile-set-shoreline-blue-tiles-254.webp?v=1780610163",
     bg: "var(--lime-wash)",
   },
   {
