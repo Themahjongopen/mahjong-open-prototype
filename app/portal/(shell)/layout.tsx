@@ -29,6 +29,7 @@ export default async function PortalLayout({ children }: { children: React.React
 
   return (
     <PortalShellClient
+      userId={session.id}
       userName={session.full_name ?? session.email}
       isAdminRole={session.isAdmin}
       adminCities={adminCtx?.cities ?? []}

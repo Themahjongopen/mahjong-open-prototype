@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { LogOut, ShieldCheck } from "lucide-react";
+import { LogOut, ShieldCheck, User } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import AdminCitySwitcher from "./AdminCitySwitcher";
@@ -10,6 +10,7 @@ import PlayerCitySwitcher from "./PlayerCitySwitcher";
 
 interface PortalAppBarProps {
   title: string;
+  userId: string;
   userName?: string;
   // Admins get a "Switch to admin view" link that navigates to /admin.
   isAdminRole?: boolean;
@@ -23,7 +24,7 @@ interface PortalAppBarProps {
   playerActiveCityName?: string | null;
 }
 
-export default function PortalAppBar({ title, userName, isAdminRole, adminCities = [], activeCityId = null, activeCityName = null, playerCities = [], playerActiveCityId = null, playerActiveCityName = null }: PortalAppBarProps) {
+export default function PortalAppBar({ title, userId, userName, isAdminRole, adminCities = [], activeCityId = null, activeCityName = null, playerCities = [], playerActiveCityId = null, playerActiveCityName = null }: PortalAppBarProps) {
   const [popoverOpen, setPopoverOpen] = useState(false);
   const router = useRouter();
 
@@ -93,6 +94,26 @@ export default function PortalAppBar({ title, userName, isAdminRole, adminCities
                 <p style={{ fontSize: 13, fontWeight: 600, color: "var(--ink-900)" }}>{userName || "Player"}</p>
                 <p style={{ fontSize: 12, color: "var(--ink-500)" }}>Spring 2026 Season</p>
               </div>
+              <button
+                onClick={() => { setPopoverOpen(false); router.push(`/portal/profile/${userId}`); }}
+                style={{
+                  width: "100%",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  padding: "12px 16px",
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  fontSize: 14,
+                  color: "var(--ink-800)",
+                  borderBottom: "1px solid var(--hair-200)",
+                  textAlign: "left",
+                }}
+              >
+                <User size={15} color="var(--pink-600)" />
+                View my profile
+              </button>
               {isAdminRole && (
                 <button
                   onClick={() => { setPopoverOpen(false); router.push("/admin"); }}

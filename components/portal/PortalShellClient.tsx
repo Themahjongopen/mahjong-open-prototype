@@ -25,6 +25,7 @@ export function useToast() { return useContext(ToastContext); }
 
 export default function PortalShellClient({
   children,
+  userId,
   userName,
   isAdminRole,
   adminCities = [],
@@ -35,6 +36,7 @@ export default function PortalShellClient({
   playerActiveCityName = null,
 }: {
   children: React.ReactNode;
+  userId: string;
   userName: string;
   isAdminRole: boolean;
   adminCities?: { id: string; name: string }[];
@@ -58,6 +60,7 @@ export default function PortalShellClient({
     <ToastContext.Provider value={{ showToast }}>
       <PortalAppBar
         title={title}
+        userId={userId}
         isAdminRole={isAdminRole}
         userName={userName}
         adminCities={adminCities}
