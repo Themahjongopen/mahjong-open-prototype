@@ -163,10 +163,10 @@ function LaunchCityCard({ city }: { city: LaunchCity }) {
         <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.16em", textTransform: "uppercase", color: "var(--lime-700)", marginBottom: 10 }}>
           Launch city
         </p>
-        <h3 style={{ fontFamily: "var(--font-display)", fontSize: 30, fontWeight: 400, color: "var(--ink-900)", lineHeight: 1.05, marginBottom: 8 }}>
+        <h3 className="launch-card-title" style={{ fontFamily: "var(--font-display)", fontWeight: 400, color: "var(--ink-900)", lineHeight: 1.05, marginBottom: 8 }}>
           {city.name}
         </h3>
-        <p style={{ fontSize: 15, color: "var(--ink-700)", margin: 0 }}>{city.state}</p>
+        <p style={{ fontSize: 14, color: "var(--ink-700)", margin: 0 }}>{city.state}</p>
       </div>
     </div>
   );
@@ -807,10 +807,11 @@ export default function HomePage() {
         .launch-cities-grid {
           /* Column of rows; rows stretch to the full container width so each
              row's justify-content:center can center its cards (don't set
-             align-items:center here — it shrink-wraps rows and breaks wrapping). */
+             align-items:center here — it shrink-wraps rows and breaks wrapping).
+             gap here also sets the mobile card-to-card vertical spacing. */
           display: flex;
           flex-direction: column;
-          gap: 28px;
+          gap: 20px;
           max-width: 1132px;
           margin-inline: auto;
         }
@@ -818,23 +819,25 @@ export default function HomePage() {
           display: flex;
           flex-wrap: wrap;
           justify-content: center;
-          gap: 28px;
+          gap: 20px;
         }
         .launch-cities-row > * {
-          flex: 0 1 340px;
-          min-width: 260px;
+          flex: 0 1 300px;
+          min-width: 230px;
         }
-        /* Card photo aspect + body padding live in CSS (not inline) so the mobile
-           media query can shorten cards. Base values match the original inline
-           styles, so desktop card sizing is unchanged. */
-        .launch-card-photo { aspect-ratio: 3 / 2; }
-        .launch-card-body { padding: 22px 28px 26px; }
+        /* Card photo aspect + body padding + title size live in CSS (not inline)
+           so both breakpoints can be tuned independently — see the 2026-08-02
+           sizing pass for the modest-tightening values. */
+        .launch-card-photo { aspect-ratio: 8 / 5; }
+        .launch-card-body { padding: 18px 22px 20px; }
+        .launch-card-title { font-size: 26px; }
         @media (max-width: 600px) {
           /* One card per row on mobile: fill the column width and shorten each
              (wider/shorter photo crop + tighter text padding). Desktop untouched. */
           .launch-cities-row > * { flex-basis: 100%; }
-          .launch-card-photo { aspect-ratio: 16 / 9; }
-          .launch-card-body { padding: 16px 24px 20px; }
+          .launch-card-photo { aspect-ratio: 2 / 1; }
+          .launch-card-body { padding: 13px 18px 16px; }
+          .launch-card-title { font-size: 22px; }
         }
         .format-card {
           opacity: 0;
