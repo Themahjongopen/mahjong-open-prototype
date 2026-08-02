@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { X, Check } from "lucide-react";
+import { X, Check, AlertCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { groupCitiesByState } from "@/lib/cities/groupByState";
 
@@ -41,6 +41,7 @@ export default function RegisterModal({ open, onClose }: RegisterModalProps) {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const dialogRef = useRef<HTMLDivElement>(null);
+  const errorRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   async function handlePhoto(e: React.ChangeEvent<HTMLInputElement>) {
@@ -80,6 +81,13 @@ export default function RegisterModal({ open, onClose }: RegisterModalProps) {
     else document.body.style.overflow = "";
     return () => { document.body.style.overflow = ""; };
   }, [open]);
+
+  // Bring the error banner into view when it appears — a banner below the fold
+  // (short viewport / mobile keyboard open) would otherwise exist off-screen and
+  // read as "nothing happened."
+  useEffect(() => {
+    if (error) errorRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }, [error]);
 
   useEffect(() => {
     if (!open) return;
@@ -152,6 +160,11 @@ export default function RegisterModal({ open, onClose }: RegisterModalProps) {
     }
 
     setLoading(true);
+    // Bound how long "Saving your spot…" can hang: /api/register creates a Stripe
+    // session, so give it a generous 20s, then abort so the button re-enables with
+    // an actionable message instead of an indefinite spinner.
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 20000);
     try {
       const res = await fetch("/api/register", {
         method: "POST",
@@ -165,7 +178,9 @@ export default function RegisterModal({ open, onClose }: RegisterModalProps) {
           skill_level: form.skill_level,
           avatar_url: avatarUrl,
         }),
+        signal: controller.signal,
       });
+      clearTimeout(timeoutId);
       if (!res.ok) {
         const data = await res.json();
         throw new Error(data.error || "Registration failed. Please try again.");
@@ -179,7 +194,18 @@ export default function RegisterModal({ open, onClose }: RegisterModalProps) {
         throw new Error("Payment checkout was not returned.");
       }
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Something went wrong.");
+      clearTimeout(timeoutId);
+      // Specific messages from /api/register arrive as Error(data.error) and show
+      // verbatim. Only the raw browser-thrown cases get a plain-language rewrite:
+      // an aborted (timed-out) request, or a network failure whose TypeError
+      // message is an unhelpful "Failed to fetch" / "Load failed".
+      if (err instanceof DOMException && err.name === "AbortError") {
+        setError("This is taking longer than expected. Check your connection and try again.");
+      } else if (err instanceof TypeError) {
+        setError("Couldn't reach the server — check your connection and try again.");
+      } else {
+        setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
@@ -416,7 +442,22 @@ export default function RegisterModal({ open, onClose }: RegisterModalProps) {
               </Field>
 
               {error && (
-                <p style={{ fontSize: 13, color: "var(--danger)", margin: 0 }}>{error}</p>
+                <div
+                  ref={errorRef}
+                  role="alert"
+                  style={{
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: 8,
+                    padding: "12px 14px",
+                    borderRadius: "var(--radius-md)",
+                    background: "#fdecee",
+                    border: "1px solid var(--danger)",
+                  }}
+                >
+                  <AlertCircle size={16} color="var(--danger)" style={{ flexShrink: 0, marginTop: 1 }} />
+                  <p style={{ fontSize: 14, color: "var(--danger)", margin: 0, lineHeight: 1.4 }}>{error}</p>
+                </div>
               )}
 
               <button
