@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { X, Check } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { groupCitiesByState } from "@/lib/cities/groupByState";
 
 interface RegisterModalProps {
   open: boolean;
@@ -371,10 +372,14 @@ export default function RegisterModal({ open, onClose }: RegisterModalProps) {
                   disabled={cities.length === 0}
                 >
                   <option value="">Select your city</option>
-                  {cities.map((city) => (
-                    <option key={city.id} value={city.id}>
-                      {city.name}, {city.state}
-                    </option>
+                  {groupCitiesByState(cities).map((group) => (
+                    <optgroup key={group.stateLabel} label={group.stateLabel}>
+                      {group.cities.map((city) => (
+                        <option key={city.id} value={city.id}>
+                          {city.name}, {city.state}
+                        </option>
+                      ))}
+                    </optgroup>
                   ))}
                 </select>
               </Field>

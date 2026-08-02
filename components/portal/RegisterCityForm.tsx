@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { groupCitiesByState } from "@/lib/cities/groupByState";
 
 type EligibleCity = { id: string; name: string; state: string | null };
 type ProfileFields = {
@@ -80,10 +81,14 @@ export default function RegisterCityForm({
         <label style={{ fontSize: 13, fontWeight: 600, color: "var(--ink-800)" }}>City</label>
         <select className="input-mo" value={cityId} onChange={(e) => setCityId(e.target.value)}>
           <option value="">Select a city</option>
-          {eligibleCities.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.state ? `${c.name}, ${c.state}` : c.name}
-            </option>
+          {groupCitiesByState(eligibleCities).map((group) => (
+            <optgroup key={group.stateLabel} label={group.stateLabel}>
+              {group.cities.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.state ? `${c.name}, ${c.state}` : c.name}
+                </option>
+              ))}
+            </optgroup>
           ))}
         </select>
       </div>
