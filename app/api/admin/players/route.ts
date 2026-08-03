@@ -125,12 +125,12 @@ export async function GET() {
   return NextResponse.json({ players: MOCK_REGISTRATIONS });
 }
 
-// Player↔Commissioner designation against real profiles. One commissioner PER
-// CITY, tracked explicitly by profiles.commissioner_city_id. Promoting requires
-// the caller to name the city (cityId) — we no longer guess it from the target's
-// most-recent registration, which could pick the wrong city once a player is
-// registered in more than one (migration 019). Promoting demotes only the
-// current commissioner of THAT city, not every commissioner system-wide.
+// Player↔Commissioner designation against real profiles. A city may have MORE
+// THAN ONE commissioner, tracked per-profile by profiles.commissioner_city_id.
+// Promoting requires the caller to name the city (cityId) — we no longer guess
+// it from the target's most-recent registration, which could pick the wrong city
+// once a player is registered in more than one (migration 019). Promoting only
+// updates the named player's row; it never demotes anyone else who leads that city.
 export async function PUT(request: Request) {
   if (!(await isAdminRequest())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -177,16 +177,8 @@ export async function PUT(request: Request) {
     return NextResponse.json({ error: "That city isn't one of this player's paid registrations." }, { status: 400 });
   }
 
-  // Demote the current commissioner of THIS city only (by commissioner_city_id).
-  const { error: demoteError } = await supabase
-    .from("profiles")
-    .update({ role: "player", commissioner_city_id: null })
-    .eq("commissioner_city_id", cityId)
-    .neq("id", profileId);
-  if (demoteError) {
-    return NextResponse.json({ error: "Could not update the current commissioner." }, { status: 500 });
-  }
-
+  // A city can have more than one commissioner — promoting this player does NOT
+  // demote anyone else who already leads the same city; only this row changes.
   const { error } = await supabase
     .from("profiles")
     .update({ role: "commissioner", commissioner_city_id: cityId })

@@ -144,7 +144,7 @@ export default function AdminRegistrationsPage() {
     const only = cities[0];
     const ok = await confirm({
       title: "Make commissioner?",
-      message: `Make ${row.full_name ?? row.email} the commissioner for ${only.label}? This replaces the current commissioner there.`,
+      message: `Make ${row.full_name ?? row.email} a commissioner for ${only.label}?`,
       confirmLabel: "Make commissioner",
     });
     if (ok) await designate(row, "commissioner", only);
@@ -568,7 +568,7 @@ export default function AdminRegistrationsPage() {
               Which city?
             </h2>
             <p style={{ fontSize: 15, lineHeight: 1.6, color: "var(--ink-700)", margin: "0 0 20px" }}>
-              {cityPicker.row.full_name ?? cityPicker.row.email} is registered in more than one city. Pick the city they’ll be commissioner of — this replaces the current commissioner there.
+              {cityPicker.row.full_name ?? cityPicker.row.email} is registered in more than one city. Pick the city they’ll be a commissioner of.
             </p>
             <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 }}>
               {cityPicker.cities.map((c) => (
