@@ -22,11 +22,21 @@ export default function AdminCitySwitcher({
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [query, setQuery] = useState("");
 
   if (cities.length === 0) return null;
 
-  async function pick(cityId: string) {
+  // Reset the search when the menu closes so stale text doesn't carry over.
+  function close() {
     setOpen(false);
+    setQuery("");
+  }
+
+  const q = query.trim().toLowerCase();
+  const filtered = q ? cities.filter((c) => c.name.toLowerCase().includes(q)) : cities;
+
+  async function pick(cityId: string) {
+    close();
     if (cityId === activeCityId) return;
     setBusy(true);
     try {
@@ -46,7 +56,7 @@ export default function AdminCitySwitcher({
     <div style={{ position: "relative" }}>
       <button
         type="button"
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => (open ? close() : setOpen(true))}
         disabled={busy}
         aria-label="Switch active city"
         style={{
@@ -74,7 +84,7 @@ export default function AdminCitySwitcher({
 
       {open ? (
         <>
-          <div style={{ position: "fixed", inset: 0, zIndex: 150 }} onClick={() => setOpen(false)} />
+          <div style={{ position: "fixed", inset: 0, zIndex: 150 }} onClick={close} />
           <div
             style={{
               position: "absolute",
@@ -84,7 +94,7 @@ export default function AdminCitySwitcher({
               border: "1px solid var(--hair-200)",
               borderRadius: "var(--radius-md)",
               boxShadow: "var(--shadow-md)",
-              minWidth: 200,
+              minWidth: 220,
               zIndex: 200,
               overflow: "hidden",
             }}
@@ -92,33 +102,60 @@ export default function AdminCitySwitcher({
             <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--ink-500)", padding: "10px 14px 6px", margin: 0 }}>
               Acting in city
             </p>
-            {cities.map((c) => {
-              const isActive = c.id === activeCityId;
-              return (
-                <button
-                  key={c.id}
-                  type="button"
-                  onClick={() => pick(c.id)}
-                  style={{
-                    width: "100%",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    gap: 10,
-                    padding: "10px 14px",
-                    background: "none",
-                    border: "none",
-                    cursor: "pointer",
-                    fontSize: 14,
-                    color: "var(--ink-800)",
-                    textAlign: "left",
-                  }}
-                >
-                  {c.name}
-                  {isActive ? <Check size={15} color="var(--pink-600)" /> : null}
-                </button>
-              );
-            })}
+            {/* Search filters the (now up to 21+) cities client-side; the list
+                below scrolls while this input stays pinned. */}
+            <div style={{ padding: "0 10px 8px" }}>
+              <input
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search cities…"
+                aria-label="Search cities"
+                autoFocus
+                style={{
+                  width: "100%",
+                  boxSizing: "border-box",
+                  padding: "7px 10px",
+                  fontSize: 13,
+                  border: "1px solid var(--hair-200)",
+                  borderRadius: "8px",
+                  outline: "none",
+                }}
+              />
+            </div>
+            <div style={{ maxHeight: 300, overflowY: "auto" }}>
+              {filtered.length === 0 ? (
+                <p style={{ fontSize: 13, color: "var(--ink-500)", padding: "8px 14px 12px", margin: 0 }}>No cities match.</p>
+              ) : (
+                filtered.map((c) => {
+                  const isActive = c.id === activeCityId;
+                  return (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => pick(c.id)}
+                      style={{
+                        width: "100%",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: 10,
+                        padding: "10px 14px",
+                        background: "none",
+                        border: "none",
+                        cursor: "pointer",
+                        fontSize: 14,
+                        color: "var(--ink-800)",
+                        textAlign: "left",
+                      }}
+                    >
+                      {c.name}
+                      {isActive ? <Check size={15} color="var(--pink-600)" /> : null}
+                    </button>
+                  );
+                })
+              )}
+            </div>
           </div>
         </>
       ) : null}
