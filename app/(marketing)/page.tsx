@@ -95,6 +95,7 @@ const LAUNCH_CITIES = [
   { name: "Charlotte", state: "North Carolina", photo: "/brand-photo-17.jpg" },
   { name: "Greater Greenville", state: "South Carolina", photo: "/brand-photo-18.jpg" },
   { name: "Central Arkansas", state: "Arkansas", photo: "/brand-photo-19.jpg" },
+  { name: "Vicksburg", state: "Mississippi", photo: "/brand-photo-20.jpg" },
 ];
 
 type LaunchCity = (typeof LAUNCH_CITIES)[number];
@@ -448,7 +449,7 @@ export default function HomePage() {
             <p className="eyebrow" style={{ display: "inline-flex", alignItems: "center", gap: 7, marginBottom: 14 }}>
               <Sparkles size={14} /> Now launching
             </p>
-            <h2 className="h2">Series One starts in{" "}<em className="serif-italic">nineteen cities</em></h2>
+            <h2 className="h2">Series One starts in{" "}<em className="serif-italic">twenty cities</em></h2>
             <p className="body-lg" style={{ marginTop: 16, maxWidth: 540, marginInline: "auto" }}>
               Our inaugural 8-week series kicks off this August. Be one of the first to take a seat at the table in your city.
             </p>
@@ -814,7 +815,7 @@ export default function HomePage() {
              gap here also sets the mobile card-to-card vertical spacing. */
           display: flex;
           flex-direction: column;
-          gap: 20px;
+          gap: 16px;
           max-width: 1132px;
           margin-inline: auto;
         }
@@ -822,25 +823,27 @@ export default function HomePage() {
           display: flex;
           flex-wrap: wrap;
           justify-content: center;
-          gap: 20px;
+          gap: 16px;
         }
         .launch-cities-row > * {
-          flex: 0 1 300px;
-          min-width: 230px;
+          flex: 0 1 265px;
+          min-width: 205px;
         }
         /* Card photo aspect + body padding + title size live in CSS (not inline)
-           so both breakpoints can be tuned independently — see the 2026-08-02
-           sizing pass for the modest-tightening values. */
+           so both breakpoints can be tuned independently. Two tightening passes so
+           far: 2026-08-02 (16 cities) and 2026-08-03 (a second step down at 20
+           cities / 7 rows — smaller cards, gaps, padding, and title). Photo aspect
+           ratios kept unchanged across both. */
         .launch-card-photo { aspect-ratio: 8 / 5; }
-        .launch-card-body { padding: 18px 22px 20px; }
-        .launch-card-title { font-size: 26px; }
+        .launch-card-body { padding: 14px 18px 16px; }
+        .launch-card-title { font-size: 23px; }
         @media (max-width: 600px) {
           /* One card per row on mobile: fill the column width and shorten each
              (wider/shorter photo crop + tighter text padding). Desktop untouched. */
           .launch-cities-row > * { flex-basis: 100%; }
           .launch-card-photo { aspect-ratio: 2 / 1; }
-          .launch-card-body { padding: 13px 18px 16px; }
-          .launch-card-title { font-size: 22px; }
+          .launch-card-body { padding: 11px 14px 14px; }
+          .launch-card-title { font-size: 20px; }
         }
         .format-card {
           opacity: 0;
