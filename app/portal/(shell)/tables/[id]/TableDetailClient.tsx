@@ -8,6 +8,7 @@ import { useConfirm } from "@/components/ConfirmProvider";
 import Avatar from "@/components/portal/Avatar";
 import type { LeagueTable } from "@/lib/portal/tables";
 import type { TableSubmission } from "@/lib/portal/scores";
+import { formatTableTime } from "@/lib/format/time";
 
 const SKILL_COLORS: Record<string, string> = {
   beginner: "badge-lime",
@@ -142,7 +143,7 @@ export default function TableDetailClient({
           {table.table_time ? (
             <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, color: "var(--ink-700)" }}>
               <Clock size={15} color="var(--ink-500)" />
-              {table.table_time.slice(0, 5)}
+              {formatTableTime(table.table_time)}
             </div>
           ) : null}
           <div style={{ display: "flex", alignItems: "flex-start", gap: 8, fontSize: 14, color: "var(--ink-700)" }}>

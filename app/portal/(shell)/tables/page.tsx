@@ -3,6 +3,7 @@ import { MapPin, Clock, Users, Plus } from "lucide-react";
 import { getPortalUser } from "@/lib/portal/session";
 import { withAdminCity } from "@/lib/portal/adminCity";
 import { getOpenTables, activeSeats, type LeagueTable } from "@/lib/portal/tables";
+import { formatTableTime } from "@/lib/format/time";
 
 const SKILL_COLORS: Record<string, string> = {
   beginner: "badge-lime",
@@ -69,7 +70,7 @@ export default async function TablesPage() {
                         <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
                           {table.table_time ? (
                             <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 13, color: "var(--ink-500)" }}>
-                              <Clock size={12} /> {table.table_time.slice(0, 5)}
+                              <Clock size={12} /> {formatTableTime(table.table_time)}
                             </span>
                           ) : null}
                           <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 13, color: "var(--ink-500)" }}>

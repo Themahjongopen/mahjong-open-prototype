@@ -1,4 +1,5 @@
 import { getAdminTables } from "@/lib/admin/tables";
+import { formatTableTime } from "@/lib/format/time";
 
 const STATUS_BADGE: Record<string, string> = { open: "badge-lime", full: "badge-peri", completed: "badge-mute", canceled: "badge-mute" };
 
@@ -28,7 +29,7 @@ export default async function AdminTablesPage() {
                   <p style={{ fontSize: 14, fontWeight: 500, color: "var(--ink-900)" }}>{t.location_name}</p>
                   <p style={{ fontSize: 12, color: "var(--ink-500)" }}>
                     {new Date(`${t.table_date}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                    {t.table_time ? ` · ${t.table_time.slice(0, 5)}` : ""}
+                    {t.table_time ? ` · ${formatTableTime(t.table_time)}` : ""}
                   </p>
                 </div>
                 <div>

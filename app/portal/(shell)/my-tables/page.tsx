@@ -2,6 +2,7 @@ import Link from "next/link";
 import { CalendarDays, MapPin } from "lucide-react";
 import { getPortalUser } from "@/lib/portal/session";
 import { getMyTables, type MyTableSeat } from "@/lib/portal/tables";
+import { formatTableTime } from "@/lib/format/time";
 
 const STATUS_COLORS: Record<string, string> = {
   open: "badge-lime", full: "badge-peri", completed: "badge-mute", canceled: "badge-mute",
@@ -37,7 +38,7 @@ export default async function MyTablesPage() {
             <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
               {table.table_time ? (
                 <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 13, color: "var(--ink-500)" }}>
-                  <CalendarDays size={12} /> {table.table_time.slice(0, 5)}
+                  <CalendarDays size={12} /> {formatTableTime(table.table_time)}
                 </span>
               ) : null}
               <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 13, color: "var(--ink-500)" }}>

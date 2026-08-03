@@ -5,6 +5,7 @@ import { withAdminCity } from "@/lib/portal/adminCity";
 import { getNextTable } from "@/lib/portal/tables";
 import { getRegisterCityOptions } from "@/lib/portal/registerCity";
 import HomeStats from "@/components/portal/HomeStats";
+import { formatTableTime } from "@/lib/format/time";
 
 function greeting(name: string) {
   const hour = new Date().getHours();
@@ -52,7 +53,7 @@ export default async function PortalDashboard() {
                 <CalendarDays size={16} color="rgba(234,242,242,0.8)" />
                 <span style={{ fontSize: 15 }}>
                   {new Date(`${nextTable.table_date}T12:00:00`).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
-                  {nextTable.table_time ? ` · ${nextTable.table_time.slice(0, 5)}` : ""}
+                  {nextTable.table_time ? ` · ${formatTableTime(nextTable.table_time)}` : ""}
                 </span>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
