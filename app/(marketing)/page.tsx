@@ -96,37 +96,24 @@ const LAUNCH_CITIES = [
   { name: "Greater Greenville", state: "South Carolina", photo: "/brand-photo-18.jpg" },
   { name: "Central Arkansas", state: "Arkansas", photo: "/brand-photo-19.jpg" },
   { name: "Vicksburg", state: "Mississippi", photo: "/brand-photo-20.jpg" },
+  { name: "Greater Cartersville", state: "Georgia", photo: "/brand-photo-21.jpg" },
 ];
 
 type LaunchCity = (typeof LAUNCH_CITIES)[number];
 
-// Split the launch cities into balanced, symmetric rows of at most 3, with the
+// Split the launch cities into balanced, symmetric rows of at most 4, with the
 // larger rows toward the center (a centered pyramid) — e.g.
-//   4 -> 2+2, 5 -> 3+2, 6 -> 3+3, 7 -> 2+3+2, 10 -> 2+3+3+2, ...
-// (reproduces the layouts shipped for 4/5/6 cities). Each row is centered in CSS.
+//   5 -> 3+2, 7 -> 4+3, 8 -> 4+4, 10 -> 3+4+3, 21 -> 3+4+4+4+3+3, ...
+// Each row is centered in CSS.
 function launchCityRows<T>(cities: T[]): T[][] {
   const n = cities.length;
   if (n === 0) return [];
 
-  // Special-case: exactly 8 cities render as 3+2+3 (edges-first) rather than
-  // the center-first 3+3+2 the general algorithm below would produce. This is
-  // a deliberate stepping stone toward the 3+3+3 layout at 9 cities, which the
-  // general algorithm already produces correctly and unchanged.
-  if (n === 8) {
-    const rows: T[][] = [];
-    let i = 0;
-    for (const size of [3, 2, 3]) {
-      rows.push(cities.slice(i, i + size));
-      i += size;
-    }
-    return rows;
-  }
-
-  const rowCount = Math.ceil(n / 3);
+  const rowCount = Math.ceil(n / 4);
   const base = Math.floor(n / rowCount);
   const sizes = new Array<number>(rowCount).fill(base);
   // Hand the remainder to the rows nearest the center first, so the middle
-  // row(s) are the largest (seven cities -> 2 + 3 + 2, not 3 + 2 + 2).
+  // row(s) are the largest (21 cities -> 3 + 4 + 4 + 4 + 3 + 3, not edges-first).
   const mid = (rowCount - 1) / 2;
   const byCenter = [...sizes.keys()].sort((a, b) => Math.abs(a - mid) - Math.abs(b - mid) || a - b);
   for (let k = 0; k < n - base * rowCount; k++) sizes[byCenter[k]]++;
@@ -449,7 +436,7 @@ export default function HomePage() {
             <p className="eyebrow" style={{ display: "inline-flex", alignItems: "center", gap: 7, marginBottom: 14 }}>
               <Sparkles size={14} /> Now launching
             </p>
-            <h2 className="h2">Series One starts in{" "}<em className="serif-italic">twenty cities</em></h2>
+            <h2 className="h2">Series One starts in{" "}<em className="serif-italic">twenty-one cities</em></h2>
             <p className="body-lg" style={{ marginTop: 16, maxWidth: 540, marginInline: "auto" }}>
               Our inaugural 8-week series kicks off this August. Be one of the first to take a seat at the table in your city.
             </p>
@@ -802,12 +789,12 @@ export default function HomePage() {
           max-width: 760px;
           margin-inline: auto;
         }
-        /* Launch cities render as explicit balanced rows (max 3 per row) via
-           launchCityRows() — e.g. 7 -> 3 + 2 + 2; it also reproduces the earlier
-           4 -> 2+2, 5 -> 3+2, 6 -> 3+3 layouts and avoids a trailing orphan row
-           of one. Every row centers, and cards keep full width so long names
-           (e.g. "Golden Triangle") stay on one line. On mobile each row's cards
-           go full-width -> a clean single-column stack. */
+        /* Launch cities render as explicit balanced rows (max 4 per row) via
+           launchCityRows() — e.g. 21 -> 3 + 4 + 4 + 4 + 3 + 3; it also handles
+           the smaller counts (7 -> 4+3, 8 -> 4+4, 10 -> 3+4+3) and avoids a
+           trailing orphan row of one. Every row centers, and cards keep full
+           width so long names (e.g. "Greater Cartersville") stay on one line. On
+           mobile each row's cards go full-width -> a clean single-column stack. */
         .launch-cities-grid {
           /* Column of rows; rows stretch to the full container width so each
              row's justify-content:center can center its cards (don't set
