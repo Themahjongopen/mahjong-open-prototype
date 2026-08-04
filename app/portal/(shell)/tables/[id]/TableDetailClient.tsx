@@ -319,7 +319,6 @@ function createCalendarHref(date: Date, table: LeagueTable) {
 
 function createGoogleCalendarLink(date: Date, table: LeagueTable) {
   const endDate = new Date(date.getTime() + 2 * 60 * 60 * 1000);
-  const format = (d: Date) => d.toISOString().replace(/[-:]/g, "").split(".")[0];
   const details = `Skill level: ${table.skill_level ?? "Open"} - ${table.location_name}${table.location_address ? `, ${table.location_address}` : ""}`;
-  return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(`The Mahjong Open table at ${table.location_name}`)}&dates=${format(date)}/${format(endDate)}&details=${encodeURIComponent(details)}&location=${encodeURIComponent(table.location_address ?? table.location_name)}&sf=true&output=xml`;
+  return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(`The Mahjong Open table at ${table.location_name}`)}&dates=${formatDateForCalendar(date)}Z/${formatDateForCalendar(endDate)}Z&details=${encodeURIComponent(details)}&location=${encodeURIComponent(table.location_address ?? table.location_name)}&sf=true&output=xml`;
 }
