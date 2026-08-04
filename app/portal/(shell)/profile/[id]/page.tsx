@@ -10,9 +10,9 @@ import Avatar from "@/components/portal/Avatar";
 
 type SkillValue = "beginner" | "intermediate" | "advanced" | "";
 
-function skillLabel(skill: string | null) {
-  if (!skill) return "Not set";
-  return `${skill.charAt(0).toUpperCase()}${skill.slice(1)}`;
+function skillLine(skill: string | null) {
+  if (!skill) return "Skill level not set";
+  return `${skill.charAt(0).toUpperCase()}${skill.slice(1)} player`;
 }
 
 const cardStyle: React.CSSProperties = {
@@ -136,7 +136,7 @@ export default async function PlayerProfilePage({ params }: { params: Promise<{ 
             <div style={{ minWidth: 0 }}>
               {cityName ? <p className="eyebrow" style={{ marginBottom: 6 }}>{cityName}</p> : null}
               <h2 style={{ fontFamily: "var(--font-display)", fontSize: 24, color: "var(--ink-900)", margin: 0 }}>{fullName}</h2>
-              <p style={{ fontSize: 14, color: "var(--ink-500)", marginTop: 6 }}>{skillLabel(skill)} player</p>
+              <p style={{ fontSize: 14, color: "var(--ink-500)", marginTop: 6 }}>{skillLine(skill)}</p>
             </div>
           </div>
           {isCommissioner ? (
