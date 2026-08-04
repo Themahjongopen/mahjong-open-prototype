@@ -31,6 +31,17 @@ export async function getCityName(cityId: string | null): Promise<string | null>
   return city?.name ?? null;
 }
 
+// The series' start date ("YYYY-MM-DD"), used to auto-fill the round/week number
+// from a table's calendar date on the Create Table form. Null if unavailable —
+// callers must degrade gracefully (the round stays a manual pick).
+export async function getSeriesStartDate(seriesId: string | null): Promise<string | null> {
+  if (!seriesId) return null;
+  const admin: any = createAdminClient();
+  if (!admin) return null;
+  const { data: series } = await admin.from("series").select("starts_at").eq("id", seriesId).maybeSingle();
+  return series?.starts_at ?? null;
+}
+
 function today() {
   return new Date().toISOString().slice(0, 10);
 }

@@ -75,7 +75,20 @@ function RoundTypeInfo() {
   );
 }
 
-export default function CreateTableForm({ cityName }: { cityName: string | null }) {
+// The series' round/week for a calendar date, or "" if the date is outside the
+// 8-week window (before the start, or >8 weeks after). UTC-midnight day-math so
+// there's no timezone/DST off-by-one — same approach as lib/format/zonedTime.ts.
+function weekNumberForDate(seriesStartDate: string | null, dateStr: string): string {
+  if (!seriesStartDate || !dateStr) return "";
+  const [sy, sm, sd] = seriesStartDate.split("-").map(Number);
+  const [dy, dm, dd] = dateStr.split("-").map(Number);
+  if ([sy, sm, sd, dy, dm, dd].some(Number.isNaN)) return "";
+  const days = Math.floor((Date.UTC(dy, dm - 1, dd) - Date.UTC(sy, sm - 1, sd)) / 86400000);
+  const week = Math.floor(days / 7) + 1;
+  return week >= 1 && week <= 8 ? String(week) : "";
+}
+
+export default function CreateTableForm({ cityName, seriesStartDate }: { cityName: string | null; seriesStartDate: string | null }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -137,14 +150,19 @@ export default function CreateTableForm({ cityName }: { cityName: string | null 
       </p>
 
       <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-        {field("Round (week 1–8)", true,
-          <select className="input-mo" value={form.week_number} onChange={(e) => setForm((f) => ({ ...f, week_number: e.target.value }))}>
-            <option value="">Select round</option>
-            {[1, 2, 3, 4, 5, 6, 7, 8].map((w) => <option key={w} value={w}>Round {w}</option>)}
-          </select>
-        )}
         {field("Date", true,
-          <input className="input-mo" type="date" value={form.table_date} onChange={(e) => setForm((f) => ({ ...f, table_date: e.target.value }))} />
+          // Auto-fills the round below from the series start date. Fires on every
+          // date change; the host can still override the round afterward.
+          <input className="input-mo" type="date" value={form.table_date} onChange={(e) => setForm((f) => ({ ...f, table_date: e.target.value, week_number: weekNumberForDate(seriesStartDate, e.target.value) }))} />
+        )}
+        {field("Round (week 1–8)", true,
+          <>
+            <select className="input-mo" value={form.week_number} onChange={(e) => setForm((f) => ({ ...f, week_number: e.target.value }))}>
+              <option value="">Select round</option>
+              {[1, 2, 3, 4, 5, 6, 7, 8].map((w) => <option key={w} value={w}>Round {w}</option>)}
+            </select>
+            <p style={{ fontSize: 12, color: "var(--ink-500)", margin: "2px 0 0" }}>Auto-filled from the date above — change it if this isn&rsquo;t right.</p>
+          </>
         )}
         {field("Time", true,
           <input className="input-mo" type="time" value={form.table_time} onChange={(e) => setForm((f) => ({ ...f, table_time: e.target.value }))} />
