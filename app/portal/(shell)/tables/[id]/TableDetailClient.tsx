@@ -250,6 +250,9 @@ export default function TableDetailClient({
             Google Calendar
           </a>
         </div>
+        <div style={{ fontSize: 12, color: "var(--ink-500)", textAlign: "center", padding: "0 8px" }}>
+          &ldquo;Add to calendar&rdquo; may not work in Chrome on iPhone — if it doesn&rsquo;t, please use Safari, or tap &ldquo;Google Calendar&rdquo; instead.
+        </div>
 
         {isCreator && scoringFilled < 4 && (table.status === "open" || table.status === "full") && (
           <div style={{ fontSize: 13, color: "var(--ink-500)", textAlign: "center", padding: "0 8px" }}>
