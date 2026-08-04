@@ -213,7 +213,7 @@ export async function POST(request: Request) {
         : "Unknown";
 
       const SITE_URL = "https://themahjongopen.com";
-      const RULEBOOK_URL = "";
+      const RULEBOOK_URL = "https://www.themahjongopen.com/handbook/the-mahjong-open-handbook-2026.pdf";
       const rulebookBlock = RULEBOOK_URL
         ? `<tr><td style="padding:6px 40px 4px 40px;font-family:Helvetica,Arial,sans-serif;"><p style="margin:0;font-size:15px;line-height:1.65;color:#3a4a4f;">New to the game or want a refresher? <a href="${RULEBOOK_URL}" style="color:#c60e31;font-weight:bold;text-decoration:underline;">Read the official rulebook</a> so you&rsquo;re ready for your first table.</p></td></tr>`
         : "";
