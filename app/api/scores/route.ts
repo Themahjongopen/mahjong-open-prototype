@@ -3,6 +3,7 @@ import { getPortalUser } from "@/lib/portal/session";
 import { createAdminClient } from "@/lib/supabase/server";
 import { resolvePrefs } from "@/lib/portal/notificationPrefs";
 import { sendScorePostedEmail } from "@/lib/email/scorePostedEmail";
+import { scoringSeats } from "@/lib/portal/tables";
 
 const NO_SHOW_STAY_BONUS = 25;
 
@@ -34,7 +35,7 @@ export async function POST(request: Request) {
 
   const { data: table } = await admin
     .from("league_tables")
-    .select("id, creator_id, status, table_date, location_name, table_seats(user_id, canceled_at), score_submissions(id)")
+    .select("id, creator_id, status, table_date, table_time, location_name, table_seats(user_id, seat_number, canceled_at), score_submissions(id)")
     .eq("id", tableId)
     .maybeSingle();
 
@@ -51,10 +52,18 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Scores have already been submitted for this table." }, { status: 409 });
   }
 
-  // The submission must cover exactly the actively-seated players.
-  const seatedIds = new Set<string>((table.table_seats ?? []).filter((s: any) => !s.canceled_at).map((s: any) => String(s.user_id)));
-  // An official round needs all 4 seats actively held. Defense-in-depth: a seat
-  // can be cancelled after the table is marked "completed" but before scores are
+  // Scoring seats = active seats + any seat whose most recent occupant cancelled
+  // within 24h and was never re-claimed. The late-cancellation users are forced
+  // to a no-show below, regardless of what the client submitted.
+  const { active, lateCancellations } = scoringSeats({
+    table_date: table.table_date,
+    table_time: table.table_time,
+    table_seats: table.table_seats ?? [],
+  });
+  const lateCancelIds = new Set<string>(lateCancellations.map((s) => String(s.user_id)));
+  const seatedIds = new Set<string>([...active, ...lateCancellations].map((s) => String(s.user_id)));
+  // An official round needs 4 scoring seats. Defense-in-depth: a seat can be
+  // cancelled after the table is marked "completed" but before scores are
   // submitted (seats/cancel doesn't check table status), so re-check here.
   if (seatedIds.size < 4) {
     return NextResponse.json({ error: "A round needs exactly 4 seated players before scores can be submitted." }, { status: 400 });
@@ -64,10 +73,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Scores must be entered for every seated player." }, { status: 400 });
   }
 
-  const anyNoShow = inputPlayers.some((p) => p.is_no_show === true);
+  // A late-cancelled seat is ALWAYS a no-show, overriding whatever the client
+  // sent — this is the enforcement of the forced no-show, not just a UI nicety.
+  const anyNoShow = lateCancelIds.size > 0 || inputPlayers.some((p) => p.is_no_show === true);
   const rows = inputPlayers.map((p) => {
+    const isNoShow = lateCancelIds.has(String(p.user_id)) || p.is_no_show === true;
     if (anyNoShow) {
-      return p.is_no_show
+      return isNoShow
         ? { user_id: p.user_id, round_score: 0, is_no_show: true, is_no_show_bonus: false }
         : { user_id: p.user_id, round_score: NO_SHOW_STAY_BONUS, is_no_show: false, is_no_show_bonus: true };
     }

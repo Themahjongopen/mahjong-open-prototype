@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getPortalUser } from "@/lib/portal/session";
 import { createAdminClient } from "@/lib/supabase/server";
+import { scoringSeats } from "@/lib/portal/tables";
 
 // Creator/admin table actions. Seats are left intact; status drives display.
 //   action: "cancel"   → status canceled
@@ -26,7 +27,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
 
   const { data: table } = await admin
     .from("league_tables")
-    .select("id, creator_id, status, table_seats(canceled_at)")
+    .select("id, creator_id, status, table_date, table_time, table_seats(seat_number, canceled_at)")
     .eq("id", id)
     .maybeSingle();
 
@@ -44,10 +45,12 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     return NextResponse.json({ ok: true });
   }
 
-  // complete — an official round needs all 4 seats actively held (handbook's
-  // "Four Players" rule). Checked ahead of the status early-returns.
-  const activeSeats = (table.table_seats ?? []).filter((s: any) => !s.canceled_at).length;
-  if (activeSeats < 4) {
+  // complete — an official round needs 4 scoring seats (handbook's "Four
+  // Players" rule): active seats plus any seat whose most recent occupant
+  // cancelled within 24h and was never re-claimed (forced no-show at score
+  // time). Checked ahead of the status early-returns.
+  const { active, lateCancellations } = scoringSeats(table);
+  if (active.length + lateCancellations.length < 4) {
     return NextResponse.json({ error: "This round needs 4 seated players before it can be marked as played." }, { status: 409 });
   }
   if (table.status === "completed") return NextResponse.json({ ok: true });

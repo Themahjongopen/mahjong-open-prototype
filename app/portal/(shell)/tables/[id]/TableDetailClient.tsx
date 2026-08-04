@@ -6,7 +6,7 @@ import { CalendarDays, MapPin, Clock } from "lucide-react";
 import { useToast } from "@/components/portal/PortalShellClient";
 import { useConfirm } from "@/components/ConfirmProvider";
 import Avatar from "@/components/portal/Avatar";
-import type { LeagueTable } from "@/lib/portal/tables";
+import { scoringSeats, type LeagueTable } from "@/lib/portal/seats";
 import type { TableSubmission } from "@/lib/portal/scores";
 import { formatTableTime } from "@/lib/format/time";
 
@@ -39,13 +39,20 @@ export default function TableDetailClient({
   const [loading, setLoading] = useState<Action>(null);
 
   const active = table.table_seats.filter((s) => !s.canceled_at);
+  const { lateCancellations } = scoringSeats(table);
+  const lateCancelSeatNumbers = new Set(lateCancellations.map((s) => s.seat_number));
   const myActiveSeat = active.find((s) => s.user_id === currentUserId);
   const isCreator = table.creator_id === currentUserId;
   const seatsFilled = active.length;
+  // Seats that count toward the 4 needed to play: real people seated + any seat
+  // whose most recent occupant cancelled within 24h and was never re-claimed
+  // (forced no-show at score time). Join eligibility and the Players header keep
+  // using the real active count so an open seat can still be backfilled.
+  const scoringFilled = active.length + lateCancellations.length;
   const canJoin = !myActiveSeat && seatsFilled < 4 && table.status === "open" && !isCreator;
   const canLeave = !!myActiveSeat && !isCreator && (table.status === "open" || table.status === "full");
   const canCancelTable = isCreator && (table.status === "open" || table.status === "full");
-  const canMarkPlayed = isCreator && seatsFilled >= 4 && (table.status === "open" || table.status === "full");
+  const canMarkPlayed = isCreator && scoringFilled >= 4 && (table.status === "open" || table.status === "full");
   const canSubmitScores = isCreator && table.status === "completed" && !submission;
 
   const tableDateTime = new Date(`${table.table_date}T${table.table_time ?? "12:00:00"}`);
@@ -169,6 +176,7 @@ export default function TableDetailClient({
         </div>
         {[1, 2, 3, 4].map((seatNum) => {
           const seat = active.find((s) => s.seat_number === seatNum);
+          const isLateCancel = !seat && lateCancelSeatNumbers.has(seatNum);
           const isMe = seat?.user_id === currentUserId;
           const isTableCreator = seat?.user_id === table.creator_id;
           return (
@@ -191,8 +199,8 @@ export default function TableDetailClient({
                 </div>
               )}
               <div style={{ flex: 1 }}>
-                <p style={{ fontSize: 14, fontWeight: seat ? 500 : 400, color: seat ? "var(--ink-900)" : "var(--ink-500)" }}>
-                  {seat ? (seat.profiles?.full_name ?? "Player") : "Open spot"}
+                <p style={{ fontSize: 14, fontWeight: seat ? 500 : 400, color: seat ? "var(--ink-900)" : isLateCancel ? "var(--danger)" : "var(--ink-500)" }}>
+                  {seat ? (seat.profiles?.full_name ?? "Player") : isLateCancel ? "Canceled (late) — counts as a no-show" : "Open spot"}
                 </p>
                 {isTableCreator && seat && <p style={{ fontSize: 11, color: "var(--lime-600)", fontWeight: 600 }}>Table creator</p>}
               </div>
@@ -240,9 +248,9 @@ export default function TableDetailClient({
           </a>
         </div>
 
-        {isCreator && seatsFilled < 4 && (table.status === "open" || table.status === "full") && (
+        {isCreator && scoringFilled < 4 && (table.status === "open" || table.status === "full") && (
           <div style={{ fontSize: 13, color: "var(--ink-500)", textAlign: "center", padding: "0 8px" }}>
-            Waiting for {4 - seatsFilled} more player{4 - seatsFilled === 1 ? "" : "s"} before this round can be marked as played.
+            Waiting for {4 - scoringFilled} more player{4 - scoringFilled === 1 ? "" : "s"} before this round can be marked as played.
           </div>
         )}
 

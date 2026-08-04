@@ -8,7 +8,9 @@ type Entry = { round_score: string; is_no_show: boolean };
 
 function initEntries(table: ScoreableTable | undefined): Record<string, Entry> {
   const out: Record<string, Entry> = {};
-  for (const s of table?.seats ?? []) out[s.user_id] = { round_score: "0", is_no_show: false };
+  // A late-cancelled seat is forced to a no-show and can't be edited — seed its
+  // entry as a no-show so it's included in the payload (and trips the no-show round).
+  for (const s of table?.seats ?? []) out[s.user_id] = { round_score: "0", is_no_show: s.is_late_cancellation };
   return out;
 }
 
@@ -75,7 +77,27 @@ export default function ScoreEntryForm({ tables, initialTableId }: { tables: Sco
           </p>
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {selected.seats.map((s) => {
-              const entry = entries[s.user_id] ?? { round_score: "0", is_no_show: false };
+              const entry = entries[s.user_id] ?? { round_score: "0", is_no_show: s.is_late_cancellation };
+
+              // Late cancellation: locked no-show. Checkbox is checked + disabled
+              // (host can't enter a real score), with a badge explaining why.
+              if (s.is_late_cancellation) {
+                return (
+                  <div key={s.user_id} style={{ background: "#fff", border: "1px solid var(--hair-200)", borderRadius: "var(--radius-lg)", padding: "14px 16px", boxShadow: "var(--shadow-xs)" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+                      <p style={{ fontSize: 14, fontWeight: 600, color: "var(--ink-900)" }}>{s.full_name ?? "Player"}</p>
+                      <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "var(--ink-400)" }}>
+                        <input type="checkbox" checked disabled style={{ width: 16, height: 16, accentColor: "var(--pink-500)" }} />
+                        No-show
+                      </label>
+                    </div>
+                    <span style={{ display: "inline-block", marginTop: 8, fontSize: 11, fontWeight: 700, color: "var(--danger)", background: "var(--warning-bg, #fff7ed)", border: "1px solid var(--crimson-100)", borderRadius: 999, padding: "3px 10px" }}>
+                      Canceled within 24 hours — recorded as a no-show
+                    </span>
+                  </div>
+                );
+              }
+
               return (
                 <div key={s.user_id} style={{ background: "#fff", border: "1px solid var(--hair-200)", borderRadius: "var(--radius-lg)", padding: "14px 16px", boxShadow: "var(--shadow-xs)" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>

@@ -1,36 +1,20 @@
 import { createAdminClient } from "@/lib/supabase/server";
 import type { PortalMember } from "@/lib/portal/session";
+import { activeSeats, scoringSeats, type SeatRow, type LeagueTable } from "./seats";
 
 // Server-only read helpers for the portal tables/seats feature. Reads go through
 // the service-role client so seat rows can embed profile names (profiles is
 // RLS-locked to service-role); every function is scoped to the caller's own
 // city+series cohort (or admin). Membership is already established by the portal
 // shell layout via getPortalUser(); these add the cohort/authorization filter.
-
-export type SeatRow = {
-  id: string;
-  user_id: string;
-  seat_number: number;
-  canceled_at: string | null;
-  profiles?: { full_name: string | null; avatar_url: string | null } | null;
-};
-
-export type LeagueTable = {
-  id: string;
-  city_id: string;
-  series_id: string;
-  creator_id: string;
-  week_number: number;
-  table_date: string;
-  table_time: string | null;
-  location_name: string;
-  location_address: string | null;
-  skill_level: string | null;
-  round_type: string | null;
-  notes: string | null;
-  status: string;
-  table_seats: SeatRow[];
-};
+//
+// The pure seat shapes/helpers (SeatRow, LeagueTable, activeSeats, scoringSeats)
+// live in ./seats — which has no server-only imports — and are re-exported here
+// so callers can keep importing them from "@/lib/portal/tables". Client
+// components must import scoringSeats from ./seats directly (importing it from
+// here would pull this module's server-only createAdminClient into the browser).
+export { activeSeats, scoringSeats };
+export type { SeatRow, LeagueTable };
 
 export type MyTableSeat = {
   seat_number: number;
@@ -50,8 +34,6 @@ export async function getCityName(cityId: string | null): Promise<string | null>
 function today() {
   return new Date().toISOString().slice(0, 10);
 }
-
-export const activeSeats = (seats: SeatRow[]) => seats.filter((s) => !s.canceled_at);
 
 // Open, still-joinable tables in the member's city+series, from today forward.
 export async function getOpenTables(member: PortalMember): Promise<LeagueTable[]> {
