@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { LogOut, ShieldCheck, User } from "lucide-react";
+import { LifeBuoy, LogOut, ShieldCheck, User } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import AdminCitySwitcher from "./AdminCitySwitcher";
@@ -113,6 +113,26 @@ export default function PortalAppBar({ title, userId, userName, isAdminRole, adm
               >
                 <User size={15} color="var(--pink-600)" />
                 View my profile
+              </button>
+              <button
+                onClick={() => { setPopoverOpen(false); router.push("/portal/support"); }}
+                style={{
+                  width: "100%",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  padding: "12px 16px",
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  fontSize: 14,
+                  color: "var(--ink-800)",
+                  borderBottom: "1px solid var(--hair-200)",
+                  textAlign: "left",
+                }}
+              >
+                <LifeBuoy size={15} color="var(--pink-600)" />
+                Get help
               </button>
               {isAdminRole && (
                 <button
