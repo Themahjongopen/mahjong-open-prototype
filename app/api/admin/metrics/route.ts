@@ -82,20 +82,22 @@ export async function GET() {
       ? countExact("registrations", (q) => q.eq("series_id", activeSeriesId).eq("paid_status", "paid"))
       : Promise.resolve(0),
     countExact("registrations"),
-    // Active players — DISTINCT profiles holding at least one paid registration
-    // in a still-active city. A multi-city player can have several qualifying
-    // registrations, so dedupe by profile_id in JS rather than counting rows.
+    // Active players — DISTINCT people holding at least one paid registration in
+    // a still-active city. Dedupe on lowercased email (not profile_id, which is
+    // only set once someone accepts their portal invite — most paid registrants
+    // haven't yet, so profile_id would massively undercount). Case-insensitive to
+    // match the email matching used elsewhere (e.g. the handle_new_user trigger).
     (async () => {
       const { data } = await supabase
         .from("registrations")
-        .select("profile_id, cities!inner(is_active)")
+        .select("email, cities!inner(is_active)")
         .eq("paid_status", "paid")
         .eq("cities.is_active", true);
-      const ids = new Set<string>();
-      for (const row of (data ?? []) as { profile_id: string | null }[]) {
-        if (row.profile_id) ids.add(row.profile_id);
+      const emails = new Set<string>();
+      for (const row of (data ?? []) as { email: string | null }[]) {
+        if (row.email) emails.add(row.email.toLowerCase());
       }
-      return ids.size;
+      return emails.size;
     })(),
     countExact("cities", (q) => q.eq("is_active", true)),
   ]);
