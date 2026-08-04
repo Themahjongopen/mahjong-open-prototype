@@ -9,6 +9,7 @@ import Avatar from "@/components/portal/Avatar";
 import { scoringSeats, type LeagueTable } from "@/lib/portal/seats";
 import type { TableSubmission } from "@/lib/portal/scores";
 import { formatTableTime } from "@/lib/format/time";
+import { zonedTimeToUtc } from "@/lib/format/zonedTime";
 
 const SKILL_COLORS: Record<string, string> = {
   beginner: "badge-lime",
@@ -55,7 +56,10 @@ export default function TableDetailClient({
   const canMarkPlayed = isCreator && scoringFilled >= 4 && (table.status === "open" || table.status === "full");
   const canSubmitScores = isCreator && table.status === "completed" && !submission;
 
-  const tableDateTime = new Date(`${table.table_date}T${table.table_time ?? "12:00:00"}`);
+  // Resolve the venue-local start time to a real UTC instant so the 24h warning
+  // (and the calendar links below) are correct regardless of the viewer's phone
+  // timezone. Falls back to Central if the city has no timezone set.
+  const tableDateTime = zonedTimeToUtc(table.table_date, table.table_time ?? "12:00:00", table.timezone ?? "America/Chicago");
   const hoursUntil = (tableDateTime.getTime() - Date.now()) / (1000 * 60 * 60);
   const withinCutoff = hoursUntil <= 24;
 
@@ -230,8 +234,7 @@ export default function TableDetailClient({
 
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
           <a
-            href={createCalendarHref(tableDateTime, table)}
-            download={`mahjong-table-${table.id}.ics`}
+            href={`/api/tables/${table.id}/calendar.ics`}
             className="btn btn-ghost"
             style={{ justifyContent: "center", padding: "13px" }}
           >
@@ -297,25 +300,6 @@ function formatDateForCalendar(date: Date) {
   return date.toISOString().replace(/[-:]/g, "").split(".")[0];
 }
 
-function createCalendarHref(date: Date, table: LeagueTable) {
-  const endDate = new Date(date.getTime() + 2 * 60 * 60 * 1000);
-  const ics = [
-    "BEGIN:VCALENDAR",
-    "VERSION:2.0",
-    "PRODID:-//The Mahjong Open//EN",
-    "BEGIN:VEVENT",
-    `UID:${table.id}@themahjongopen.com`,
-    `DTSTAMP:${formatDateForCalendar(new Date())}Z`,
-    `DTSTART:${formatDateForCalendar(date)}Z`,
-    `DTEND:${formatDateForCalendar(endDate)}Z`,
-    `SUMMARY:The Mahjong Open table at ${table.location_name}`,
-    `DESCRIPTION:Skill level: ${table.skill_level ?? "Open"}\\nLocation: ${table.location_name}${table.location_address ? `\\n${table.location_address}` : ""}`,
-    `LOCATION:${table.location_address ?? table.location_name}`,
-    "END:VEVENT",
-    "END:VCALENDAR",
-  ].join("\r\n");
-  return `data:text/calendar;charset=utf-8,${encodeURIComponent(ics)}`;
-}
 
 function createGoogleCalendarLink(date: Date, table: LeagueTable) {
   const endDate = new Date(date.getTime() + 2 * 60 * 60 * 1000);

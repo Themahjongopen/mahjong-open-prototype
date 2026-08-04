@@ -25,16 +25,18 @@ export type SubmittedPlayer = {
 export type TableSubmission = { id: string; status: string; players: SubmittedPlayer[] };
 
 const TABLE_SELECT =
-  "id, creator_id, week_number, table_date, table_time, location_name, status, series_id, table_seats(user_id, seat_number, canceled_at, profiles(full_name)), score_submissions(id)";
+  "id, creator_id, week_number, table_date, table_time, location_name, status, series_id, cities(timezone), table_seats(user_id, seat_number, canceled_at, profiles(full_name)), score_submissions(id)";
 
 // Build the scoreable seat list: active seats (is_late_cancellation false) plus
 // any seat whose most recent occupant cancelled within 24h and was never
 // re-claimed (is_late_cancellation true, forced to a no-show at submit time),
 // sorted together by seat_number.
-function toSeats(table: { table_date: string; table_time: string | null; table_seats: SeatRow[] | null }): ScoreSeat[] {
+function toSeats(table: { table_date: string; table_time: string | null; table_seats: SeatRow[] | null; cities?: { timezone: string | null } | { timezone: string | null }[] | null }): ScoreSeat[] {
+  const city = Array.isArray(table.cities) ? table.cities[0] : table.cities;
   const { active, lateCancellations } = scoringSeats({
     table_date: table.table_date,
     table_time: table.table_time,
+    timezone: city?.timezone ?? null,
     table_seats: table.table_seats ?? [],
   });
   const seat = (s: SeatRow, is_late_cancellation: boolean): ScoreSeat => ({

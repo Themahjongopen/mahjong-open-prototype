@@ -13,7 +13,7 @@ interface City {
 
 export default function AdminCitiesPage() {
   const [cities, setCities] = useState<City[]>([]);
-  const [form, setForm] = useState({ name: "", state: "" });
+  const [form, setForm] = useState({ name: "", state: "", timezone: "America/Chicago" });
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ name: "", state: "" });
   const [loading, setLoading] = useState(false);
@@ -48,7 +48,7 @@ export default function AdminCitiesPage() {
     const response = await fetch("/api/admin/cities", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: form.name, state: form.state }),
+      body: JSON.stringify({ name: form.name, state: form.state, timezone: form.timezone }),
     });
 
     const payload = await response.json().catch(() => ({}));
@@ -59,7 +59,7 @@ export default function AdminCitiesPage() {
       return;
     }
 
-    setForm({ name: "", state: "" });
+    setForm({ name: "", state: "", timezone: "America/Chicago" });
     setFeedback("City added.");
     await loadCities();
     setLoading(false);
@@ -167,6 +167,10 @@ export default function AdminCitiesPage() {
         <form onSubmit={handleCreate} className="admin-cities-form">
           <input className="input-mo" placeholder="City name" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} required />
           <input className="input-mo" placeholder="State (e.g. MS)" value={form.state} onChange={(e) => setForm((f) => ({ ...f, state: e.target.value }))} required />
+          <select className="input-mo" aria-label="Timezone" value={form.timezone} onChange={(e) => setForm((f) => ({ ...f, timezone: e.target.value }))} required>
+            <option value="America/Chicago">Central (America/Chicago)</option>
+            <option value="America/New_York">Eastern (America/New_York)</option>
+          </select>
           <button className="btn btn-primary" type="submit" disabled={loading} style={{ whiteSpace: "nowrap" }}>{loading ? "Adding…" : "Add city"}</button>
         </form>
       </div>

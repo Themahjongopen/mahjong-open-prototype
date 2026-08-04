@@ -27,7 +27,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
 
   const { data: table } = await admin
     .from("league_tables")
-    .select("id, creator_id, status, table_date, table_time, table_seats(seat_number, canceled_at)")
+    .select("id, creator_id, status, table_date, table_time, cities(timezone), table_seats(seat_number, canceled_at)")
     .eq("id", id)
     .maybeSingle();
 
@@ -49,7 +49,13 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
   // Players" rule): active seats plus any seat whose most recent occupant
   // cancelled within 24h and was never re-claimed (forced no-show at score
   // time). Checked ahead of the status early-returns.
-  const { active, lateCancellations } = scoringSeats(table);
+  const city = Array.isArray(table.cities) ? table.cities[0] : table.cities;
+  const { active, lateCancellations } = scoringSeats({
+    table_date: table.table_date,
+    table_time: table.table_time,
+    timezone: city?.timezone ?? null,
+    table_seats: table.table_seats ?? [],
+  });
   if (active.length + lateCancellations.length < 4) {
     return NextResponse.json({ error: "This round needs 4 seated players before it can be marked as played." }, { status: 409 });
   }

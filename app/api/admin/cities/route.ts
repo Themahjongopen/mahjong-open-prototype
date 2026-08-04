@@ -58,6 +58,10 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
   const name = body?.name?.toString().trim();
   const state = body?.state?.toString().trim();
+  // Only the two zones our cities actually use; default to Central (majority).
+  const ALLOWED_TIMEZONES = ["America/Chicago", "America/New_York"];
+  const requestedTz = body?.timezone?.toString().trim();
+  const timezone = ALLOWED_TIMEZONES.includes(requestedTz) ? requestedTz : "America/Chicago";
 
   if (!name || !state) {
     return NextResponse.json({ error: "Please enter a city name and state." }, { status: 400 });
@@ -83,6 +87,7 @@ export async function POST(request: Request) {
         state,
         slug: slugify(`${name}-${state}`) || "city",
         is_active: true,
+        timezone,
       })
       .select("id, name, state, slug, is_active, created_at")
       .single();

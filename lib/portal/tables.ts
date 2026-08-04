@@ -61,13 +61,16 @@ export async function getTableDetail(id: string, member: PortalMember): Promise<
 
   const { data } = await admin
     .from("league_tables")
-    .select("id, city_id, series_id, creator_id, week_number, table_date, table_time, location_name, location_address, skill_level, round_type, notes, status, table_seats(id, user_id, seat_number, canceled_at, profiles(full_name, avatar_url))")
+    .select("id, city_id, series_id, creator_id, week_number, table_date, table_time, location_name, location_address, skill_level, round_type, notes, status, cities(timezone), table_seats(id, user_id, seat_number, canceled_at, profiles(full_name, avatar_url))")
     .eq("id", id)
     .maybeSingle();
 
   if (!data) return null;
   if (!member.isAdmin && data.series_id !== member.series_id) return null;
-  return data as LeagueTable;
+  // Flatten the joined city timezone onto the table (venue-local time for the
+  // calendar exports + the 24h no-show cutoff).
+  const city = Array.isArray(data.cities) ? data.cities[0] : data.cities;
+  return { ...data, timezone: city?.timezone ?? null } as LeagueTable;
 }
 
 // Tables the member is actively seated in (creators keep seat 1), newest first.

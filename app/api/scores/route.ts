@@ -35,7 +35,7 @@ export async function POST(request: Request) {
 
   const { data: table } = await admin
     .from("league_tables")
-    .select("id, creator_id, status, table_date, table_time, location_name, table_seats(user_id, seat_number, canceled_at), score_submissions(id)")
+    .select("id, creator_id, status, table_date, table_time, location_name, cities(timezone), table_seats(user_id, seat_number, canceled_at), score_submissions(id)")
     .eq("id", tableId)
     .maybeSingle();
 
@@ -55,9 +55,11 @@ export async function POST(request: Request) {
   // Scoring seats = active seats + any seat whose most recent occupant cancelled
   // within 24h and was never re-claimed. The late-cancellation users are forced
   // to a no-show below, regardless of what the client submitted.
+  const city = Array.isArray(table.cities) ? table.cities[0] : table.cities;
   const { active, lateCancellations } = scoringSeats({
     table_date: table.table_date,
     table_time: table.table_time,
+    timezone: city?.timezone ?? null,
     table_seats: table.table_seats ?? [],
   });
   const lateCancelIds = new Set<string>(lateCancellations.map((s) => String(s.user_id)));

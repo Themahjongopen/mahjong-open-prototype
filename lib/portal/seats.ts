@@ -4,6 +4,12 @@
 // into the browser bundle. Server data-access lives in ./tables, which re-exports
 // everything here so existing "@/lib/portal/tables" imports keep working.
 
+import { zonedTimeToUtc } from "@/lib/format/zonedTime";
+
+// Fallback venue timezone (majority zone) when a city has no timezone set —
+// e.g. an old/demo row not yet backfilled by migration 024.
+const DEFAULT_TIMEZONE = "America/Chicago";
+
 export type SeatRow = {
   id: string;
   user_id: string;
@@ -20,6 +26,7 @@ export type LeagueTable = {
   week_number: number;
   table_date: string;
   table_time: string | null;
+  timezone: string | null; // IANA name of the venue's local time (cities.timezone)
   location_name: string;
   location_address: string | null;
   skill_level: string | null;
@@ -37,10 +44,12 @@ export const activeSeats = (seats: SeatRow[]) => seats.filter((s) => !s.canceled
 // time (see scores.ts / api/scores). Returns active seats and late-cancellation
 // seats separately so callers can total them (`active.length + lateCancellations.length`)
 // or treat them differently (score entry needs to flag which is which).
-export function scoringSeats(table: Pick<LeagueTable, "table_date" | "table_time" | "table_seats">): { active: SeatRow[]; lateCancellations: SeatRow[] } {
+export function scoringSeats(table: Pick<LeagueTable, "table_date" | "table_time" | "timezone" | "table_seats">): { active: SeatRow[]; lateCancellations: SeatRow[] } {
   const active = activeSeats(table.table_seats);
   const activeSeatNumbers = new Set(active.map((s) => s.seat_number));
-  const cutoff = new Date(`${table.table_date}T${table.table_time ?? "12:00:00"}`).getTime() - 24 * 60 * 60 * 1000;
+  // Resolve the venue-local start time to a real UTC instant so the 24h cutoff
+  // is correct regardless of where this runs (server = UTC). See zonedTimeToUtc.
+  const cutoff = zonedTimeToUtc(table.table_date, table.table_time ?? "12:00:00", table.timezone ?? DEFAULT_TIMEZONE).getTime() - 24 * 60 * 60 * 1000;
 
   const lateCancellations: SeatRow[] = [];
   const bySeatNumber = new Map<number, SeatRow>(); // most recent cancellation per seat_number
