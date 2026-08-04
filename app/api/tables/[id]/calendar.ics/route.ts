@@ -52,10 +52,20 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
     "END:VCALENDAR",
   ].join("\r\n");
 
-  return new Response(ics, {
+  // Encode to bytes so we can send an explicit Content-Length. Without it, the
+  // Vercel Node runtime uses chunked transfer-encoding, and iOS Safari's
+  // text/calendar handling (the native "Add Event" sheet) needs the full length
+  // up front — otherwise WebKit falls back to a generic file download that fails
+  // with "Safari cannot download this file". Use `inline` (not `attachment`) so
+  // Safari's calendar-event recognition runs instead of the generic download
+  // manager; `text/calendar` is unambiguous, so this never renders as text.
+  const bodyBytes = new TextEncoder().encode(ics);
+
+  return new Response(bodyBytes, {
     headers: {
       "Content-Type": "text/calendar; charset=utf-8",
-      "Content-Disposition": `attachment; filename="mahjong-table-${table.id}.ics"`,
+      "Content-Disposition": `inline; filename="mahjong-table-${table.id}.ics"`,
+      "Content-Length": String(bodyBytes.byteLength),
     },
   });
 }
