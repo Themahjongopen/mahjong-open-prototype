@@ -37,6 +37,16 @@ export type MyTableSeat = {
   table: Omit<LeagueTable, "table_seats"> & { table_seats: SeatRow[] };
 };
 
+// Resolve a city's display name from its id — used to label the tables/create
+// screens with the active city (same lookup getStandings() does for Standings).
+export async function getCityName(cityId: string | null): Promise<string | null> {
+  if (!cityId) return null;
+  const admin: any = createAdminClient();
+  if (!admin) return null;
+  const { data: city } = await admin.from("cities").select("name").eq("id", cityId).maybeSingle();
+  return city?.name ?? null;
+}
+
 function today() {
   return new Date().toISOString().slice(0, 10);
 }
