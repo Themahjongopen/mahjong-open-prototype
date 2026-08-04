@@ -82,7 +82,21 @@ export async function GET() {
       ? countExact("registrations", (q) => q.eq("series_id", activeSeriesId).eq("paid_status", "paid"))
       : Promise.resolve(0),
     countExact("registrations"),
-    countExact("profiles", (q) => q.neq("role", "admin")),
+    // Active players — DISTINCT profiles holding at least one paid registration
+    // in a still-active city. A multi-city player can have several qualifying
+    // registrations, so dedupe by profile_id in JS rather than counting rows.
+    (async () => {
+      const { data } = await supabase
+        .from("registrations")
+        .select("profile_id, cities!inner(is_active)")
+        .eq("paid_status", "paid")
+        .eq("cities.is_active", true);
+      const ids = new Set<string>();
+      for (const row of (data ?? []) as { profile_id: string | null }[]) {
+        if (row.profile_id) ids.add(row.profile_id);
+      }
+      return ids.size;
+    })(),
     countExact("cities", (q) => q.eq("is_active", true)),
   ]);
 
