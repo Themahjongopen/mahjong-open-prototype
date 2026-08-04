@@ -437,6 +437,7 @@ export default function RegisterModal({ open, onClose }: RegisterModalProps) {
                     </button>
                     <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={handlePhoto} style={{ display: "none" }} />
                     <p style={{ fontSize: 12, color: "var(--ink-500)", marginTop: 4 }}>Required · JPG, PNG, or WebP · up to 3 MB.</p>
+                    <p style={{ fontSize: 12, color: "var(--ink-500)", marginTop: 4 }}>Please use a real photo of yourself — no avatars, illustrations, or logos.</p>
                   </div>
                 </div>
               </Field>
