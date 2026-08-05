@@ -46,21 +46,43 @@ function today() {
   return new Date().toISOString().slice(0, 10);
 }
 
+// Shared query for the city+series table list, from today forward. `openOnly`
+// gates the `status = 'open'` filter so getOpenTables and getAllTables share one
+// select string + sort order. Sort: round, then date, then time ascending — the
+// table_time key is what keeps same-date tables in chronological (not insertion)
+// order on the Open Tables / All views.
+function tablesInCohortQuery(admin: any, member: PortalMember, openOnly: boolean) {
+  let query = admin
+    .from("league_tables")
+    .select("id, city_id, series_id, creator_id, week_number, table_date, table_time, location_name, location_address, skill_level, round_type, notes, status, table_seats(id, user_id, seat_number, canceled_at, profiles(full_name, avatar_url, skill_level))")
+    .eq("series_id", member.series_id)
+    .eq("city_id", member.city_id);
+  if (openOnly) query = query.eq("status", "open");
+  return query
+    .gte("table_date", today())
+    .order("week_number", { ascending: true })
+    .order("table_date", { ascending: true })
+    .order("table_time", { ascending: true });
+}
+
 // Open, still-joinable tables in the member's city+series, from today forward.
 export async function getOpenTables(member: PortalMember): Promise<LeagueTable[]> {
   const admin: any = createAdminClient();
   if (!admin || !member.series_id || !member.city_id) return [];
 
-  const { data } = await admin
-    .from("league_tables")
-    .select("id, city_id, series_id, creator_id, week_number, table_date, table_time, location_name, location_address, skill_level, round_type, notes, status, table_seats(id, user_id, seat_number, canceled_at, profiles(full_name, avatar_url, skill_level))")
-    .eq("series_id", member.series_id)
-    .eq("city_id", member.city_id)
-    .eq("status", "open")
-    .gte("table_date", today())
-    .order("week_number", { ascending: true })
-    .order("table_date", { ascending: true });
+  const { data } = await tablesInCohortQuery(admin, member, true);
+  return (data ?? []) as LeagueTable[];
+}
 
+// Every table in the member's city+series from today forward, regardless of
+// status (open/full/completed/canceled). Same forward-looking window as
+// getOpenTables — it just drops the status filter; it does NOT surface past
+// weeks. Backs the "All" toggle on the tables page.
+export async function getAllTables(member: PortalMember): Promise<LeagueTable[]> {
+  const admin: any = createAdminClient();
+  if (!admin || !member.series_id || !member.city_id) return [];
+
+  const { data } = await tablesInCohortQuery(admin, member, false);
   return (data ?? []) as LeagueTable[];
 }
 
@@ -84,7 +106,10 @@ export async function getTableDetail(id: string, member: PortalMember): Promise<
   return { ...data, timezone: city?.timezone ?? null } as LeagueTable;
 }
 
-// Tables the member is actively seated in (creators keep seat 1), newest first.
+// Tables the member is actively seated in (creators keep seat 1). Returned
+// unsorted — the caller splits these into Upcoming/Past and sorts each bucket in
+// its own direction (soonest-first vs most-recent-first), so a single order here
+// would be wrong for one of them.
 export async function getMyTables(member: PortalMember): Promise<MyTableSeat[]> {
   const admin: any = createAdminClient();
   if (!admin) return [];
@@ -98,8 +123,7 @@ export async function getMyTables(member: PortalMember): Promise<MyTableSeat[]> 
   const rows = (data ?? []) as { seat_number: number; league_tables: LeagueTable | null }[];
   return rows
     .filter((r) => r.league_tables)
-    .map((r) => ({ seat_number: r.seat_number, table: r.league_tables as LeagueTable }))
-    .sort((a, b) => b.table.table_date.localeCompare(a.table.table_date));
+    .map((r) => ({ seat_number: r.seat_number, table: r.league_tables as LeagueTable }));
 }
 
 export type NextTable = {

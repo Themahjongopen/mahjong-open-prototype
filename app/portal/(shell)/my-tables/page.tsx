@@ -14,8 +14,18 @@ export default async function MyTablesPage() {
   const seats = member ? await getMyTables(member) : [];
   const today = new Date().toISOString().slice(0, 10);
 
-  const upcoming = seats.filter((s) => s.table.table_date >= today);
-  const past = seats.filter((s) => s.table.table_date < today);
+  // Sort each bucket independently: Upcoming soonest-first (date ascending), Past
+  // most-recent-first (date descending). Both break same-date ties by table_time
+  // ascending — the earlier time of day comes first regardless of bucket direction
+  // (same key the Open Tables list now sorts on). getMyTables returns unsorted.
+  const timeAsc = (a: MyTableSeat, b: MyTableSeat) =>
+    (a.table.table_time ?? "").localeCompare(b.table.table_time ?? "");
+  const upcoming = seats
+    .filter((s) => s.table.table_date >= today)
+    .sort((a, b) => a.table.table_date.localeCompare(b.table.table_date) || timeAsc(a, b));
+  const past = seats
+    .filter((s) => s.table.table_date < today)
+    .sort((a, b) => b.table.table_date.localeCompare(a.table.table_date) || timeAsc(a, b));
 
   function TableRow({ seat }: { seat: MyTableSeat }) {
     const table = seat.table;

@@ -15,6 +15,14 @@ const SKILL_COLORS: Record<string, string> = {
   advanced: "badge-pink",
 };
 
+// Table-status → badge color. Only surfaces in the "All" view, where non-open
+// tables can appear; the default "Open" view only ever shows open tables so the
+// badge is suppressed for those. Duplicated locally per the codebase convention
+// (the same small map lives in my-tables/page.tsx, TableDetailClient, and admin).
+const STATUS_COLORS: Record<string, string> = {
+  open: "badge-lime", full: "badge-peri", completed: "badge-mute", canceled: "badge-mute",
+};
+
 // One open-table row on the Open Tables list. The whole card navigates to the
 // detail page; a Join button (when eligible) seats the viewer in place. The card
 // can't be an <a> because it contains a <button> (invalid nested interactives),
@@ -77,6 +85,16 @@ export default function OpenTableCard({ table, currentUserId }: { table: LeagueT
           </div>
         </div>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
+          {/* Round type — mirrors the detail page's badge so a player can see
+              Social/Focused/Lightning before tapping Join straight from the list. */}
+          {table.round_type && (
+            <span className="badge badge-peri" style={{ textTransform: "capitalize" }}>{table.round_type}</span>
+          )}
+          {/* Status is only meaningful (and only shown) when it's not "open" —
+              i.e. a non-open table surfaced by the "All" view. */}
+          {table.status !== "open" && (
+            <span className={`badge ${STATUS_COLORS[table.status] ?? "badge-mute"}`} style={{ textTransform: "capitalize" }}>{table.status}</span>
+          )}
           {isSeated && <span className="badge badge-pink">Joined</span>}
         </div>
       </div>
