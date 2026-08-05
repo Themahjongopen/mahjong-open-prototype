@@ -100,7 +100,7 @@ const LAUNCH_CITIES = [
   { name: "Southwest Georgia", state: "Georgia", photo: "/brand-photo-22.jpg" },
   { name: "Dallas County", state: "Texas", photo: "/brand-photo-23.jpg" },
   { name: "Denton County", state: "Texas", photo: "/brand-photo-24.jpg" },
-  { name: "Fort Worth", state: "Texas", photo: "/brand-photo-25.jpg" },
+  { name: "Southern Tarrant County", state: "Texas", photo: "/brand-photo-25.jpg" },
   { name: "Memphis", state: "Tennessee", photo: "/brand-photo-26.jpg" },
   { name: "Enterprise", state: "Alabama", photo: "/brand-photo-27.jpg" },
 ];
@@ -160,7 +160,10 @@ function LaunchCityCard({ city }: { city: LaunchCity }) {
         <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.16em", textTransform: "uppercase", color: "var(--lime-700)", marginBottom: 10 }}>
           Launch city
         </p>
-        <h3 className="launch-card-title" style={{ fontFamily: "var(--font-display)", fontWeight: 400, color: "var(--ink-900)", lineHeight: 1.05, marginBottom: 8 }}>
+        <h3
+          className={`launch-card-title${city.name.length > 20 ? " launch-card-title--long" : ""}`}
+          style={{ fontFamily: "var(--font-display)", fontWeight: 400, color: "var(--ink-900)", lineHeight: 1.05, marginBottom: 8 }}
+        >
           {city.name}
         </h3>
         <p style={{ fontSize: 14, color: "var(--ink-700)", margin: 0 }}>{city.state}</p>
@@ -830,6 +833,15 @@ export default function HomePage() {
         .launch-card-photo { aspect-ratio: 8 / 5; }
         .launch-card-body { padding: 14px 18px 16px; }
         .launch-card-title { font-size: 23px; }
+        /* Long names (currently just "Southern Tarrant County," 23 chars) don't fit
+           the ~227px text area of the 265px desktop card at 23px. Measured against
+           the real display font: 20px still wraps (231px), 18px fits with margin
+           (208px) — so step down to 18px. Only desktop needs this: the mobile
+           card is full-width (single column, ~330px text area) where the name
+           already fits, and the max-width:600px .launch-card-title 20px rule
+           below overrides this one there (equal specificity, later in source), so
+           mobile long names stay at the normal 20px. */
+        .launch-card-title--long { font-size: 18px; }
         @media (max-width: 600px) {
           /* One card per row on mobile: fill the column width and shorten each
              (wider/shorter photo crop + tighter text padding). Desktop untouched. */
