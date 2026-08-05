@@ -15,7 +15,7 @@ export type PortalInviteResult = { ok: boolean; error?: string };
  * user, which fires the 007 trigger to create the profile + backfill
  * registrations.profile_id). If the user already exists (a re-send), fall back to
  * a `recovery` link so the same "set your password" flow still works. Either way
- * the email points at our own /portal/auth/callback, matching the reset template.
+ * the email points at our own /portal/auth/confirm, matching the reset template.
  */
 export async function sendPortalInvite(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -43,7 +43,7 @@ export async function sendPortalInvite(
     return { ok: false, error: gen.error?.message ?? "Could not generate an invite link." };
   }
 
-  const actionUrl = `${SITE_URL}/portal/auth/callback?token_hash=${hashedToken}&type=${linkType}&next=/portal/set-password`;
+  const actionUrl = `${SITE_URL}/portal/auth/confirm?token_hash=${hashedToken}&type=${linkType}&next=/portal/set-password`;
   const firstName = (fullName ?? "").trim().split(/\s+/)[0] || "there";
 
   const innerHtml = `
