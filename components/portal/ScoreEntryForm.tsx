@@ -21,17 +21,31 @@ export default function ScoreEntryForm({ tables, initialTableId }: { tables: Sco
   const [entries, setEntries] = useState<Record<string, Entry>>(() => initEntries(tables.find((t) => t.id === (initialTableId || tables[0]?.id))));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // "entry" = editable score fields; "review" = read-only summary + confirm.
+  const [stage, setStage] = useState<"entry" | "review">("entry");
 
   const anyNoShow = Object.values(entries).some((e) => e.is_no_show);
 
   function changeTable(id: string) {
     setSelectedId(id);
     setEntries(initEntries(tables.find((t) => t.id === id)));
+    setStage("entry");
     setError(null);
   }
 
-  async function handleSubmit(e: React.FormEvent) {
+  // The form's submit: from entry it advances to review (no POST); from review
+  // it performs the real post. This is what blocks a premature/accidental submit.
+  function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!selected) return;
+    if (stage === "entry") {
+      setStage("review");
+      return;
+    }
+    handleConfirmPost();
+  }
+
+  async function handleConfirmPost() {
     if (!selected) return;
     setLoading(true);
     setError(null);
@@ -57,7 +71,13 @@ export default function ScoreEntryForm({ tables, initialTableId }: { tables: Sco
   }
 
   return (
-    <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+    <form
+      onSubmit={handleSubmit}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" && (e.target as HTMLElement).tagName !== "TEXTAREA") e.preventDefault();
+      }}
+      style={{ display: "flex", flexDirection: "column", gap: 20 }}
+    >
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         <label style={{ fontSize: 13, fontWeight: 600, color: "var(--ink-800)" }}>Table</label>
         <select className="input-mo" value={selectedId} onChange={(e) => changeTable(e.target.value)}>
@@ -75,6 +95,7 @@ export default function ScoreEntryForm({ tables, initialTableId }: { tables: Sco
           <p style={{ fontSize: 13, color: "var(--ink-500)", marginBottom: 12 }}>
             Enter each player&rsquo;s total for the round (including any bonuses applied at the table), or mark a player as a no-show.
           </p>
+          {stage === "entry" ? (
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {selected.seats.map((s) => {
               const entry = entries[s.user_id] ?? { round_score: "0", is_no_show: s.is_late_cancellation };
@@ -121,6 +142,7 @@ export default function ScoreEntryForm({ tables, initialTableId }: { tables: Sco
                         min={0}
                         value={entry.round_score}
                         onChange={(ev) => setEntries((prev) => ({ ...prev, [s.user_id]: { ...entry, round_score: ev.target.value } }))}
+                        onFocus={(e) => e.target.select()}
                         style={{ maxWidth: 140 }}
                       />
                     </div>
@@ -129,6 +151,21 @@ export default function ScoreEntryForm({ tables, initialTableId }: { tables: Sco
               );
             })}
           </div>
+          ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {selected.seats.map((s) => {
+              const entry = entries[s.user_id] ?? { round_score: "0", is_no_show: s.is_late_cancellation };
+              return (
+                <div key={s.user_id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", background: "#fff", border: "1px solid var(--hair-200)", borderRadius: "var(--radius-md)", fontSize: 14 }}>
+                  <span style={{ color: "var(--ink-800)", fontWeight: 500 }}>{s.full_name ?? "Player"}</span>
+                  <span style={{ color: entry.is_no_show ? "var(--danger)" : "var(--ink-900)", fontWeight: 600 }}>
+                    {entry.is_no_show ? "No-show" : (Number.parseInt(entry.round_score || "0", 10) || 0)}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+          )}
 
           {anyNoShow && (
             <div style={{ marginTop: 12, background: "var(--warning-bg, #fff7ed)", border: "1px solid var(--crimson-100)", borderRadius: "var(--radius-md)", padding: "10px 14px", fontSize: 13, color: "var(--ink-700)", lineHeight: 1.6 }}>
@@ -140,9 +177,20 @@ export default function ScoreEntryForm({ tables, initialTableId }: { tables: Sco
 
       {error && <p style={{ fontSize: 13, color: "var(--danger)" }}>{error}</p>}
 
-      <button className="btn btn-primary" type="submit" disabled={loading || !selected} style={{ justifyContent: "center", padding: "14px" }}>
-        {loading ? "Posting…" : "Post scores"}
-      </button>
+      {stage === "review" ? (
+        <div style={{ display: "flex", gap: 10 }}>
+          <button className="btn btn-ghost" type="button" onClick={() => setStage("entry")} disabled={loading} style={{ justifyContent: "center", padding: "14px" }}>
+            ← Edit
+          </button>
+          <button className="btn btn-primary" type="submit" disabled={loading || !selected} style={{ justifyContent: "center", padding: "14px", flex: 1 }}>
+            {loading ? "Posting…" : "Confirm & post scores"}
+          </button>
+        </div>
+      ) : (
+        <button className="btn btn-primary" type="submit" disabled={loading || !selected} style={{ justifyContent: "center", padding: "14px" }}>
+          Review scores →
+        </button>
+      )}
     </form>
   );
 }
