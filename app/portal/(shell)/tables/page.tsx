@@ -3,7 +3,7 @@ import { Plus } from "lucide-react";
 import { getPortalUser } from "@/lib/portal/session";
 import { withAdminCity } from "@/lib/portal/adminCity";
 import { getOpenTables, getAllTables, getCityName, type LeagueTable } from "@/lib/portal/tables";
-import OpenTableCard from "@/components/portal/OpenTableCard";
+import TablesFilterList from "@/components/portal/TablesFilterList";
 
 export default async function TablesPage({ searchParams }: { searchParams: Promise<{ view?: string }> }) {
   const { view } = await searchParams;
@@ -14,11 +14,6 @@ export default async function TablesPage({ searchParams }: { searchParams: Promi
   const [tables, cityName] = member
     ? await Promise.all([showAll ? getAllTables(member) : getOpenTables(member), getCityName(member.city_id)])
     : [[] as LeagueTable[], null];
-
-  const byWeek = tables.reduce<Record<number, LeagueTable[]>>((acc, t) => {
-    (acc[t.week_number] ??= []).push(t);
-    return acc;
-  }, {});
 
   // Open/All view toggle. Server-side URL param (no client state) so the page
   // stays a server component. Default (no param) is "Open" — byte-identical to
@@ -56,18 +51,12 @@ export default async function TablesPage({ searchParams }: { searchParams: Promi
         </div>
       )}
 
-      {Object.entries(byWeek).map(([week, weekTables]) => (
-        <div key={week} style={{ marginBottom: 32 }}>
-          <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--lime-600)", marginBottom: 12 }}>
-            Round {week}
-          </p>
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {weekTables.map((table) => (
-              <OpenTableCard key={table.id} table={table} currentUserId={member?.id ?? null} />
-            ))}
-          </div>
-        </div>
-      ))}
+      {/* Client-side round / day / time-of-day filtering of the fetched list.
+          Rendered only when there are tables — the empty state above owns the
+          zero-tables case, so filter controls never show with nothing to filter. */}
+      {tables.length > 0 && (
+        <TablesFilterList tables={tables} currentUserId={member?.id ?? null} />
+      )}
     </div>
   );
 }
