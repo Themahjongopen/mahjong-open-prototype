@@ -2,11 +2,19 @@ import { NextResponse } from "next/server";
 import { getPortalUser } from "@/lib/portal/session";
 import { createAdminClient } from "@/lib/supabase/server";
 import { scoringSeats } from "@/lib/portal/tables";
+import { zonedTimeToUtc } from "@/lib/format/zonedTime";
+import { seriesWeekForDate } from "@/lib/portal/seriesWeek";
+import { sendTableUpdatedEmail } from "@/lib/email/tableUpdatedEmail";
+
+const ROUND_TYPES = new Set(["social", "focused", "lightning"]);
+const DEFAULT_TIMEZONE = "America/Chicago";
 
 // Creator/admin table actions. Seats are left intact; status drives display.
 //   action: "cancel"   → status canceled
 //   action: "complete" → status completed (marks the round played; unlocks
 //                        host score entry)
+//   action: "edit"     → update time/date/location/round type/notes (NOT the
+//                        round/week number — see below), with a hard 24h cutoff
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
   const { id } = await context.params;
   const session = await getPortalUser();
@@ -16,7 +24,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
 
   const body = await request.json().catch(() => null);
   const action = body?.action;
-  if (action !== "cancel" && action !== "complete") {
+  if (action !== "cancel" && action !== "complete" && action !== "edit") {
     return NextResponse.json({ error: "Unsupported action." }, { status: 400 });
   }
 
@@ -27,7 +35,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
 
   const { data: table } = await admin
     .from("league_tables")
-    .select("id, creator_id, status, table_date, table_time, cities(timezone), table_seats(seat_number, canceled_at)")
+    .select("id, creator_id, status, table_date, table_time, location_name, location_address, round_type, notes, series_id, cities(timezone), series(starts_at), table_seats(seat_number, user_id, canceled_at)")
     .eq("id", id)
     .maybeSingle();
 
@@ -36,6 +44,94 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
   }
   if (table.creator_id !== session.id && !session.isAdmin) {
     return NextResponse.json({ error: "Only the table host can do that." }, { status: 403 });
+  }
+
+  if (action === "edit") {
+    // Status guard — a completed/canceled round's record isn't editable.
+    if (table.status !== "open" && table.status !== "full") {
+      return NextResponse.json({ error: "Only an open or upcoming table can be edited." }, { status: 409 });
+    }
+
+    // Hard 24-hour cutoff, NO exceptions (creator and admin alike). Computed
+    // against the table's CURRENT (pre-edit) start time in the venue timezone via
+    // the same zone-aware path as the late-cancellation rule — never naive
+    // `new Date(date+time)` math (that's the 2026-08-04 bug we don't reintroduce).
+    const city = Array.isArray(table.cities) ? table.cities[0] : table.cities;
+    const startsAtUtc = zonedTimeToUtc(table.table_date, table.table_time ?? "12:00:00", city?.timezone ?? DEFAULT_TIMEZONE);
+    if (startsAtUtc.getTime() - Date.now() <= 24 * 60 * 60 * 1000) {
+      return NextResponse.json({ error: "Can't edit a table within 24 hours of its start time." }, { status: 409 });
+    }
+
+    // Editable fields only. week_number / city_id / series_id are intentionally
+    // never read from the body: changing the round has downstream scoring/standings
+    // effects and is a bigger decision than an "edit" (goes through Jordan for now).
+    const tableDate = body?.table_date?.toString().trim();
+    const tableTime = body?.table_time?.toString().trim();
+    const locationName = body?.location_name?.toString().trim();
+    const locationAddress = body?.location_address?.toString().trim() || null;
+    const roundType = body?.round_type?.toString().trim() || null;
+    const notes = body?.notes?.toString().trim() || null;
+
+    // Mirror Create's required-field checks — an edit can't null out a required field.
+    if (!tableDate || !tableTime || !locationName || !roundType) {
+      return NextResponse.json({ error: "Date, time, location, and round type are all required." }, { status: 400 });
+    }
+    if (!ROUND_TYPES.has(roundType)) {
+      return NextResponse.json({ error: "Invalid round type." }, { status: 400 });
+    }
+    // Catch a wildly out-of-range date: the new date must still land inside the
+    // series' 8-week window. We do NOT touch week_number to match it — moving a
+    // date out of its round's usual window is an accepted host call (flagged to
+    // Jordan). Skip the check only if the series start date is unavailable.
+    const seriesRow = Array.isArray(table.series) ? table.series[0] : table.series;
+    const seriesStart = seriesRow?.starts_at ?? null;
+    if (seriesStart && seriesWeekForDate(seriesStart, tableDate) === null) {
+      return NextResponse.json({ error: "That date is outside the current series window." }, { status: 400 });
+    }
+
+    const { error: updateError } = await admin
+      .from("league_tables")
+      .update({ table_date: tableDate, table_time: tableTime, location_name: locationName, location_address: locationAddress, round_type: roundType, notes })
+      .eq("id", id);
+    if (updateError) {
+      return NextResponse.json({ error: "The table couldn't be updated. Please try again." }, { status: 500 });
+    }
+
+    // Best-effort "table updated" emails to the OTHER seated players (not the
+    // editor — same courtesy-exclusion scorePostedEmail uses). The row is already
+    // saved; email is a secondary effect and must never fail the edit, so it's
+    // fully wrapped and we always return ok below.
+    // Sent UNCONDITIONALLY — intentionally NOT gated on notification_preferences
+    // (unlike the three preference-gated emails). A "your table moved" notice is
+    // transactional: a player who muted reminders still needs to know their
+    // table's time or place changed.
+    try {
+      const seatedUserIds = (table.table_seats ?? [])
+        .filter((s: any) => !s.canceled_at && s.user_id && s.user_id !== session.id)
+        .map((s: any) => s.user_id);
+      if (seatedUserIds.length) {
+        const { data: profiles } = await admin
+          .from("profiles")
+          .select("id, email, full_name")
+          .in("id", seatedUserIds);
+        for (const p of (profiles ?? []) as any[]) {
+          if (!p.email) continue;
+          try {
+            const res = await sendTableUpdatedEmail(
+              { email: p.email, fullName: p.full_name },
+              { tableId: id, tableDate, tableTime, locationName, locationAddress, roundType }
+            );
+            if (!res.ok) console.error("tableUpdatedEmail not sent", p.email, res.error);
+          } catch (err) {
+            console.error("tableUpdatedEmail send failed", p.email, err);
+          }
+        }
+      }
+    } catch (err) {
+      console.error("tableUpdatedEmail batch failed", err);
+    }
+
+    return NextResponse.json({ ok: true });
   }
 
   if (action === "cancel") {

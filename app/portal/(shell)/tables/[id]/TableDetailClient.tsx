@@ -23,21 +23,44 @@ const STATUS_COLORS: Record<string, string> = {
   canceled: "badge-mute",
 };
 
-type Action = "join" | "leave" | "cancel" | "complete" | null;
+type Action = "join" | "leave" | "cancel" | "complete" | "edit" | null;
+
+// Edit form state — the fields a host/admin may change (round/week is not among
+// them). Pre-filled from the table's current values.
+type EditForm = {
+  table_date: string;
+  table_time: string;
+  location_name: string;
+  location_address: string;
+  round_type: string;
+  notes: string;
+};
 
 export default function TableDetailClient({
   table,
   currentUserId,
+  isAdmin = false,
   submission,
 }: {
   table: LeagueTable;
   currentUserId: string;
+  isAdmin?: boolean;
   submission: TableSubmission | null;
 }) {
   const { showToast } = useToast();
   const confirm = useConfirm();
   const router = useRouter();
   const [loading, setLoading] = useState<Action>(null);
+  const [editing, setEditing] = useState(false);
+  const [editForm, setEditForm] = useState<EditForm>({
+    table_date: table.table_date,
+    table_time: (table.table_time ?? "").slice(0, 5), // <input type=time> wants HH:MM
+    location_name: table.location_name,
+    location_address: table.location_address ?? "",
+    round_type: table.round_type ?? "",
+    notes: table.notes ?? "",
+  });
+  const [editError, setEditError] = useState("");
 
   const active = table.table_seats.filter((s) => !s.canceled_at);
   const { lateCancellations } = scoringSeats(table);
@@ -55,6 +78,10 @@ export default function TableDetailClient({
   const canCancelTable = isCreator && (table.status === "open" || table.status === "full");
   const canMarkPlayed = isCreator && scoringFilled >= 4 && (table.status === "open" || table.status === "full");
   const canSubmitScores = isCreator && table.status === "completed" && !submission;
+  // Editing is a creator/admin action, only on an open/upcoming table. The 24h
+  // block below is enforced server-side; this is just the matching client hint.
+  const isHostOrAdmin = isCreator || isAdmin;
+  const canManageEdit = isHostOrAdmin && (table.status === "open" || table.status === "full");
 
   // Resolve the venue-local start time to a real UTC instant so the 24h warning
   // (and the calendar links below) are correct regardless of the viewer's phone
@@ -130,6 +157,92 @@ export default function TableDetailClient({
       `/api/tables/${table.id}`,
       { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "complete" }) },
       "Table marked as played."
+    );
+  }
+
+  async function handleEditSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setEditError("");
+    if (!editForm.table_date || !editForm.table_time || !editForm.location_name || !editForm.round_type) {
+      setEditError("Please fill in the date, time, location, and round type.");
+      return;
+    }
+    setLoading("edit");
+    try {
+      const res = await fetch(`/api/tables/${table.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "edit", ...editForm }),
+      });
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setEditError(payload.error || "The table couldn't be updated.");
+        return;
+      }
+      showToast("Table updated.");
+      setEditing(false);
+      router.refresh();
+    } finally {
+      setLoading(null);
+    }
+  }
+
+  // Reused field wrapper matching CreateTableForm's layout/styling.
+  function field(label: string, required: boolean, children: React.ReactNode) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        <label style={{ fontSize: 13, fontWeight: 600, color: "var(--ink-800)" }}>
+          {label} {required && <span style={{ color: "var(--pink-500)" }}>*</span>}
+        </label>
+        {children}
+      </div>
+    );
+  }
+
+  if (editing) {
+    return (
+      <form onSubmit={handleEditSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+        <div>
+          <p style={{ fontFamily: "var(--font-display)", fontSize: 22, color: "var(--ink-900)" }}>Edit table</p>
+          <p style={{ fontSize: 13, color: "var(--ink-500)", marginTop: 4 }}>
+            Round {table.week_number} — the round isn&rsquo;t editable here. Seated players will be emailed about the change.
+          </p>
+        </div>
+        {field("Date", true,
+          <input className="input-mo" type="date" value={editForm.table_date} onChange={(e) => setEditForm((f) => ({ ...f, table_date: e.target.value }))} />
+        )}
+        {field("Time", true,
+          <input className="input-mo" type="time" value={editForm.table_time} onChange={(e) => setEditForm((f) => ({ ...f, table_time: e.target.value }))} />
+        )}
+        {field("Location name", true,
+          <input className="input-mo" type="text" placeholder="e.g. Jane's place, Rosewood Café" value={editForm.location_name} onChange={(e) => setEditForm((f) => ({ ...f, location_name: e.target.value }))} />
+        )}
+        {field("Address or directions", false,
+          <input className="input-mo" type="text" placeholder="Optional" value={editForm.location_address} onChange={(e) => setEditForm((f) => ({ ...f, location_address: e.target.value }))} />
+        )}
+        {field("Round type", true,
+          <select className="input-mo" value={editForm.round_type} onChange={(e) => setEditForm((f) => ({ ...f, round_type: e.target.value }))}>
+            <option value="">Select type</option>
+            <option value="social">Social</option>
+            <option value="focused">Focused</option>
+            <option value="lightning">Lightning</option>
+          </select>
+        )}
+        {field("Notes", false,
+          <textarea className="input-mo" rows={3} placeholder="Anything players should know" value={editForm.notes} onChange={(e) => setEditForm((f) => ({ ...f, notes: e.target.value }))} style={{ resize: "vertical" }} />
+        )}
+
+        {editError && <p style={{ fontSize: 13, color: "var(--danger)" }}>{editError}</p>}
+
+        <div style={{ display: "flex", gap: 10 }}>
+          <button type="button" className="btn btn-ghost" onClick={() => { setEditing(false); setEditError(""); }} disabled={loading === "edit"} style={{ flex: 1, justifyContent: "center", padding: "13px" }}>
+            Cancel
+          </button>
+          <button type="submit" className="btn btn-primary" disabled={loading === "edit"} style={{ flex: 1, justifyContent: "center", padding: "13px" }}>
+            {loading === "edit" ? "Saving…" : "Save changes"}
+          </button>
+        </div>
+      </form>
     );
   }
 
@@ -288,6 +401,17 @@ export default function TableDetailClient({
                 </span>
               </div>
             ))}
+          </div>
+        )}
+
+        {canManageEdit && !withinCutoff && (
+          <button className="btn btn-ghost" onClick={() => setEditing(true)} style={{ justifyContent: "center", padding: "13px" }}>
+            Edit table details
+          </button>
+        )}
+        {canManageEdit && withinCutoff && (
+          <div style={{ fontSize: 13, color: "var(--ink-500)", textAlign: "center", padding: "0 8px" }}>
+            This table can no longer be edited — it&rsquo;s within 24 hours of its start time.
           </div>
         )}
 

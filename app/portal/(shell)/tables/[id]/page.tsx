@@ -19,7 +19,7 @@ export default async function TableDetailPage({ params }: { params: Promise<{ id
       <Link href="/portal/tables" style={{ fontSize: 13, color: "var(--pink-600)", display: "inline-flex", alignItems: "center", gap: 4, marginBottom: 16, textDecoration: "none" }}>
         ← Back to tables
       </Link>
-      <TableDetailClient table={table} currentUserId={member.id} submission={submission} />
+      <TableDetailClient table={table} currentUserId={member.id} isAdmin={member.isAdmin} submission={submission} />
     </div>
   );
 }

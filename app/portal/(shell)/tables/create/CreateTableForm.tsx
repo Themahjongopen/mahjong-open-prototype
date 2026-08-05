@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Info } from "lucide-react";
+import { seriesWeekForDate } from "@/lib/portal/seriesWeek";
 
 const ROUND_TYPE_INFO: { name: string; desc: string }[] = [
   { name: "Social", desc: "Light conversation, casual play" },
@@ -75,17 +76,13 @@ function RoundTypeInfo() {
   );
 }
 
-// The series' round/week for a calendar date, or "" if the date is outside the
-// 8-week window (before the start, or >8 weeks after). UTC-midnight day-math so
-// there's no timezone/DST off-by-one — same approach as lib/format/zonedTime.ts.
+// The series' round/week for a calendar date as a string, or "" if outside the
+// 8-week window. Thin wrapper over the shared seriesWeekForDate() (also used by
+// the edit route's date-bounds check) that keeps this form's string-valued
+// week_number state and empty-string "no round" convention.
 function weekNumberForDate(seriesStartDate: string | null, dateStr: string): string {
-  if (!seriesStartDate || !dateStr) return "";
-  const [sy, sm, sd] = seriesStartDate.split("-").map(Number);
-  const [dy, dm, dd] = dateStr.split("-").map(Number);
-  if ([sy, sm, sd, dy, dm, dd].some(Number.isNaN)) return "";
-  const days = Math.floor((Date.UTC(dy, dm - 1, dd) - Date.UTC(sy, sm - 1, sd)) / 86400000);
-  const week = Math.floor(days / 7) + 1;
-  return week >= 1 && week <= 8 ? String(week) : "";
+  const week = seriesWeekForDate(seriesStartDate, dateStr);
+  return week === null ? "" : String(week);
 }
 
 export default function CreateTableForm({ cityName, seriesStartDate }: { cityName: string | null; seriesStartDate: string | null }) {
