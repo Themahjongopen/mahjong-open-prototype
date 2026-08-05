@@ -92,7 +92,11 @@ export default function PortalAppBar({ title, userId, userName, isAdminRole, adm
             >
               <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--hair-200)" }}>
                 <p style={{ fontSize: 13, fontWeight: 600, color: "var(--ink-900)" }}>{userName || "Player"}</p>
-                <p style={{ fontSize: 12, color: "var(--ink-500)" }}>Spring 2026 Season</p>
+                {/* Hardcoded to match the "Series One" branding used everywhere else.
+                    series.name currently holds the long form ("The Mahjong Open — 2026
+                    — Series One"), so there's no clean column to compose "2026 - Series
+                    One" from — revisit with a proper series display field when Series Two starts. */}
+                <p style={{ fontSize: 12, color: "var(--ink-500)" }}>2026 - Series One</p>
               </div>
               <button
                 onClick={() => { setPopoverOpen(false); router.push(`/portal/profile/${userId}`); }}
