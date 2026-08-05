@@ -100,7 +100,7 @@ const LAUNCH_CITIES = [
   { name: "Southwest Georgia", state: "Georgia", photo: "/brand-photo-22.jpg" },
   { name: "Dallas County", state: "Texas", photo: "/brand-photo-23.jpg" },
   { name: "Denton County", state: "Texas", photo: "/brand-photo-24.jpg" },
-  { name: "Southern Tarrant County", state: "Texas", photo: "/brand-photo-25.jpg" },
+  { name: "South Tarrant Co.", state: "Texas", photo: "/brand-photo-25.jpg" },
   { name: "Memphis", state: "Tennessee", photo: "/brand-photo-26.jpg" },
   { name: "Enterprise", state: "Alabama", photo: "/brand-photo-27.jpg" },
 ];
