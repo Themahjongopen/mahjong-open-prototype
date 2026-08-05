@@ -13,6 +13,7 @@ const PORTAL_PUBLIC_PATHS = [
   "/portal/reset-password",
   "/portal/update-password",
   "/portal/auth/callback",
+  "/portal/auth/confirm",
 ];
 
 // Paths that stay reachable even when the coming-soon gate is on.
