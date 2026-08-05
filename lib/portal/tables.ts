@@ -53,7 +53,7 @@ export async function getOpenTables(member: PortalMember): Promise<LeagueTable[]
 
   const { data } = await admin
     .from("league_tables")
-    .select("id, city_id, series_id, creator_id, week_number, table_date, table_time, location_name, location_address, skill_level, round_type, notes, status, table_seats(id, user_id, seat_number, canceled_at, profiles(full_name, avatar_url))")
+    .select("id, city_id, series_id, creator_id, week_number, table_date, table_time, location_name, location_address, skill_level, round_type, notes, status, table_seats(id, user_id, seat_number, canceled_at, profiles(full_name, avatar_url, skill_level))")
     .eq("series_id", member.series_id)
     .eq("city_id", member.city_id)
     .eq("status", "open")
@@ -72,7 +72,7 @@ export async function getTableDetail(id: string, member: PortalMember): Promise<
 
   const { data } = await admin
     .from("league_tables")
-    .select("id, city_id, series_id, creator_id, week_number, table_date, table_time, location_name, location_address, skill_level, round_type, notes, status, cities(timezone), table_seats(id, user_id, seat_number, canceled_at, profiles(full_name, avatar_url))")
+    .select("id, city_id, series_id, creator_id, week_number, table_date, table_time, location_name, location_address, skill_level, round_type, notes, status, cities(timezone), table_seats(id, user_id, seat_number, canceled_at, profiles(full_name, avatar_url, skill_level))")
     .eq("id", id)
     .maybeSingle();
 

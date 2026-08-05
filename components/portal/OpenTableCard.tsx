@@ -30,7 +30,6 @@ export default function OpenTableCard({ table, currentUserId }: { table: LeagueT
   const isSeated = active.some((s) => s.user_id === currentUserId);
   const isCreator = table.creator_id === currentUserId;
   const canJoin = !isSeated && !isCreator && seatsLeft > 0 && table.status === "open";
-  const firstNames = active.map((s) => s.profiles?.full_name?.split(" ")[0] ?? "Player");
 
   async function handleJoin(e: React.MouseEvent) {
     e.stopPropagation(); // don't also trigger the card's navigate
@@ -78,15 +77,21 @@ export default function OpenTableCard({ table, currentUserId }: { table: LeagueT
           </div>
         </div>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
-          {table.skill_level && (
-            <span className={`badge ${SKILL_COLORS[table.skill_level] ?? "badge-mute"}`}>{table.skill_level}</span>
-          )}
           {isSeated && <span className="badge badge-pink">Joined</span>}
         </div>
       </div>
 
-      {firstNames.length > 0 && (
-        <p style={{ fontSize: 13, color: "var(--ink-700)", marginBottom: 10 }}>{firstNames.join(", ")}</p>
+      {active.length > 0 && (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 10, fontSize: 13, color: "var(--ink-700)" }}>
+          {active.map((s) => (
+            <span key={s.user_id} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+              {s.profiles?.full_name?.split(" ")[0] ?? "Player"}
+              {s.profiles?.skill_level && (
+                <span className={`badge ${SKILL_COLORS[s.profiles.skill_level] ?? "badge-mute"}`} style={{ fontSize: 10 }}>{s.profiles.skill_level}</span>
+              )}
+            </span>
+          ))}
+        </div>
       )}
 
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>

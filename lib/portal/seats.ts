@@ -15,7 +15,7 @@ export type SeatRow = {
   user_id: string;
   seat_number: number;
   canceled_at: string | null;
-  profiles?: { full_name: string | null; avatar_url: string | null } | null;
+  profiles?: { full_name: string | null; avatar_url: string | null; skill_level?: string | null } | null;
 };
 
 export type LeagueTable = {

@@ -139,9 +139,6 @@ export default function TableDetailClient({
         <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
           <span className="badge badge-mute">Round {table.week_number}</span>
           <span className={`badge ${STATUS_COLORS[table.status] ?? "badge-mute"}`}>{table.status}</span>
-          {table.skill_level && (
-            <span className={`badge ${SKILL_COLORS[table.skill_level] ?? "badge-mute"}`}>{table.skill_level}</span>
-          )}
           {table.round_type && (
             <span className="badge badge-peri" style={{ textTransform: "capitalize" }}>{table.round_type}</span>
           )}
@@ -205,6 +202,11 @@ export default function TableDetailClient({
               <div style={{ flex: 1 }}>
                 <p style={{ fontSize: 14, fontWeight: seat ? 500 : 400, color: seat ? "var(--ink-900)" : isLateCancel ? "var(--danger)" : "var(--ink-500)" }}>
                   {seat ? (seat.profiles?.full_name ?? "Player") : isLateCancel ? "Canceled (late) — counts as a no-show" : "Open spot"}
+                  {seat?.profiles?.skill_level && (
+                    <span className={`badge ${SKILL_COLORS[seat.profiles.skill_level] ?? "badge-mute"}`} style={{ fontSize: 10, marginLeft: 6 }}>
+                      {seat.profiles.skill_level}
+                    </span>
+                  )}
                 </p>
                 {isTableCreator && seat && <p style={{ fontSize: 11, color: "var(--lime-600)", fontWeight: 600 }}>Table creator</p>}
               </div>
@@ -306,6 +308,6 @@ function formatDateForCalendar(date: Date) {
 
 function createGoogleCalendarLink(date: Date, table: LeagueTable) {
   const endDate = new Date(date.getTime() + 2 * 60 * 60 * 1000);
-  const details = `Skill level: ${table.skill_level ?? "Open"} - ${table.location_name}${table.location_address ? `, ${table.location_address}` : ""}`;
+  const details = `${table.location_name}${table.location_address ? `, ${table.location_address}` : ""}`;
   return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(`The Mahjong Open table at ${table.location_name}`)}&dates=${formatDateForCalendar(date)}Z/${formatDateForCalendar(endDate)}Z&details=${encodeURIComponent(details)}&location=${encodeURIComponent(table.location_address ?? table.location_name)}&sf=true&output=xml`;
 }

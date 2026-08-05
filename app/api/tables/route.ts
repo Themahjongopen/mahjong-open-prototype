@@ -3,7 +3,6 @@ import { getPortalUser } from "@/lib/portal/session";
 import { getAdminContext } from "@/lib/portal/adminCity";
 import { createAdminClient } from "@/lib/supabase/server";
 
-const SKILLS = new Set(["beginner", "intermediate", "advanced"]);
 const ROUND_TYPES = new Set(["social", "focused", "lightning"]);
 
 // Create a table in the member's own city+series (or, for admins, their current
@@ -34,7 +33,6 @@ export async function POST(request: Request) {
   const tableTime = body?.table_time?.toString().trim();
   const locationName = body?.location_name?.toString().trim();
   const locationAddress = body?.location_address?.toString().trim() || null;
-  const skillLevel = body?.skill_level?.toString().trim() || null;
   const roundType = body?.round_type?.toString().trim() || null;
   const notes = body?.notes?.toString().trim() || null;
 
@@ -43,9 +41,6 @@ export async function POST(request: Request) {
   }
   if (!tableDate || !tableTime || !locationName) {
     return NextResponse.json({ error: "Please fill in the date, time, and location." }, { status: 400 });
-  }
-  if (skillLevel && !SKILLS.has(skillLevel)) {
-    return NextResponse.json({ error: "Invalid skill level." }, { status: 400 });
   }
   if (roundType && !ROUND_TYPES.has(roundType)) {
     return NextResponse.json({ error: "Invalid round type." }, { status: 400 });
@@ -67,7 +62,6 @@ export async function POST(request: Request) {
       table_time: tableTime,
       location_name: locationName,
       location_address: locationAddress,
-      skill_level: skillLevel,
       round_type: roundType,
       notes,
       status: "open",

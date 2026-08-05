@@ -98,7 +98,6 @@ export default function CreateTableForm({ cityName, seriesStartDate }: { cityNam
     table_time: "",
     location_name: "",
     location_address: "",
-    skill_level: "",
     round_type: "",
     notes: "",
   });
@@ -106,7 +105,7 @@ export default function CreateTableForm({ cityName, seriesStartDate }: { cityNam
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-    if (!form.week_number || !form.table_date || !form.table_time || !form.location_name || !form.skill_level || !form.round_type) {
+    if (!form.week_number || !form.table_date || !form.table_time || !form.location_name || !form.round_type) {
       setError("Please fill in all required fields.");
       return;
     }
@@ -172,14 +171,6 @@ export default function CreateTableForm({ cityName, seriesStartDate }: { cityNam
         )}
         {field("Address or directions", false,
           <input className="input-mo" type="text" placeholder="Optional" value={form.location_address} onChange={(e) => setForm((f) => ({ ...f, location_address: e.target.value }))} />
-        )}
-        {field("Skill level", true,
-          <select className="input-mo" value={form.skill_level} onChange={(e) => setForm((f) => ({ ...f, skill_level: e.target.value }))}>
-            <option value="">Select level</option>
-            <option value="beginner">Beginner</option>
-            <option value="intermediate">Intermediate</option>
-            <option value="advanced">Advanced</option>
-          </select>
         )}
         {field("Round type", true,
           <select className="input-mo" value={form.round_type} onChange={(e) => setForm((f) => ({ ...f, round_type: e.target.value }))}>
