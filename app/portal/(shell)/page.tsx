@@ -66,24 +66,7 @@ export default async function PortalDashboard() {
             </p>
           </div>
         </Link>
-      ) : (
-        <div
-          style={{
-            background: "var(--pink-50)",
-            border: "1.5px dashed var(--pink-200)",
-            borderRadius: "var(--radius-xl)",
-            padding: "24px",
-            textAlign: "center",
-            marginBottom: 20,
-          }}
-        >
-          <p style={{ fontFamily: "var(--font-display)", fontSize: 18, color: "var(--ink-900)", marginBottom: 8 }}>No upcoming table</p>
-          <p style={{ fontSize: 14, color: "var(--ink-500)", marginBottom: 16 }}>Join or create a table for this series.</p>
-          <Link href="/portal/tables" className="btn btn-primary" style={{ fontSize: 14, display: "inline-flex" }}>
-            Browse open tables
-          </Link>
-        </div>
-      )}
+      ) : null}
 
       {/* Stats — activeCityId drives a re-fetch when an admin switches cities */}
       <HomeStats activeCityId={member?.city_id ?? null} />

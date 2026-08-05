@@ -128,7 +128,7 @@ export async function getNextTable(member: PortalMember): Promise<NextTable | nu
     .select("seat_number, league_tables!inner(id, week_number, table_date, table_time, location_name, city_id, series_id, status)")
     .eq("user_id", member.id)
     .is("canceled_at", null)
-    .neq("league_tables.status", "canceled")
+    .in("league_tables.status", ["open", "full"])
     .gte("league_tables.table_date", today())
     .order("table_date", { referencedTable: "league_tables", ascending: true })
     .limit(1);
