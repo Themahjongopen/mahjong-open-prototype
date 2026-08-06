@@ -177,7 +177,7 @@ function LaunchCityCard({ city }: { city: LaunchCity }) {
 const FAQS = [
   {
     q: "What is The Mahjong Open?",
-    a: "A city-based mahjong social league. You register once and play unlimited games over an 8-week series, then climb your city's leaderboard.",
+    a: "Mahjong Made Social — a city-based mahjong league. Register once, play unlimited games over a flexible 8-week series, meet new friends, and climb your city's leaderboard.",
   },
   {
     q: "How much does it cost?",
@@ -274,11 +274,11 @@ export default function HomePage() {
             <div className="hero-copy" style={{ display: "flex", flexDirection: "column", justifyContent: "center", gap: 24 }}>
               <p className="eyebrow">The Mahjong Open</p>
               <h1 className="h1" style={{ fontSize: "clamp(32px, 4.2vw, 46px)" }}>
-                A city-based mahjong<br />
-                <em className="serif-italic">social league</em>
+                Mahjong Made <em className="serif-italic">Social</em>
               </h1>
               <p className="body-lg" style={{ maxWidth: 480 }}>
-                Register once, play unlimited games over an 8-week series, and climb your city&rsquo;s leaderboard.
+                Meet more friends. Play more Mahjong. Win more prizes.<br />
+                8-week league with a flexible schedule.
               </p>
               <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
                 <button
