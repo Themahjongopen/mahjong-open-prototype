@@ -44,7 +44,15 @@ export function createAdminClient() {
   );
 }
 
-export type AuthUserSummary = { id: string; last_sign_in_at: string | null };
+export type AuthUserSummary = {
+  id: string;
+  last_sign_in_at: string | null;
+  // Most recent of the Auth user's invited_at / recovery_sent_at — i.e. when the
+  // last portal set-password link was generated for them. A resend to an existing
+  // unconfirmed account goes out as a recovery link (see sendPortalInvite's
+  // invite→recovery fallback), so recovery_sent_at is what advances on a resend.
+  invite_sent_at: string | null;
+};
 
 /**
  * List every Supabase Auth user, keyed by lowercased email. Service-role only.
@@ -60,12 +68,15 @@ export async function listAuthUsersByEmail(
   const perPage = 1000;
   for (let page = 1; ; page++) {
     const { data, error } = await supabase.auth.admin.listUsers({ page, perPage });
-    const users: Array<{ id: string; email?: string | null; last_sign_in_at?: string | null }> =
+    const users: Array<{ id: string; email?: string | null; last_sign_in_at?: string | null; invited_at?: string | null; recovery_sent_at?: string | null }> =
       data?.users ?? [];
     if (error || users.length === 0) break;
     for (const u of users) {
       if (u.email) {
-        byEmail.set(u.email.toLowerCase(), { id: u.id, last_sign_in_at: u.last_sign_in_at ?? null });
+        // ISO 8601 timestamps sort lexicographically = chronologically, so the
+        // last after sorting is the most recent send (either may be absent).
+        const invite_sent_at = [u.invited_at, u.recovery_sent_at].filter(Boolean).sort().pop() ?? null;
+        byEmail.set(u.email.toLowerCase(), { id: u.id, last_sign_in_at: u.last_sign_in_at ?? null, invite_sent_at });
       }
     }
     if (users.length < perPage) break;

@@ -31,6 +31,7 @@ type RegistrationRow = {
   paid_city_count: number;
   invited: boolean;
   invite_state: InviteState;
+  invite_sent_at: string | null;
   profile_id?: string | null;
   role?: string | null;
 };
@@ -43,6 +44,13 @@ function formatDate(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "—";
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+// Date + time, e.g. "Aug 6, 2:14 PM" — for the "Sent {…}" invite note.
+function formatDateTime(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+  return date.toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 }
 
 // Wrap a CSV field in quotes when it contains a comma, quote, or newline; escape embedded quotes.
@@ -68,7 +76,13 @@ export default function AdminRegistrationsPage() {
   const [resendBusyId, setResendBusyId] = useState<string | null>(null);
   const [resendMsg, setResendMsg] = useState<Record<string, string>>({});
   const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkResendBusy, setBulkResendBusy] = useState(false);
   const [roleBusyId, setRoleBusyId] = useState<string | null>(null);
+  // Inline per-row edit of name/email/phone (only one row edits at a time).
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState<{ full_name: string; email: string; phone: string }>({ full_name: "", email: "", phone: "" });
+  const [editBusy, setEditBusy] = useState(false);
+  const [editError, setEditError] = useState<string>("");
   // When promoting a player who has paid in more than one city, we ask which
   // city rather than guessing. This holds the pending promotion + its choices.
   const [cityPicker, setCityPicker] = useState<{ row: RegistrationRow; cities: CityChoice[] } | null>(null);
@@ -167,6 +181,41 @@ export default function AdminRegistrationsPage() {
     }
   }
 
+  function startEdit(row: RegistrationRow) {
+    setEditingId(row.id);
+    setEditForm({ full_name: row.full_name ?? "", email: row.email, phone: row.phone ?? "" });
+    setEditError("");
+  }
+  function cancelEdit() {
+    setEditingId(null);
+    setEditError("");
+  }
+  // Save name/email/phone via the PATCH route. Errors show inline on the row
+  // (like resendMsg); success reloads the table so the derived state (invite
+  // state, counts, etc.) reflects the new values.
+  async function saveEdit(row: RegistrationRow) {
+    setEditBusy(true);
+    setEditError("");
+    try {
+      const res = await fetch(`/api/admin/registrations/${row.id}`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ full_name: editForm.full_name.trim(), email: editForm.email.trim(), phone: editForm.phone.trim() }),
+      });
+      const payload = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setEditingId(null);
+        setMessage(`Updated ${editForm.full_name.trim() || editForm.email.trim()}.`);
+        await loadRows();
+      } else {
+        setEditError(payload.error ?? "Could not save changes.");
+      }
+    } finally {
+      setEditBusy(false);
+    }
+  }
+
   async function loadRows() {
     setLoading(true);
     const response = await fetch("/api/admin/players", { credentials: "include" });
@@ -200,6 +249,13 @@ export default function AdminRegistrationsPage() {
   // Paid registrants with no portal account yet — the target set for bulk invite.
   const uninvitedPaid = useMemo(
     () => visibleRows.filter((r) => r.paid_status === "paid" && r.invite_state === "none"),
+    [visibleRows]
+  );
+
+  // Paid registrants who were invited but have never signed in — the target set
+  // for bulk resend (distinct from uninvitedPaid, which is invite_state "none").
+  const pendingInvited = useMemo(
+    () => visibleRows.filter((r) => r.paid_status === "paid" && r.invite_state === "invited"),
     [visibleRows]
   );
 
@@ -333,6 +389,35 @@ export default function AdminRegistrationsPage() {
     setBulkBusy(false);
   }
 
+  // Bulk resend to already-invited-but-not-signed-in players. Same /api/admin/invite
+  // pipeline as handleBulkInvite (the invite→recovery fallback re-sends a fresh
+  // set-password link to an existing unconfirmed account — no duplicate accounts),
+  // just targeting pendingInvited, with its own busy flag so the two bulk buttons
+  // don't block each other.
+  async function handleBulkResend() {
+    const targets = pendingInvited;
+    if (targets.length === 0) return;
+    const confirmed = await confirm({
+      title: "Re-send invites?",
+      message: `Re-send the portal invite to ${targets.length} ${targets.length === 1 ? "player" : "players"} who haven't set up their account yet?`,
+      confirmLabel: `Re-send ${targets.length}`,
+    });
+    if (!confirmed) return;
+    setBulkResendBusy(true);
+    setMessage(null);
+    const { ok, payload } = await postInvites(targets.map((r) => r.id));
+    if (ok || typeof payload.sent === "number") {
+      const parts = [`Re-sent ${payload.sent ?? 0}`];
+      if (payload.skipped) parts.push(`${payload.skipped} skipped`);
+      if (payload.failed) parts.push(`${payload.failed} failed`);
+      setMessage(`${parts.join(" · ")}.`);
+      await loadRows();
+    } else {
+      setMessage(payload.error ?? "Unable to re-send invites.");
+    }
+    setBulkResendBusy(false);
+  }
+
   const filters: { key: Filter; label: string }[] = [
     { key: "all", label: "All" },
     { key: "paid", label: "Paid" },
@@ -354,6 +439,14 @@ export default function AdminRegistrationsPage() {
             disabled={bulkBusy || uninvitedPaid.length === 0}
           >
             {bulkBusy ? "Inviting…" : `Invite ${uninvitedPaid.length} paid ${uninvitedPaid.length === 1 ? "player" : "players"}`}
+          </button>
+          <button
+            type="button"
+            className="btn"
+            onClick={handleBulkResend}
+            disabled={bulkResendBusy || pendingInvited.length === 0}
+          >
+            {bulkResendBusy ? "Resending…" : `Resend to ${pendingInvited.length} pending`}
           </button>
           <button type="button" className="btn" onClick={handleExport} disabled={filteredRows.length === 0}>
             Export CSV
@@ -435,15 +528,65 @@ export default function AdminRegistrationsPage() {
               <div key={r.id} className="admin-players-row">
                 <div>
                   <span className="admin-mobile-label">Name</span>
-                  <p style={{ fontSize: 14, fontWeight: 500, color: "var(--ink-900)" }}>{r.full_name ?? "—"}</p>
+                  {editingId === r.id ? (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                      <input
+                        className="input-mo"
+                        style={{ fontSize: 13, padding: "6px 8px", width: "100%" }}
+                        value={editForm.full_name}
+                        onChange={(e) => setEditForm((f) => ({ ...f, full_name: e.target.value }))}
+                        placeholder="Full name"
+                        aria-label="Full name"
+                      />
+                      <div style={{ display: "flex", gap: 6 }}>
+                        <button type="button" className="btn btn-primary" style={{ fontSize: 12, padding: "5px 11px" }} disabled={editBusy} onClick={() => saveEdit(r)}>
+                          {editBusy ? "Saving…" : "Save"}
+                        </button>
+                        <button type="button" className="btn" style={{ fontSize: 12, padding: "5px 11px" }} disabled={editBusy} onClick={cancelEdit}>
+                          Cancel
+                        </button>
+                      </div>
+                      {editError ? <span style={{ fontSize: 12, color: "var(--danger)" }}>{editError}</span> : null}
+                    </div>
+                  ) : (
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                      <p style={{ fontSize: 14, fontWeight: 500, color: "var(--ink-900)" }}>{r.full_name ?? "—"}</p>
+                      <button type="button" className="btn" style={{ fontSize: 11, padding: "3px 9px" }} onClick={() => startEdit(r)}>
+                        Edit
+                      </button>
+                    </div>
+                  )}
                 </div>
                 <div>
                   <span className="admin-mobile-label">Email</span>
-                  <p style={{ fontSize: 13, color: "var(--ink-700)", wordBreak: "break-word" }}>{r.email}</p>
+                  {editingId === r.id ? (
+                    <input
+                      className="input-mo"
+                      type="email"
+                      style={{ fontSize: 13, padding: "6px 8px", width: "100%" }}
+                      value={editForm.email}
+                      onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))}
+                      placeholder="Email"
+                      aria-label="Email"
+                    />
+                  ) : (
+                    <p style={{ fontSize: 13, color: "var(--ink-700)", wordBreak: "break-word" }}>{r.email}</p>
+                  )}
                 </div>
                 <div>
                   <span className="admin-mobile-label">Phone</span>
-                  <p style={{ fontSize: 13, color: "var(--ink-700)" }}>{r.phone ?? "—"}</p>
+                  {editingId === r.id ? (
+                    <input
+                      className="input-mo"
+                      style={{ fontSize: 13, padding: "6px 8px", width: "100%" }}
+                      value={editForm.phone}
+                      onChange={(e) => setEditForm((f) => ({ ...f, phone: e.target.value }))}
+                      placeholder="Phone"
+                      aria-label="Phone"
+                    />
+                  ) : (
+                    <p style={{ fontSize: 13, color: "var(--ink-700)" }}>{r.phone ?? "—"}</p>
+                  )}
                 </div>
                 <div>
                   <span className="admin-mobile-label">City</span>
@@ -498,6 +641,11 @@ export default function AdminRegistrationsPage() {
                       >
                         {busyId === r.id ? "Sending…" : "Resend"}
                       </button>
+                      {r.invite_sent_at ? (
+                        <span style={{ fontSize: 11, color: "var(--ink-500)" }}>
+                          Sent {formatDateTime(r.invite_sent_at)}
+                        </span>
+                      ) : null}
                     </div>
                   ) : r.paid_status === "paid" ? (
                     <button
