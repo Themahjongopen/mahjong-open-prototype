@@ -105,6 +105,10 @@ const LAUNCH_CITIES = [
   { name: "Enterprise", state: "Alabama", photo: "/brand-photo-27.jpg" },
   { name: "Cypress", state: "Texas", photo: "/brand-photo-28.jpg" },
   { name: "Fort Wayne", state: "Indiana", photo: "/brand-photo-29.jpg" },
+  { name: "North Tarrant Co.", state: "Texas", photo: "/brand-photo-30.jpg" },
+  { name: "Lubbock", state: "Texas", photo: "/brand-photo-31.jpg" },
+  { name: "Greater Boston Metro", state: "Massachusetts", photo: "/brand-photo-32.jpg" },
+  { name: "San Antonio", state: "Texas", photo: "/brand-photo-33.jpg" },
 ];
 
 type LaunchCity = (typeof LAUNCH_CITIES)[number];
@@ -163,7 +167,7 @@ function LaunchCityCard({ city }: { city: LaunchCity }) {
           Launch city
         </p>
         <h3
-          className={`launch-card-title${city.name.length > 20 ? " launch-card-title--long" : ""}`}
+          className={`launch-card-title${city.name.length >= 20 ? " launch-card-title--long" : ""}`}
           style={{ fontFamily: "var(--font-display)", fontWeight: 400, color: "var(--ink-900)", lineHeight: 1.05, marginBottom: 8 }}
         >
           {city.name}
@@ -446,7 +450,7 @@ export default function HomePage() {
             <p className="eyebrow" style={{ display: "inline-flex", alignItems: "center", gap: 7, marginBottom: 14 }}>
               <Sparkles size={14} /> Now launching
             </p>
-            <h2 className="h2">Series One starts in{" "}<em className="serif-italic">twenty-nine cities</em></h2>
+            <h2 className="h2">Series One starts in{" "}<em className="serif-italic">thirty-three cities</em></h2>
             <p className="body-lg" style={{ marginTop: 16, maxWidth: 540, marginInline: "auto" }}>
               Our inaugural 8-week series kicks off this August. Be one of the first to take a seat at the table in your city.
             </p>
@@ -834,10 +838,11 @@ export default function HomePage() {
         .launch-card-photo { aspect-ratio: 8 / 5; }
         .launch-card-body { padding: 14px 18px 16px; }
         .launch-card-title { font-size: 23px; }
-        /* Long names (currently just "Southern Tarrant County," 23 chars) don't fit
-           the ~227px text area of the 265px desktop card at 23px. Measured against
-           the real display font: 20px still wraps (231px), 18px fits with margin
-           (208px) — so step down to 18px. Only desktop needs this: the mobile
+        /* Long names (>= 20 chars — currently "Greater Cartersville" and "Greater
+           Boston Metro") don't fit the ~227px text area of the 265px desktop card
+           at 23px: both wrap to two lines. Measured against the real display font,
+           18px fits each on one line with margin — so step down to 18px. Only
+           desktop needs this: the mobile
            card is full-width (single column, ~330px text area) where the name
            already fits, and the max-width:600px .launch-card-title 20px rule
            below overrides this one there (equal specificity, later in source), so
