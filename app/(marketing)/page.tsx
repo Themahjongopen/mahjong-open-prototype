@@ -277,8 +277,7 @@ export default function HomePage() {
                 Mahjong Made <em className="serif-italic">Social</em>
               </h1>
               <p className="body-lg" style={{ maxWidth: 480 }}>
-                Meet more friends. Play more Mahjong. Win more prizes.<br />
-                8-week league with a flexible schedule.
+                Meet more friends. Play more Mahjong. Win more prizes. 8-week league with a flexible schedule.
               </p>
               <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
                 <button
