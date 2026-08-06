@@ -85,7 +85,7 @@ function weekNumberForDate(seriesStartDate: string | null, dateStr: string): str
   return week === null ? "" : String(week);
 }
 
-export default function CreateTableForm({ cityName, seriesStartDate }: { cityName: string | null; seriesStartDate: string | null }) {
+export default function CreateTableForm({ cityName, seriesStartDate, seriesEndDate }: { cityName: string | null; seriesStartDate: string | null; seriesEndDate: string | null }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -148,10 +148,14 @@ export default function CreateTableForm({ cityName, seriesStartDate }: { cityNam
       <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         {field("Date", true,
           // Auto-fills the round below from the series start date. Fires on every
-          // date change; the host can still override the round afterward. `min`
-          // blocks the native picker from offering pre-series dates (server also
-          // enforces this); omitted if the start date is somehow unavailable.
-          <input className="input-mo" type="date" min={seriesStartDate ?? undefined} value={form.table_date} onChange={(e) => setForm((f) => ({ ...f, table_date: e.target.value, week_number: weekNumberForDate(seriesStartDate, e.target.value) }))} />
+          // date change; the host can still override the round afterward. `min`/
+          // `max` block the native picker from offering dates outside the series
+          // window (server also enforces both bounds); either is simply omitted
+          // if that series date is unavailable. Desktop/Android calendar-grid
+          // pickers visually gray out the disabled days; iOS's native scrolling-
+          // wheel picker has no such visual, but min/max still fully block
+          // scrolling past the boundary there too.
+          <input className="input-mo" type="date" min={seriesStartDate ?? undefined} max={seriesEndDate ?? undefined} value={form.table_date} onChange={(e) => setForm((f) => ({ ...f, table_date: e.target.value, week_number: weekNumberForDate(seriesStartDate, e.target.value) }))} />
         )}
         {field("Round (week 1–8)", true,
           <>

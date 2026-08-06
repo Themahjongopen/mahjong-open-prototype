@@ -42,6 +42,19 @@ export async function getSeriesStartDate(seriesId: string | null): Promise<strin
   return series?.starts_at ?? null;
 }
 
+// The series' end date ("YYYY-MM-DD"), used to cap the Create Table date picker
+// so a table can't be scheduled after the series ends. Sibling to
+// getSeriesStartDate() above — same shape, same graceful-null-on-unavailable
+// contract. Reads the real ends_at column (admin-editable at /admin/series)
+// rather than assuming a fixed 8-week window from the start date.
+export async function getSeriesEndDate(seriesId: string | null): Promise<string | null> {
+  if (!seriesId) return null;
+  const admin: any = createAdminClient();
+  if (!admin) return null;
+  const { data: series } = await admin.from("series").select("ends_at").eq("id", seriesId).maybeSingle();
+  return series?.ends_at ?? null;
+}
+
 function today() {
   return new Date().toISOString().slice(0, 10);
 }
