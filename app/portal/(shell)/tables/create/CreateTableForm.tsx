@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Info } from "lucide-react";
-import { seriesWeekForDate } from "@/lib/portal/seriesWeek";
+import { enumerateSeriesRounds } from "@/lib/portal/seriesWeek";
 
 const ROUND_TYPE_INFO: { name: string; desc: string }[] = [
   { name: "Social", desc: "Light conversation, casual play" },
@@ -76,13 +76,19 @@ function RoundTypeInfo() {
   );
 }
 
-// The series' round/week for a calendar date as a string, or "" if outside the
-// 8-week window. Thin wrapper over the shared seriesWeekForDate() (also used by
-// the edit route's date-bounds check) that keeps this form's string-valued
-// week_number state and empty-string "no round" convention.
-function weekNumberForDate(seriesStartDate: string | null, dateStr: string): string {
-  const week = seriesWeekForDate(seriesStartDate, dateStr);
-  return week === null ? "" : String(week);
+// "Mon, Aug 17" — UTC-safe (avoids the local-timezone off-by-one every other
+// date formatter in this file already guards against).
+function formatDateOption(dateStr: string): string {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" });
+}
+
+// Today as "YYYY-MM-DD" in the viewer's local time zone — used only to floor
+// the dropdown's options at today-forward. Deliberately local (not UTC): this
+// should match how the host sitting in front of the screen perceives "today."
+function localTodayString(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
 export default function CreateTableForm({ cityName, seriesStartDate, seriesEndDate }: { cityName: string | null; seriesStartDate: string | null; seriesEndDate: string | null }) {
@@ -98,6 +104,22 @@ export default function CreateTableForm({ cityName, seriesStartDate, seriesEndDa
     round_type: "",
     notes: "",
   });
+
+  const seriesRounds = useMemo(() => enumerateSeriesRounds(seriesStartDate, seriesEndDate), [seriesStartDate, seriesEndDate]);
+  const hasDynamicDates = seriesRounds.length > 0;
+
+  // Today-forward floor, applied on top of the pure per-round enumeration.
+  // Rounds left with zero visible dates (fully in the past) are dropped
+  // entirely rather than rendered as an empty optgroup. The label still shows
+  // each round's full canonical range (dates[0]/dates[dates.length - 1] from the
+  // unfiltered round), so a host mid-round still sees which round they're in
+  // even if only its tail end remains selectable.
+  const visibleRounds = useMemo(() => {
+    const today = localTodayString();
+    return seriesRounds
+      .map((r) => ({ round: r.round, rangeStart: r.dates[0], rangeEnd: r.dates[r.dates.length - 1], dates: r.dates.filter((d) => d >= today) }))
+      .filter((r) => r.dates.length > 0);
+  }, [seriesRounds]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -147,15 +169,36 @@ export default function CreateTableForm({ cityName, seriesStartDate, seriesEndDa
 
       <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         {field("Date", true,
-          // Auto-fills the round below from the series start date. Fires on every
-          // date change; the host can still override the round afterward. `min`/
-          // `max` block the native picker from offering dates outside the series
-          // window (server also enforces both bounds); either is simply omitted
-          // if that series date is unavailable. Desktop/Android calendar-grid
-          // pickers visually gray out the disabled days; iOS's native scrolling-
-          // wheel picker has no such visual, but min/max still fully block
-          // scrolling past the boundary there too.
-          <input className="input-mo" type="date" min={seriesStartDate ?? undefined} max={seriesEndDate ?? undefined} value={form.table_date} onChange={(e) => setForm((f) => ({ ...f, table_date: e.target.value, week_number: weekNumberForDate(seriesStartDate, e.target.value) }))} />
+          // A <select>, not a native date picker — deliberately. Every browser
+          // renders type="date" pickers differently, and some (confirmed on a
+          // real phone) render a fully custom calendar widget that ignores
+          // min/max entirely, leaving out-of-window dates selectable. A
+          // <select> still uses the browser's own dropdown/wheel UI, but the
+          // option list is ours — nothing invalid to ever pick, on any device.
+          // Falls back to the original native input (same min/max as before)
+          // if the series' dates aren't available, so table creation is never
+          // fully blocked by a misconfigured series row.
+          hasDynamicDates ? (
+            <select
+              className="input-mo"
+              value={form.table_date}
+              onChange={(e) => {
+                const round = visibleRounds.find((r) => r.dates.includes(e.target.value))?.round;
+                setForm((f) => ({ ...f, table_date: e.target.value, week_number: round ? String(round) : "" }));
+              }}
+            >
+              <option value="">Select a date</option>
+              {visibleRounds.map((r) => (
+                <optgroup key={r.round} label={`Round ${r.round} (${formatDateOption(r.rangeStart)} – ${formatDateOption(r.rangeEnd)})`}>
+                  {r.dates.map((d) => (
+                    <option key={d} value={d}>{formatDateOption(d)}</option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
+          ) : (
+            <input className="input-mo" type="date" min={seriesStartDate ?? undefined} max={seriesEndDate ?? undefined} value={form.table_date} onChange={(e) => setForm((f) => ({ ...f, table_date: e.target.value }))} />
+          )
         )}
         {field("Round (week 1–8)", true,
           <>
