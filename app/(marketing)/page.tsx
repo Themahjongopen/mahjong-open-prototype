@@ -443,6 +443,75 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* What makes us different — multi-city registration */}
+      <section style={{ padding: "72px 0", background: "var(--pink-wash)" }}>
+        <div className="container-mo">
+          <div style={{ textAlign: "center", marginBottom: 40 }}>
+            <p className="eyebrow" style={{ marginBottom: 12 }}>Multi-city play</p>
+            <h2 className="h2">
+              What Makes The Mahjong Open{" "}<em className="serif-italic">Different</em>
+            </h2>
+          </div>
+          <div
+            style={{
+              maxWidth: 680,
+              marginInline: "auto",
+              background: "#fff",
+              border: "1px solid var(--hair-200)",
+              borderRadius: "var(--radius-lg)",
+              boxShadow: "var(--shadow-sm)",
+              padding: "36px 32px",
+              textAlign: "center",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 16,
+            }}
+          >
+            <div
+              style={{
+                width: 50,
+                height: 50,
+                borderRadius: "var(--radius-md)",
+                background: "var(--pink-50)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <MapPin size={22} color="var(--pink-600)" />
+            </div>
+            <p className="body-lg" style={{ maxWidth: 560 }}>
+              Register in more than one city and play in both — whether that&rsquo;s two cities near each
+              other, or a hometown and the place you visit all summer. Each city keeps its own separate
+              leaderboard, so you&rsquo;re competing everywhere you register.
+            </p>
+            <p style={{ fontSize: 16, color: "var(--ink-700)", margin: 0 }}>
+              Second city registration is just{" "}
+              <strong style={{ color: "var(--pink-600)" }}>$35</strong>.
+            </p>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: 13, color: "var(--ink-500)" }}>Use code</span>
+              <span
+                style={{
+                  fontFamily: "ui-monospace, Menlo, Consolas, monospace",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  letterSpacing: "0.05em",
+                  color: "var(--pink-700)",
+                  background: "var(--pink-50)",
+                  border: "1px dashed var(--pink-300)",
+                  borderRadius: "var(--radius-sm)",
+                  padding: "4px 12px",
+                }}
+              >
+                2NDCITY
+              </span>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Launch cities */}
       <section style={{ padding: "96px 0", background: "var(--bg)" }}>
         <div className="container-mo">
