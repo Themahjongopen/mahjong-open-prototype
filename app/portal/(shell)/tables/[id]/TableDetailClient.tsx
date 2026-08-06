@@ -209,6 +209,10 @@ export default function TableDetailClient({
           </p>
         </div>
         {field("Date", true,
+          // TODO: same native <input type="date"> gap CreateTableForm.tsx had
+          // before d076769 — no min/max here at all today. Good next candidate
+          // for the same round-grouped <select> treatment; not done yet because
+          // it wasn't part of the original report.
           <input className="input-mo" type="date" value={editForm.table_date} onChange={(e) => setEditForm((f) => ({ ...f, table_date: e.target.value }))} />
         )}
         {field("Time", true,
