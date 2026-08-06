@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { getPortalUser } from "@/lib/portal/session";
 import { getAdminContext } from "@/lib/portal/adminCity";
 import { createAdminClient } from "@/lib/supabase/server";
+import { getSeriesStartDate } from "@/lib/portal/tables";
+import { seriesWeekForDate } from "@/lib/portal/seriesWeek";
 
 const ROUND_TYPES = new Set(["social", "focused", "lightning"]);
 
@@ -44,6 +46,14 @@ export async function POST(request: Request) {
   }
   if (roundType && !ROUND_TYPES.has(roundType)) {
     return NextResponse.json({ error: "Invalid round type." }, { status: 400 });
+  }
+  // The date must fall inside the series' 8-week window — the same guard the edit
+  // route (PATCH /api/tables/[id], action "edit") already applies. Applies to
+  // admins too (they go through this route). Skips gracefully if the series start
+  // date is unavailable, matching the edit route's own fallback.
+  const seriesStart = await getSeriesStartDate(seriesId);
+  if (seriesStart && seriesWeekForDate(seriesStart, tableDate) === null) {
+    return NextResponse.json({ error: "That date is outside the current series window." }, { status: 400 });
   }
 
   const admin: any = createAdminClient();

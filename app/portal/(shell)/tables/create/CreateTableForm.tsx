@@ -148,8 +148,10 @@ export default function CreateTableForm({ cityName, seriesStartDate }: { cityNam
       <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         {field("Date", true,
           // Auto-fills the round below from the series start date. Fires on every
-          // date change; the host can still override the round afterward.
-          <input className="input-mo" type="date" value={form.table_date} onChange={(e) => setForm((f) => ({ ...f, table_date: e.target.value, week_number: weekNumberForDate(seriesStartDate, e.target.value) }))} />
+          // date change; the host can still override the round afterward. `min`
+          // blocks the native picker from offering pre-series dates (server also
+          // enforces this); omitted if the start date is somehow unavailable.
+          <input className="input-mo" type="date" min={seriesStartDate ?? undefined} value={form.table_date} onChange={(e) => setForm((f) => ({ ...f, table_date: e.target.value, week_number: weekNumberForDate(seriesStartDate, e.target.value) }))} />
         )}
         {field("Round (week 1–8)", true,
           <>
