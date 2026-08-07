@@ -628,7 +628,24 @@ export default function AdminRegistrationsPage() {
                 <div>
                   <span className="admin-mobile-label">Portal</span>
                   {r.invite_state === "active" ? (
-                    <span className="badge badge-lime" style={{ alignSelf: "center" }} title="Signed in — direct them to “Forgot password” to reset.">Active</span>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                      <span className="badge badge-lime" style={{ alignSelf: "center" }}>Active</span>
+                      <button
+                        type="button"
+                        className="btn"
+                        style={{ fontSize: 12, padding: "5px 11px" }}
+                        disabled={busyId === r.id}
+                        onClick={() => handleRowInvite(r, true)}
+                        title="Sends a fresh password-reset link — same as self-serve Forgot Password."
+                      >
+                        {busyId === r.id ? "Sending…" : "Send password reset"}
+                      </button>
+                      {r.invite_sent_at ? (
+                        <span style={{ fontSize: 11, color: "var(--ink-500)" }}>
+                          Sent {formatDateTime(r.invite_sent_at)}
+                        </span>
+                      ) : null}
+                    </div>
                   ) : r.invite_state === "invited" ? (
                     <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                       <span className="badge badge-butter">Invited</span>

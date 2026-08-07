@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createAdminClient, listAuthUsersByEmail } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/server";
 import { isAdminRequest } from "@/lib/admin/auth";
 import { sendPortalInvite } from "@/lib/email/portalInvite";
 
@@ -11,8 +11,9 @@ type InviteOutcome = { registrationId: string; email: string | null; status: Sta
 // Admin-triggered portal invites — single, bulk, or Resend invite. Every path
 // sends the same fully branded email via lib/email/portalInvite (generateLink +
 // buildBrandedEmail + Resend), so we don't depend on Supabase SMTP template
-// styling. Only PAID registrants are invited; already-active accounts (the user
-// has signed in) are skipped and pointed at the password-reset flow instead.
+// styling. Only PAID registrants are invited. Already-active accounts are NOT
+// skipped: sendPortalInvite falls back to a recovery (password-reset) link for
+// any existing account, so an admin can help a locked-out signed-in player too.
 export async function POST(request: Request) {
   if (!(await isAdminRequest())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -44,14 +45,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Could not load registrations." }, { status: 502 });
   }
 
-  // One listUsers pass tells us who already has an account and who has signed in.
-  let usersByEmail = new Map<string, { id: string; last_sign_in_at: string | null }>();
-  try {
-    usersByEmail = await listAuthUsersByEmail(supabase);
-  } catch {
-    // Non-fatal: fall back to invite-first behaviour (generateLink handles existing users).
-  }
-
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const byId = new Map<string, any>((registrations ?? []).map((r: any) => [String(r.id), r]));
   const outcomes: InviteOutcome[] = [];
@@ -66,17 +59,10 @@ export async function POST(request: Request) {
       outcomes.push({ registrationId: id, email: reg.email, status: "skipped", message: "Not a paid registration." });
       continue;
     }
-    const authUser = usersByEmail.get(String(reg.email).toLowerCase());
-    if (authUser?.last_sign_in_at) {
-      outcomes.push({
-        registrationId: id,
-        email: reg.email,
-        status: "skipped",
-        message: "Account is already active — use the password reset flow.",
-      });
-      continue;
-    }
-
+    // Active accounts are no longer skipped: sendPortalInvite's invite→recovery
+    // fallback issues a plain password-reset link (the same link type self-serve
+    // "Forgot password" produces) for any existing account, so an admin can help
+    // a signed-in-but-locked-out player directly.
     const result = await sendPortalInvite(supabase, { email: reg.email, fullName: reg.full_name });
     outcomes.push(
       result.ok
