@@ -75,6 +75,8 @@ export default function AdminRegistrationsPage() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [resendBusyId, setResendBusyId] = useState<string | null>(null);
   const [resendMsg, setResendMsg] = useState<Record<string, string>>({});
+  const [refundBusyId, setRefundBusyId] = useState<string | null>(null);
+  const [refundMsg, setRefundMsg] = useState<Record<string, string>>({});
   const [bulkBusy, setBulkBusy] = useState(false);
   const [bulkResendBusy, setBulkResendBusy] = useState(false);
   const [roleBusyId, setRoleBusyId] = useState<string | null>(null);
@@ -178,6 +180,33 @@ export default function AdminRegistrationsPage() {
       }
     } finally {
       setResendBusyId(null);
+    }
+  }
+
+  // Mark a paid registration as refunded. Confirms first — this is a one-way
+  // action in the UI (no "undo" button); does NOT call Stripe, just syncs the
+  // DB status. See the refund route's comment for the full rationale.
+  async function markRefunded(row: RegistrationRow) {
+    const ok = await confirm({
+      title: "Mark as refunded?",
+      message: `Mark ${row.full_name ?? row.email}'s registration as refunded? This removes them from standings, the directory, and their city roster. This does NOT process a Stripe refund — only do this after refunding them in Stripe.`,
+      confirmLabel: "Mark refunded",
+      danger: true,
+    });
+    if (!ok) return;
+
+    setRefundBusyId(row.id);
+    setRefundMsg((m) => ({ ...m, [row.id]: "" }));
+    try {
+      const res = await fetch(`/api/admin/registrations/${row.id}/refund`, { method: "POST", credentials: "include" });
+      const payload = await res.json().catch(() => ({}));
+      if (res.ok) {
+        await loadRows(); // refetch so the badge + counts reflect the new status
+      } else {
+        setRefundMsg((m) => ({ ...m, [row.id]: payload.error ?? "Could not mark this registration refunded." }));
+      }
+    } finally {
+      setRefundBusyId(null);
     }
   }
 
@@ -617,6 +646,21 @@ export default function AdminRegistrationsPage() {
                           {resendBusyId === r.id ? "Sending…" : "Resend link"}
                         </button>
                         {resendMsg[r.id] ? <span style={{ fontSize: 12, color: "var(--ink-500)" }}>{resendMsg[r.id]}</span> : null}
+                      </>
+                    ) : null}
+                    {r.paid_status === "paid" ? (
+                      <>
+                        <button
+                          type="button"
+                          className="btn"
+                          style={{ fontSize: 12, padding: "5px 11px" }}
+                          disabled={refundBusyId === r.id}
+                          onClick={() => markRefunded(r)}
+                          title="Mark this registration refunded — does not process a Stripe refund, only syncs status"
+                        >
+                          {refundBusyId === r.id ? "Updating…" : "Mark refunded"}
+                        </button>
+                        {refundMsg[r.id] ? <span style={{ fontSize: 12, color: "var(--ink-500)" }}>{refundMsg[r.id]}</span> : null}
                       </>
                     ) : null}
                   </div>
