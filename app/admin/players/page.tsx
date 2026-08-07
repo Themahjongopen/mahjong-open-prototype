@@ -79,6 +79,10 @@ export default function AdminRegistrationsPage() {
   const [refundMsg, setRefundMsg] = useState<Record<string, string>>({});
   const [bulkBusy, setBulkBusy] = useState(false);
   const [bulkResendBusy, setBulkResendBusy] = useState(false);
+  // Checkbox selection for the selective bulk actions.
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [selectedInviteBusy, setSelectedInviteBusy] = useState(false);
+  const [selectedResendBusy, setSelectedResendBusy] = useState(false);
   const [roleBusyId, setRoleBusyId] = useState<string | null>(null);
   // Inline per-row edit of name/email/phone (only one row edits at a time).
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -335,6 +339,43 @@ export default function AdminRegistrationsPage() {
     });
   }, [visibleRows, filter, search, cityFilter, seriesFilter, multiCityOnly]);
 
+  function toggleSelected(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  // "Select all visible" reflects/affects only the currently filtered rows —
+  // selections outside the current filter are left untouched, so filtering
+  // down, selecting, then widening the filter again doesn't lose a partial pick.
+  const allVisibleSelected = filteredRows.length > 0 && filteredRows.every((r) => selectedIds.has(r.id));
+  function toggleSelectAllVisible() {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (allVisibleSelected) {
+        for (const r of filteredRows) next.delete(r.id);
+      } else {
+        for (const r of filteredRows) next.add(r.id);
+      }
+      return next;
+    });
+  }
+
+  // Selection is intentionally NOT cleared by changing filters/search — the
+  // whole point is picking specific rows while scrolling/filtering through a
+  // long list. It IS cleared after a selection-based send succeeds (below), and
+  // via the explicit "Clear selection" control.
+  const selectedInvited = useMemo(
+    () => visibleRows.filter((r) => selectedIds.has(r.id) && r.invite_state === "invited"),
+    [visibleRows, selectedIds]
+  );
+  const selectedPendingPayment = useMemo(
+    () => visibleRows.filter((r) => selectedIds.has(r.id) && r.paid_status === "pending"),
+    [visibleRows, selectedIds]
+  );
+
   function handleExport() {
     const header = ["Name", "Email", "Phone", "City", "Series", "Skill", "Payment status", "Registered date"];
     const lines = [header.join(",")];
@@ -447,6 +488,68 @@ export default function AdminRegistrationsPage() {
     setBulkResendBusy(false);
   }
 
+  // Selective version of the "Resend setup link" bulk action — same /api/admin/invite
+  // pipeline, just targeting whichever selected rows are actually invite_state
+  // "invited" rather than the whole pendingInvited set.
+  async function handleSelectedInvite() {
+    const targets = selectedInvited;
+    if (targets.length === 0) return;
+    const confirmed = await confirm({
+      title: "Resend setup link?",
+      message: `Resend the portal setup email to ${targets.length} selected ${targets.length === 1 ? "player" : "players"} who haven't signed in yet?`,
+      confirmLabel: `Resend to ${targets.length}`,
+    });
+    if (!confirmed) return;
+    setSelectedInviteBusy(true);
+    setMessage(null);
+    const { ok, payload } = await postInvites(targets.map((r) => r.id));
+    if (ok || typeof payload.sent === "number") {
+      const parts = [`Re-sent ${payload.sent ?? 0}`];
+      if (payload.skipped) parts.push(`${payload.skipped} skipped`);
+      if (payload.failed) parts.push(`${payload.failed} failed`);
+      setMessage(`${parts.join(" · ")}.`);
+      setSelectedIds(new Set());
+      await loadRows();
+    } else {
+      setMessage(payload.error ?? "Unable to resend.");
+    }
+    setSelectedInviteBusy(false);
+  }
+
+  // Selective bulk resend of the "complete your registration" email, for
+  // selected rows with paid_status === "pending". New endpoint — no bulk version
+  // of this one existed before this build.
+  async function handleSelectedRegistrationResend() {
+    const targets = selectedPendingPayment;
+    if (targets.length === 0) return;
+    const confirmed = await confirm({
+      title: "Resend registration link?",
+      message: `Resend the "complete your registration" email to ${targets.length} selected ${targets.length === 1 ? "player" : "players"}?`,
+      confirmLabel: `Resend to ${targets.length}`,
+    });
+    if (!confirmed) return;
+    setSelectedResendBusy(true);
+    setMessage(null);
+    const response = await fetch("/api/admin/registrations/resend-bulk", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids: targets.map((r) => r.id) }),
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (response.ok) {
+      const parts = [`Sent ${payload.sent ?? 0}`];
+      if (payload.skipped) parts.push(`${payload.skipped} skipped`);
+      if (payload.failed) parts.push(`${payload.failed} failed`);
+      setMessage(`${parts.join(" · ")}.`);
+      setSelectedIds(new Set());
+      await loadRows();
+    } else {
+      setMessage(payload.error ?? "Unable to resend.");
+    }
+    setSelectedResendBusy(false);
+  }
+
   const filters: { key: Filter; label: string }[] = [
     { key: "all", label: "All" },
     { key: "paid", label: "Paid" },
@@ -458,7 +561,10 @@ export default function AdminRegistrationsPage() {
       <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginBottom: 8 }}>
         <div>
           <h1 style={{ fontFamily: "var(--font-display)", fontSize: 26, color: "var(--ink-900)", marginBottom: 8 }}>Registrations</h1>
-          <p style={{ fontSize: 15, color: "var(--ink-500)" }}>{paidCount} paid · {visibleRows.length} total</p>
+          <p style={{ fontSize: 15, color: "var(--ink-500)" }}>
+            {paidCount} paid · {visibleRows.length} total
+            {loading && rows.length > 0 ? <span style={{ marginLeft: 8, fontSize: 12, color: "var(--mute-400)" }}>Refreshing…</span> : null}
+          </p>
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <button
@@ -474,14 +580,44 @@ export default function AdminRegistrationsPage() {
             className="btn"
             onClick={handleBulkResend}
             disabled={bulkResendBusy || pendingInvited.length === 0}
+            title="Re-sends the portal account setup email to paid players who haven't signed in yet. Not related to payment status."
           >
-            {bulkResendBusy ? "Resending…" : `Resend to ${pendingInvited.length} pending`}
+            {bulkResendBusy ? "Resending…" : `Resend setup link to ${pendingInvited.length} not signed in`}
           </button>
           <button type="button" className="btn" onClick={handleExport} disabled={filteredRows.length === 0}>
             Export CSV
           </button>
         </div>
       </div>
+
+      {selectedIds.size > 0 ? (
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", background: "var(--paper-100)", border: "1px solid var(--hair-200)", borderRadius: "var(--radius-md)", padding: "10px 14px", marginBottom: 16 }}>
+          <span style={{ fontSize: 13, fontWeight: 600, color: "var(--ink-700)" }}>{selectedIds.size} selected</span>
+          <button type="button" className="btn" style={{ fontSize: 12, padding: "6px 12px" }} onClick={() => setSelectedIds(new Set())}>
+            Clear selection
+          </button>
+          <button
+            type="button"
+            className="btn"
+            style={{ fontSize: 12, padding: "6px 12px" }}
+            disabled={selectedInviteBusy || selectedInvited.length === 0}
+            onClick={handleSelectedInvite}
+            title="Only affects selected rows that haven't signed in yet"
+          >
+            {selectedInviteBusy ? "Resending…" : `Resend setup link to ${selectedInvited.length} selected`}
+          </button>
+          <button
+            type="button"
+            className="btn"
+            style={{ fontSize: 12, padding: "6px 12px" }}
+            disabled={selectedResendBusy || selectedPendingPayment.length === 0}
+            onClick={handleSelectedRegistrationResend}
+            title="Only affects selected rows still pending payment"
+          >
+            {selectedResendBusy ? "Resending…" : `Resend registration link to ${selectedPendingPayment.length} selected`}
+          </button>
+        </div>
+      ) : null}
 
       {message ? <p style={{ fontSize: 13, color: "var(--ink-700)", marginBottom: 16 }}>{message}</p> : null}
 
@@ -542,11 +678,19 @@ export default function AdminRegistrationsPage() {
       <div style={{ background: "#fff", border: "1px solid var(--hair-200)", borderRadius: "var(--radius-lg)", overflow: "hidden", boxShadow: "var(--shadow-xs)" }}>
         <div className="admin-players-table">
           <div className="admin-players-table-header">
+            <p>
+              <input
+                type="checkbox"
+                checked={allVisibleSelected}
+                onChange={toggleSelectAllVisible}
+                aria-label="Select all visible rows"
+              />
+            </p>
             {["Name", "Email", "Phone", "City", "Series", "Skill", "Payment", "Registered", "Portal"].map((h) => (
               <p key={h}>{h}</p>
             ))}
           </div>
-          {loading ? (
+          {loading && rows.length === 0 ? (
             <div style={{ padding: 20, color: "var(--ink-500)" }}>Loading registrations…</div>
           ) : filteredRows.length === 0 ? (
             <div style={{ padding: 20, color: "var(--ink-500)" }}>
@@ -555,6 +699,17 @@ export default function AdminRegistrationsPage() {
           ) : (
             filteredRows.map((r) => (
               <div key={r.id} className="admin-players-row">
+                <div>
+                  <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(r.id)}
+                      onChange={() => toggleSelected(r.id)}
+                      aria-label={`Select ${r.full_name ?? r.email}`}
+                    />
+                    <span className="admin-mobile-label" style={{ marginBottom: 0 }}>Select</span>
+                  </label>
+                </div>
                 <div>
                   <span className="admin-mobile-label">Name</span>
                   {editingId === r.id ? (
