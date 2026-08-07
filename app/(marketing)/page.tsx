@@ -106,7 +106,7 @@ const LAUNCH_CITIES = [
   { name: "Cypress", state: "Texas", photo: "/brand-photo-28.jpg" },
   { name: "Fort Wayne", state: "Indiana", photo: "/brand-photo-29.jpg" },
   { name: "North Tarrant Co.", state: "Texas", photo: "/brand-photo-30.jpg" },
-  { name: "Lubbock", state: "Texas", photo: "/brand-photo-31.jpg" },
+  { name: "Lubbock County", state: "Texas", photo: "/brand-photo-31.jpg" },
   { name: "Greater Boston Metro", state: "Massachusetts", photo: "/brand-photo-32.jpg" },
   { name: "Boerne & Greater San Antonio", state: "Texas", photo: "/brand-photo-33.jpg" },
   { name: "Greater Clanton", state: "Alabama", photo: "/brand-photo-34.jpg" },
