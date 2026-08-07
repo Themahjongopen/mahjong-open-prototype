@@ -48,6 +48,21 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Registration for this series has closed." }, { status: 400 });
     }
 
+    // If this email already has a portal account (a profile row), attach it to
+    // this registration immediately. Without this, profile_id is only ever set
+    // by handle_new_user() — a trigger that fires ONCE, at first Auth-account
+    // creation, and backfills whatever registrations exist for that email AT
+    // THAT MOMENT. Any registration created after a player's first portal login
+    // (e.g. a second city via "Register Another City," or this same public form
+    // used again) would otherwise get profile_id = NULL forever — fully paid,
+    // but invisible to getPortalUser(), which filters strictly on profile_id.
+    const { data: matchingProfiles } = await supabase
+      .from("profiles")
+      .select("id")
+      .ilike("email", email)
+      .limit(1);
+    const profileId = matchingProfiles?.[0]?.id ?? null;
+
     // Scope the lookup to (email, series_id, city_id) — NOT just (email,
     // series_id). Migration 019 loosened the UNIQUE constraint so a player can
     // hold one paid registration PER CITY within a series. Keying only on
@@ -84,6 +99,7 @@ export async function POST(request: Request) {
           skill_level,
           avatar_url,
           paid_status: "pending",
+          profile_id: profileId,
         })
         .eq("id", registrationId);
 
@@ -102,6 +118,7 @@ export async function POST(request: Request) {
           skill_level,
           avatar_url,
           paid_status: "pending",
+          profile_id: profileId,
         })
         .select("id")
         .single();
