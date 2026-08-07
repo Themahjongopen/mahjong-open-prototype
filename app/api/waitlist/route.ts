@@ -53,7 +53,7 @@ export async function POST(request: Request) {
           html: buildBrandedEmail({
             title: "New waitlist signup",
             innerHtml: `<div style="font-family:Helvetica,Arial,sans-serif;font-size:15px;line-height:1.65;color:#3a4a4f;"><p style="margin:0;"><strong>Email:</strong> ${email}</p></div>`,
-            footerNote: "A city-based mahjong social league. You’re receiving this because someone joined the waitlist on The Mahjong Open.",
+            footerNote: "Mahjong Made Social. You’re receiving this because someone joined the waitlist on The Mahjong Open.",
           }),
         });
       } catch (emailError) {

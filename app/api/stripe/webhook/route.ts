@@ -289,7 +289,7 @@ export async function POST(request: Request) {
       const html = buildBrandedEmail({
         title: `You’re in, ${firstName}.`,
         innerHtml,
-        footerNote: `A city-based mahjong social league. You’re receiving this because you registered for ${seriesName}.`,
+        footerNote: `Mahjong Made Social. You’re receiving this because you registered for ${seriesName}.`,
       });
       try {
         const resend = new Resend(resendApiKey);
@@ -302,7 +302,7 @@ export async function POST(request: Request) {
           html: buildBrandedEmail({
             title: "New registration",
             innerHtml: internalNoticeInnerHtml,
-            footerNote: "A city-based mahjong social league. You’re receiving this because a player completed a registration through The Mahjong Open.",
+            footerNote: "Mahjong Made Social. You’re receiving this because a player completed a registration through The Mahjong Open.",
           }),
         });
 

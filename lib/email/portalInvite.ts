@@ -70,7 +70,7 @@ export async function sendPortalInvite(
         title: "Set up your member portal",
         innerHtml,
         footerNote:
-          "A city-based mahjong social league. You’re receiving this because you registered for The Mahjong Open.",
+          "Mahjong Made Social. You’re receiving this because you registered for The Mahjong Open.",
       }),
     });
     if (error) return { ok: false, error: "Could not send the invite email." };

@@ -3,7 +3,7 @@ const ASSET_BASE = "https://themahjongopen.com";
 export function buildBrandedEmail({
   title,
   innerHtml,
-  footerNote = "A city-based Mahjong game league.",
+  footerNote = "Mahjong Made Social.",
   preheader,
 }: {
   title: string;

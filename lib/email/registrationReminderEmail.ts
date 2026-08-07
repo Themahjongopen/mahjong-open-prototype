@@ -41,7 +41,7 @@ export async function sendRegistrationReminderEmail(
       html: buildBrandedEmail({
         title: "Your registration is still waiting",
         innerHtml,
-        footerNote: "A city-based mahjong social league. You’re receiving this because your registration was left unfinished.",
+        footerNote: "Mahjong Made Social. You’re receiving this because your registration was left unfinished.",
       }),
     });
     if (error) return { ok: false, error: "Could not send the reminder email." };

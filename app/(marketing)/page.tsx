@@ -188,7 +188,7 @@ function LaunchCityCard({ city }: { city: LaunchCity }) {
 const FAQS = [
   {
     q: "What is The Mahjong Open?",
-    a: "Mahjong Made Social — a city-based mahjong league. Register once, play unlimited games over a flexible 8-week series, meet new friends, and climb your city's leaderboard.",
+    a: "Mahjong Made Social — mahjong that brings your city together. Register once, play unlimited games over a flexible 8-week series, meet new friends, and climb your city's leaderboard.",
   },
   {
     q: "How much does it cost?",

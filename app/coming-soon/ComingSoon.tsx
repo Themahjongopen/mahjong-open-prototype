@@ -87,7 +87,7 @@ export default function ComingSoon() {
             maxWidth: 400,
           }}
         >
-          A city-based mahjong social league for everyone who loves the game. Be the first to know when we open.
+          Mahjong Made Social — for everyone who loves the game. Be the first to know when we open.
         </p>
 
         {status === "done" ? (

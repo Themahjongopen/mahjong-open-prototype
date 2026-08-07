@@ -28,9 +28,9 @@ const isIndexable = process.env.SITE_INDEXABLE === "true";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://themahjongopen.com"),
-  title: "The Mahjong Open — City-Based Mahjong Social League",
+  title: "The Mahjong Open — Mahjong Made Social",
   description:
-    "A city-based mahjong social league. Register once, play unlimited games over an 8-week series, and climb your city's leaderboard. Warm, welcoming, flexible.",
+    "Mahjong Made Social. Register once, play unlimited games over an 8-week series, meet new friends, and climb your city's leaderboard. Warm, welcoming, flexible.",
   keywords: [
     "mahjong social league",
     "mahjong league",
@@ -43,17 +43,17 @@ export const metadata: Metadata = {
   robots: isIndexable ? undefined : { index: false, follow: false },
   verification: { google: "kN2Y9zGfQ8wL_Ln8Wk-L0j0RX5zm6DfFIlptpWf9uBY" },
   openGraph: {
-    title: "The Mahjong Open — City-Based Mahjong Social League",
+    title: "The Mahjong Open — Mahjong Made Social",
     description:
-      "A city-based mahjong social league. Register once, play unlimited games over an 8-week series, and climb your city's leaderboard. Warm, welcoming, flexible.",
+      "Mahjong Made Social. Register once, play unlimited games over an 8-week series, meet new friends, and climb your city's leaderboard. Warm, welcoming, flexible.",
     type: "website",
     siteName: "The Mahjong Open",
   },
   twitter: {
     card: "summary_large_image",
-    title: "The Mahjong Open — City-Based Mahjong Social League",
+    title: "The Mahjong Open — Mahjong Made Social",
     description:
-      "A city-based mahjong social league. Register once, play unlimited games over an 8-week series, and climb your city's leaderboard. Warm, welcoming, flexible.",
+      "Mahjong Made Social. Register once, play unlimited games over an 8-week series, meet new friends, and climb your city's leaderboard. Warm, welcoming, flexible.",
   },
 };
 
@@ -64,7 +64,7 @@ const organizationJsonLd = {
   "@type": "Organization",
   name: "The Mahjong Open",
   description:
-    "The Mahjong Open is a city-based mahjong social league where players register once and play unlimited games over an 8-week series, climbing their city's leaderboard.",
+    "The Mahjong Open is Mahjong Made Social — players register once and play unlimited games over an 8-week series, meeting new friends and climbing their city's leaderboard.",
   url: "https://themahjongopen.com",
   knowsAbout: "Mahjong",
   slogan: "Warm, welcoming, and flexible.",

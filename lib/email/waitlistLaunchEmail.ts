@@ -20,7 +20,7 @@ export function buildWaitlistLaunchEmail() {
 
   const innerHtml = `
         <p style="${p}">You asked to be the first to know, so here it is: <strong style="${strong}">registration is now open</strong> in the cities of Mobile, AL; Slidell, LA; Ocean Springs, MS; and Madison, MS.</p>
-        <p style="${p}">The Mahjong Open is a city-based mahjong social league for everyone who loves the game. Register once and you&rsquo;re set for a full <strong style="${strong}">8-week series</strong> &mdash; play unlimited games, meet players across your city, and climb the leaderboard. Series One runs August 17 &ndash; October 11 &mdash; register now to be there from week one. All skill levels are welcome, and you play on your own schedule.</p>
+        <p style="${p}">The Mahjong Open is Mahjong Made Social — for everyone who loves the game. Register once and you&rsquo;re set for a full <strong style="${strong}">8-week series</strong> &mdash; play unlimited games, meet players across your city, and climb the leaderboard. Series One runs August 17 &ndash; October 11 &mdash; register now to be there from week one. All skill levels are welcome, and you play on your own schedule.</p>
         <table role="presentation" cellpadding="0" cellspacing="0" style="margin:24px auto 24px auto;">
           <tr>
             <td align="center" style="background-color:#ec466e;border-radius:999px;">
@@ -47,6 +47,6 @@ export function buildWaitlistLaunchEmail() {
     innerHtml,
     preheader: WAITLIST_LAUNCH_PREHEADER,
     footerNote:
-      "A city-based mahjong social league. You’re receiving this because you signed up to be notified when registration opened.",
+      "Mahjong Made Social. You’re receiving this because you signed up to be notified when registration opened.",
   });
 }

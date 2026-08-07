@@ -2,7 +2,7 @@ import { ImageResponse } from "next/og";
 import { readFileSync } from "fs";
 import { join } from "path";
 
-export const OG_ALT = "The Mahjong Open — a city-based mahjong social league";
+export const OG_ALT = "The Mahjong Open — Mahjong Made Social";
 export const OG_SIZE = { width: 1200, height: 630 };
 
 const FONTS = "node_modules/@fontsource";
@@ -40,7 +40,7 @@ export async function renderShareImage() {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={markSrc} width={300} height={300} style={{ width: 300, height: 300 }} alt="" />
           <div style={{ display: "flex", marginTop: 20, fontFamily: "Quicksand", fontSize: 40, color: "#3A5163" }}>
-            A city-based mahjong social league.
+            Mahjong Made Social.
           </div>
         </div>
       </div>
