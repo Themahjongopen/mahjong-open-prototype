@@ -5,7 +5,7 @@ import { createAdminClient } from "@/lib/supabase/server";
 // Columns returned to the admin Series page. Matches the live `series` table
 // from migration 003 (league-wide series — no city, no quarter/year).
 const SERIES_COLUMNS =
-  "id, name, starts_at, ends_at, registration_closes_at, total_weeks, price_cents, is_active, created_at";
+  "id, name, starts_at, ends_at, registration_closes_at, total_weeks, price_cents, is_active, auto_invite_enabled, created_at";
 
 // The `name` column is UNIQUE. Guard case-insensitively before writing so the
 // admin gets a friendly 409 instead of a raw Postgres constraint error.
@@ -122,7 +122,7 @@ export async function POST(request: Request) {
 
     const { data, error } = await supabase
       .from("series")
-      .insert({ ...parsed.values, is_active: true })
+      .insert({ ...parsed.values, is_active: true, auto_invite_enabled: false })
       .select(SERIES_COLUMNS)
       .single();
 
@@ -177,6 +177,31 @@ export async function PUT(request: Request) {
 
       if (error) {
         return NextResponse.json({ error: "Series status could not be updated." }, { status: 500 });
+      }
+
+      return NextResponse.json({ series: data });
+    }
+
+    if (action === "toggle_auto_invite") {
+      const { data: existing, error: fetchError } = await supabase
+        .from("series")
+        .select("id, auto_invite_enabled")
+        .eq("id", id)
+        .single();
+
+      if (fetchError || !existing) {
+        return NextResponse.json({ error: "Series could not be found." }, { status: 404 });
+      }
+
+      const { data, error } = await supabase
+        .from("series")
+        .update({ auto_invite_enabled: !existing.auto_invite_enabled })
+        .eq("id", id)
+        .select(SERIES_COLUMNS)
+        .single();
+
+      if (error) {
+        return NextResponse.json({ error: "Auto-invite setting could not be updated." }, { status: 500 });
       }
 
       return NextResponse.json({ series: data });

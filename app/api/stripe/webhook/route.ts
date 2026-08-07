@@ -3,7 +3,8 @@ import { Resend } from "resend";
 import Stripe from "stripe";
 import { buildBrandedEmail } from "@/lib/email/brandedEmail";
 import { sendRegistrationReminderEmail } from "@/lib/email/registrationReminderEmail";
-import { createAdminClient } from "@/lib/supabase/server";
+import { sendPortalInvite } from "@/lib/email/portalInvite";
+import { createAdminClient, listAuthUsersByEmail } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
 
@@ -68,6 +69,36 @@ async function sendUnmatchedAlert(sessionId: string, email: string | null, amoun
     });
   } catch (alertError) {
     console.error("[stripe-webhook] failed to send unmatched-checkout alert", alertError);
+  }
+}
+
+// Internal alert when a per-series auto-invite fails to send — payment is fine,
+// but the invite didn't go out, so an admin needs to send it manually. Mirrors
+// sendUnmatchedAlert's log-and-move-on posture (never throws to the caller).
+async function sendAutoInviteFailedAlert(email: string, fullName: string | null, reason?: string) {
+  const resendApiKey = process.env.RESEND_API_KEY;
+  if (!resendApiKey) return;
+  try {
+    const resend = new Resend(resendApiKey);
+    await resend.emails.send({
+      from: "The Mahjong Open <welcome@themahjongopen.com>",
+      to: ["themahjongopen@gmail.com"],
+      subject: `Action needed: auto-invite failed for ${fullName ?? email}`,
+      html: buildBrandedEmail({
+        title: "Auto-invite failed",
+        innerHtml: `
+          <div style="font-family:Helvetica,Arial,sans-serif;font-size:15px;line-height:1.65;color:#3a4a4f;">
+            <p style="margin:0 0 12px 0;">Payment succeeded and the registration is fine, but the automatic portal invite failed to send. Use the admin console to invite them manually.</p>
+            <p style="margin:0 0 12px 0;"><strong>Player:</strong> ${fullName ?? "Unknown"}</p>
+            <p style="margin:0 0 12px 0;"><strong>Email:</strong> ${email}</p>
+            <p style="margin:0;"><strong>Reason:</strong> ${reason ?? "Unknown"}</p>
+          </div>
+        `,
+        footerNote: "Automated alert from the Stripe webhook.",
+      }),
+    });
+  } catch (alertError) {
+    console.error("[stripe-webhook] failed to send auto-invite-failed alert", alertError);
   }
 }
 
@@ -167,7 +198,7 @@ export async function POST(request: Request) {
     if (resendApiKey && registrationData?.email) {
       const { data: seriesData } = await supabase
         .from("series")
-        .select("name, price_cents, starts_at, ends_at")
+        .select("name, price_cents, starts_at, ends_at, auto_invite_enabled")
         .eq("id", registrationData.series_id)
         .single();
 
@@ -283,6 +314,40 @@ export async function POST(request: Request) {
         });
       } catch (emailError) {
         console.error("Welcome or registration notice email failed after payment confirmation.", emailError);
+      }
+
+      // Auto-invite (per-series opt-in): if this series has it on, send the portal
+      // invite now instead of waiting for an admin click. Isolated + non-blocking
+      // — payment is already recorded and the emails above already fired; a failure
+      // here only alerts + logs, it never affects the checkout flow.
+      if (seriesData?.auto_invite_enabled) {
+        try {
+          // Skip anyone who already has full portal access (e.g. registering
+          // for a second city under 2NDCITY) — they don't need a "set up your
+          // account" email, they already have one. Reuses the same lookup the
+          // admin Players page already relies on elsewhere in this codebase.
+          // Note: this pages through every Auth user on every auto-invite-
+          // eligible checkout — fine at today's scale, worth revisiting (a
+          // targeted single-email lookup instead of a full scan) if the
+          // league grows into the thousands of accounts.
+          const usersByEmail = await listAuthUsersByEmail(supabase);
+          const alreadyActive = usersByEmail.get(registrationData.email.toLowerCase())?.last_sign_in_at;
+
+          if (!alreadyActive) {
+            const inviteResult = await sendPortalInvite(supabase, {
+              email: registrationData.email,
+              fullName: registrationData.full_name,
+            });
+
+            if (!inviteResult.ok) {
+              console.error("[stripe-webhook] auto-invite failed to send", { registrationId: registrationData.id, error: inviteResult.error });
+              await sendAutoInviteFailedAlert(registrationData.email, registrationData.full_name, inviteResult.error);
+            }
+          }
+        } catch (autoInviteError) {
+          console.error("[stripe-webhook] auto-invite threw", autoInviteError);
+          await sendAutoInviteFailedAlert(registrationData.email, registrationData.full_name, "Unexpected error — see server logs.");
+        }
       }
     }
   }

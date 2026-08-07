@@ -12,6 +12,7 @@ interface Series {
   total_weeks: number;
   price_cents: number;
   is_active: boolean;
+  auto_invite_enabled: boolean;
 }
 
 const emptyForm = {
@@ -169,6 +170,30 @@ export default function AdminSeriesPage() {
     setLoading(false);
   }
 
+  async function toggleAutoInvite(item: Series) {
+    setLoading(true);
+    setFeedback(null);
+    setError(null);
+
+    const response = await fetch("/api/admin/series", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: item.id, action: "toggle_auto_invite" }),
+    });
+
+    const payload = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      setError(payload.error || "Auto-invite setting could not be updated.");
+      setLoading(false);
+      return;
+    }
+
+    setFeedback(item.auto_invite_enabled ? "Auto-invite turned off." : "Auto-invite turned on — new paid registrants for this series will be invited automatically.");
+    await loadSeries();
+    setLoading(false);
+  }
+
   async function handleDelete(seriesId: string) {
     const item = series.find((s) => s.id === seriesId);
     const confirmed = await confirm({
@@ -292,6 +317,15 @@ export default function AdminSeriesPage() {
                 <span className={`badge ${item.is_active ? "badge-lime" : "badge-mute"}`}>{item.is_active ? "Active" : "Inactive"}</span>
                 <button onClick={() => toggleActive(item)} className="btn btn-ghost" style={{ fontSize: 12, padding: "5px 12px" }} disabled={loading}>
                   {item.is_active ? "Deactivate" : "Activate"}
+                </button>
+                <span
+                  className={`badge ${item.auto_invite_enabled ? "badge-lime" : "badge-mute"}`}
+                  title="When on, new paid registrants for this series get their portal invite automatically, the moment they pay."
+                >
+                  Auto-invite {item.auto_invite_enabled ? "On" : "Off"}
+                </span>
+                <button onClick={() => toggleAutoInvite(item)} className="btn btn-ghost" style={{ fontSize: 12, padding: "5px 12px" }} disabled={loading}>
+                  {item.auto_invite_enabled ? "Turn off" : "Turn on"}
                 </button>
                 <button onClick={() => startEdit(item)} className="btn btn-ghost" style={{ fontSize: 12, padding: "5px 12px" }} disabled={loading}>
                   Edit
