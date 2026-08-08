@@ -72,6 +72,7 @@ export default function AdminRegistrationsPage() {
   const [cityFilter, setCityFilter] = useState<string>("all");
   const [seriesFilter, setSeriesFilter] = useState<string>("all");
   const [multiCityOnly, setMultiCityOnly] = useState<boolean>(false);
+  const [invitedNoAccountOnly, setInvitedNoAccountOnly] = useState<boolean>(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [resendBusyId, setResendBusyId] = useState<string | null>(null);
   const [resendMsg, setResendMsg] = useState<Record<string, string>>({});
@@ -331,13 +332,14 @@ export default function AdminRegistrationsPage() {
       if (cityFilter !== "all" && r.city_id !== cityFilter) return false;
       if (seriesFilter !== "all" && r.series_id !== seriesFilter) return false;
       if (multiCityOnly && r.paid_city_count < 2) return false;
+      if (invitedNoAccountOnly && !(r.paid_status === "paid" && r.invite_state === "invited")) return false;
       if (q) {
         const hay = `${r.full_name ?? ""} ${r.email} ${r.phone ?? ""}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
       return true;
     });
-  }, [visibleRows, filter, search, cityFilter, seriesFilter, multiCityOnly]);
+  }, [visibleRows, filter, search, cityFilter, seriesFilter, multiCityOnly, invitedNoAccountOnly]);
 
   function toggleSelected(id: string) {
     setSelectedIds((prev) => {
@@ -656,6 +658,16 @@ export default function AdminRegistrationsPage() {
           style={{ cursor: "pointer", border: "1px solid var(--hair-200)", background: multiCityOnly ? undefined : "#fff" }}
         >
           Registered in multiple cities
+        </button>
+        <button
+          type="button"
+          onClick={() => setInvitedNoAccountOnly((v) => !v)}
+          aria-pressed={invitedNoAccountOnly}
+          className={`badge ${invitedNoAccountOnly ? "badge-pink" : "badge-mute"}`}
+          style={{ cursor: "pointer", border: "1px solid var(--hair-200)", background: invitedNoAccountOnly ? undefined : "#fff" }}
+          title="Paid, invited to the portal, but hasn't signed in yet"
+        >
+          Invited — no account yet
         </button>
       </div>
 
