@@ -50,6 +50,13 @@ export async function sendPortalInvite(
     <p style="margin:0 0 12px 0;font-size:15px;line-height:1.65;color:#3a4a4f;">Hi ${firstName},</p>
     <p style="margin:0 0 12px 0;font-size:15px;line-height:1.65;color:#3a4a4f;">You&rsquo;re all set for The Mahjong Open. Your member portal account is ready &mdash; set a password below to sign in.</p>
     <p style="margin:0 0 20px 0;font-size:15px;line-height:1.65;color:#3a4a4f;">Inside you&rsquo;ll find your city&rsquo;s tables, live standings, and score submission through the season.</p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 18px 0;background-color:#fdeef2;border-radius:8px;">
+      <tr>
+        <td style="padding:12px 16px;font-family:Helvetica,Arial,sans-serif;font-size:13px;line-height:1.6;color:#9a1f58;">
+          <strong>Before you tap the button:</strong> turn off Wi&#8209;Fi on your phone first, then open this link on cellular data. This is the single most common fix for the button not working.
+        </td>
+      </tr>
+    </table>
     <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 18px 0;">
       <tr>
         <td align="center" style="background-color:#ec466e;border-radius:999px;">
@@ -57,7 +64,7 @@ export async function sendPortalInvite(
         </td>
       </tr>
     </table>
-    <p style="margin:0;font-size:13px;line-height:1.6;color:#8a9499;">This link can be used once and expires for security. If it stops working, ask an organizer to re-send your invite.</p>
+    <p style="margin:0;font-size:13px;line-height:1.6;color:#8a9499;">This link can be used once and expires 24 hours after this email was sent. If it stops working, ask an organizer to re-send your invite.</p>
   `;
 
   try {
@@ -65,7 +72,7 @@ export async function sendPortalInvite(
     const { error } = await resend.emails.send({
       from: FROM,
       to: [email],
-      subject: "Set up your Mahjong Open member portal",
+      subject: "Set up your Mahjong Open member portal — link expires in 24 hours",
       html: buildBrandedEmail({
         title: "Set up your member portal",
         innerHtml,
