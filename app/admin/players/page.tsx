@@ -34,6 +34,7 @@ type RegistrationRow = {
   invite_sent_at: string | null;
   profile_id?: string | null;
   role?: string | null;
+  commissioner_city_id?: string | null;
 };
 
 type CityChoice = { city_id: string; label: string };
@@ -292,6 +293,19 @@ export default function AdminRegistrationsPage() {
     () => visibleRows.filter((r) => r.paid_status === "paid" && r.invite_state === "invited"),
     [visibleRows]
   );
+
+  // profile_id -> city label, for the ONE row that actually matches
+  // commissioner_city_id. Used so a multi-city commissioner's other rows can
+  // say "Commissioner in {city}" instead of wrongly showing the badge.
+  const commissionerCityLabelByProfileId = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const r of rows) {
+      if (r.profile_id && r.role === "commissioner" && r.city_id && r.city_id === r.commissioner_city_id) {
+        map.set(r.profile_id, r.city ?? "another city");
+      }
+    }
+    return map;
+  }, [rows]);
 
   // Distinct (city_id, label) pairs present in the loaded rows, for the City
   // dropdown, each with paid/pending counts (refunded excluded). Counts are over
@@ -889,7 +903,7 @@ export default function AdminRegistrationsPage() {
                     <span style={{ fontSize: 12, color: "var(--ink-500)" }}>—</span>
                   )}
                   {r.profile_id ? (
-                    r.role === "commissioner" ? (
+                    r.role === "commissioner" && r.city_id === r.commissioner_city_id ? (
                       <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginTop: 6 }}>
                         <span className="badge badge-pink" style={{ fontSize: 11 }}>Commissioner</span>
                         <button type="button" className="btn" style={{ fontSize: 11, padding: "3px 9px" }} disabled={roleBusyId === r.id} onClick={() => toggleCommissioner(r)}>
@@ -899,9 +913,16 @@ export default function AdminRegistrationsPage() {
                     ) : r.role === "admin" ? (
                       <span className="badge badge-mute" style={{ fontSize: 11, marginTop: 6, alignSelf: "flex-start" }}>Admin</span>
                     ) : (
-                      <button type="button" className="btn" style={{ fontSize: 11, padding: "3px 9px", marginTop: 6 }} disabled={roleBusyId === r.id} onClick={() => toggleCommissioner(r)}>
-                        {roleBusyId === r.id ? "…" : "Make commissioner"}
-                      </button>
+                      <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 4, marginTop: 6 }}>
+                        {r.role === "commissioner" && r.profile_id && commissionerCityLabelByProfileId.has(r.profile_id) ? (
+                          <span style={{ fontSize: 11, color: "var(--ink-500)" }}>
+                            Commissioner in {commissionerCityLabelByProfileId.get(r.profile_id)}
+                          </span>
+                        ) : null}
+                        <button type="button" className="btn" style={{ fontSize: 11, padding: "3px 9px" }} disabled={roleBusyId === r.id} onClick={() => toggleCommissioner(r)}>
+                          {roleBusyId === r.id ? "…" : "Make commissioner"}
+                        </button>
+                      </div>
                     )
                   ) : null}
                 </div>

@@ -31,6 +31,7 @@ type RegistrationRow = {
   invite_sent_at: string | null;
   profile_id?: string | null;
   role?: string | null;
+  commissioner_city_id?: string | null;
 };
 
 // Local-preview fallback used only when no service-role client is configured.
@@ -59,7 +60,7 @@ export async function GET() {
   if (supabase) {
     const { data, error } = await supabase
       .from("registrations")
-      .select("id, full_name, email, phone, skill_level, paid_status, created_at, profile_id, city_id, series_id, cities(name, state), series(name), profiles(role)")
+      .select("id, full_name, email, phone, skill_level, paid_status, created_at, profile_id, city_id, series_id, cities(name, state), series(name), profiles(role, commissioner_city_id)")
       .order("created_at", { ascending: false });
 
     if (!error && data) {
@@ -119,6 +120,7 @@ export async function GET() {
           invite_sent_at: authUser?.invite_sent_at ?? null,
           profile_id: row.profile_id ?? null,
           role: profile?.role ?? null,
+          commissioner_city_id: profile?.commissioner_city_id ?? null,
         };
       });
       // Empty state is returned cleanly as an empty array (page shows "No registrations yet").
