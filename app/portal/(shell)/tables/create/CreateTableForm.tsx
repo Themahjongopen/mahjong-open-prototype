@@ -213,7 +213,12 @@ export default function CreateTableForm({ cityName, seriesStartDate, seriesEndDa
           <input className="input-mo" type="time" value={form.table_time} onChange={(e) => setForm((f) => ({ ...f, table_time: e.target.value }))} />
         )}
         {field("Location name", true,
-          <input className="input-mo" type="text" placeholder="e.g. Jane's place, Rosewood Café" value={form.location_name} onChange={(e) => setForm((f) => ({ ...f, location_name: e.target.value }))} />
+          <>
+            <input className="input-mo" type="text" placeholder="e.g. Jane's place, Rosewood Café" value={form.location_name} onChange={(e) => setForm((f) => ({ ...f, location_name: e.target.value }))} />
+            <p style={{ fontSize: 12, color: "var(--ink-500)", margin: "2px 0 0" }}>
+              Include your city or town (e.g. &ldquo;Jane&rsquo;s place, Auburn&rdquo;) so players in your area can tell how far it is.
+            </p>
+          </>
         )}
         {field("Address or directions", false,
           <input className="input-mo" type="text" placeholder="Optional" value={form.location_address} onChange={(e) => setForm((f) => ({ ...f, location_address: e.target.value }))} />
