@@ -23,7 +23,7 @@ const STATUS_COLORS: Record<string, string> = {
   canceled: "badge-mute",
 };
 
-type Action = "join" | "leave" | "cancel" | "complete" | "edit" | null;
+type Action = "join" | "leave" | "cancel" | "complete" | "edit" | "delete" | null;
 
 // Edit form state — the fields a host/admin may change (round/week is not among
 // them). Pre-filled from the table's current values.
@@ -82,6 +82,7 @@ export default function TableDetailClient({
   // block below is enforced server-side; this is just the matching client hint.
   const isHostOrAdmin = isCreator || isAdmin;
   const canManageEdit = isHostOrAdmin && (table.status === "open" || table.status === "full");
+  const canDeleteTable = isHostOrAdmin && table.status === "canceled";
 
   // Resolve the venue-local start time to a real UTC instant so the 24h warning
   // (and the calendar links below) are correct regardless of the viewer's phone
@@ -143,6 +144,31 @@ export default function TableDetailClient({
       { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "cancel" }) },
       "Table cancelled."
     );
+  }
+
+  // Deliberately NOT built on run(): run() ends with router.refresh(), which would
+  // re-fetch a table that no longer exists. Delete navigates away instead.
+  async function handleDeleteTable() {
+    const ok = await confirm({
+      title: "Delete this table?",
+      message: "This permanently removes the table and can't be undone.",
+      confirmLabel: "Delete table",
+      danger: true,
+    });
+    if (!ok) return;
+    setLoading("delete");
+    try {
+      const res = await fetch(`/api/tables/${table.id}`, { method: "DELETE" });
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        showToast(payload.error || "Something went wrong.");
+        return;
+      }
+      showToast("Table deleted.");
+      router.push("/portal/my-tables");
+    } finally {
+      setLoading(null);
+    }
   }
 
   async function handleMarkPlayed() {
@@ -422,6 +448,11 @@ export default function TableDetailClient({
         {canCancelTable && (
           <button className="btn btn-ghost" onClick={handleCancelTable} disabled={loading === "cancel"} style={{ justifyContent: "center", padding: "13px", color: "var(--danger)", borderColor: "rgba(200,16,46,0.3)" }}>
             {loading === "cancel" ? "Cancelling…" : "Cancel this table"}
+          </button>
+        )}
+        {canDeleteTable && (
+          <button className="btn btn-ghost" onClick={handleDeleteTable} disabled={loading === "delete"} style={{ justifyContent: "center", padding: "13px", color: "var(--danger)", borderColor: "rgba(200,16,46,0.3)" }}>
+            {loading === "delete" ? "Deleting…" : "Delete this table"}
           </button>
         )}
       </div>

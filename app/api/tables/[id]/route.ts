@@ -163,3 +163,43 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
   if (error) return NextResponse.json({ error: "The table couldn't be updated. Please try again." }, { status: 500 });
   return NextResponse.json({ ok: true });
 }
+
+// Creator/admin only, and only once a table is cancelled — permanently removes
+// the table. table_seats and score_submissions cascade-delete with it (migration
+// 006's ON DELETE CASCADE), which is safe here specifically because a cancelled
+// table's seats are already inert and it was never played (no real score data).
+// Open/full/completed tables can NEVER be deleted this way — see the build
+// prompt's scope note for why.
+export async function DELETE(request: Request, context: { params: Promise<{ id: string }> }) {
+  const { id } = await context.params;
+  const session = await getPortalUser();
+  if (!session || session.status !== "active") {
+    return NextResponse.json({ error: "Please sign in." }, { status: 401 });
+  }
+
+  const admin: any = createAdminClient();
+  if (!admin) {
+    return NextResponse.json({ error: "Tables are unavailable right now." }, { status: 503 });
+  }
+
+  const { data: table } = await admin
+    .from("league_tables")
+    .select("id, creator_id, status")
+    .eq("id", id)
+    .maybeSingle();
+  if (!table) {
+    return NextResponse.json({ error: "That table no longer exists." }, { status: 404 });
+  }
+  if (table.creator_id !== session.id && !session.isAdmin) {
+    return NextResponse.json({ error: "Only the table host can do that." }, { status: 403 });
+  }
+  if (table.status !== "canceled") {
+    return NextResponse.json({ error: "Only a cancelled table can be deleted." }, { status: 409 });
+  }
+
+  const { error } = await admin.from("league_tables").delete().eq("id", id);
+  if (error) {
+    return NextResponse.json({ error: "The table couldn't be deleted. Please try again." }, { status: 500 });
+  }
+  return NextResponse.json({ ok: true });
+}
