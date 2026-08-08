@@ -29,6 +29,8 @@ export default function PortalShellClient({
   userId,
   userName,
   isAdminRole,
+  isCommissionerRole = false,
+  commissionerCityId = null,
   adminCities = [],
   activeCityId = null,
   activeCityName = null,
@@ -40,6 +42,8 @@ export default function PortalShellClient({
   userId: string;
   userName: string;
   isAdminRole: boolean;
+  isCommissionerRole?: boolean;
+  commissionerCityId?: string | null;
   adminCities?: { id: string; name: string }[];
   activeCityId?: string | null;
   activeCityName?: string | null;
@@ -63,6 +67,8 @@ export default function PortalShellClient({
         title={title}
         userId={userId}
         isAdminRole={isAdminRole}
+        isCommissionerRole={isCommissionerRole}
+        commissionerCityId={commissionerCityId}
         userName={userName}
         adminCities={adminCities}
         activeCityId={activeCityId}

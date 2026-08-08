@@ -431,6 +431,16 @@ body.admin-drawer-open {
   grid-template-columns: 60px 1.5fr 1fr 1fr 80px 60px;
 }
 
+/* Read-only commissioner roster — a 5-column variant of the admin players grid
+   (Name, Email, Phone, Payment, Registered). Reuses .admin-players-table-header
+   / .admin-players-row (display: contents + cell styling + mobile card), so only
+   the column template differs. */
+.commissioner-players-table {
+  display: grid;
+  width: 100%;
+  grid-template-columns: 1.3fr 1.6fr 1fr 0.8fr 1fr;
+}
+
 .admin-players-table-header,
 .admin-tables-table-header {
   display: contents;
@@ -607,7 +617,8 @@ body.admin-drawer-open {
   }
 
   .admin-players-table,
-  .admin-tables-table {
+  .admin-tables-table,
+  .commissioner-players-table {
     display: block;
   }
 

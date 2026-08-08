@@ -32,6 +32,8 @@ export default async function PortalLayout({ children }: { children: React.React
       userId={session.id}
       userName={session.full_name ?? session.email}
       isAdminRole={session.isAdmin}
+      isCommissionerRole={session.isCommissioner}
+      commissionerCityId={session.commissionerCityId}
       adminCities={adminCtx?.cities ?? []}
       activeCityId={adminCtx?.cityId ?? null}
       activeCityName={adminCtx?.cityName ?? null}

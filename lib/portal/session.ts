@@ -9,6 +9,9 @@ export type PortalMember = {
   email: string;
   role: string;
   isCommissioner: boolean;
+  // The one city this commissioner belongs to (migration 020). Null for everyone
+  // else — and the only city a commissioner may ever see the roster of.
+  commissionerCityId: string | null;
   isAdmin: boolean;
   // The player's active city+series (cookie-resolved for multi-city players;
   // their sole registration otherwise). Downstream read helpers scope by these.
@@ -43,7 +46,7 @@ export const getPortalUser = cache(async (): Promise<PortalSession> => {
 
   const { data: profile } = await admin
     .from("profiles")
-    .select("id, full_name, email, role")
+    .select("id, full_name, email, role, commissioner_city_id")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -87,6 +90,7 @@ export const getPortalUser = cache(async (): Promise<PortalSession> => {
     email: user.email ?? profile?.email ?? "",
     role,
     isCommissioner: role === "commissioner",
+    commissionerCityId: profile?.commissioner_city_id ?? null,
     isAdmin,
     city_id: active.city_id,
     series_id: active.series_id,

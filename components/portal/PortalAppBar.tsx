@@ -14,6 +14,9 @@ interface PortalAppBarProps {
   userName?: string;
   // Admins get a "Switch to admin view" link that navigates to /admin.
   isAdminRole?: boolean;
+  // Commissioners get a "Switch to commissioner view" link → /portal/commissioner.
+  isCommissionerRole?: boolean;
+  commissionerCityId?: string | null;
   // Admin-only active-city switcher data (empty for non-admins).
   adminCities?: { id: string; name: string }[];
   activeCityId?: string | null;
@@ -24,7 +27,7 @@ interface PortalAppBarProps {
   playerActiveCityName?: string | null;
 }
 
-export default function PortalAppBar({ title, userId, userName, isAdminRole, adminCities = [], activeCityId = null, activeCityName = null, playerCities = [], playerActiveCityId = null, playerActiveCityName = null }: PortalAppBarProps) {
+export default function PortalAppBar({ title, userId, userName, isAdminRole, isCommissionerRole, commissionerCityId = null, adminCities = [], activeCityId = null, activeCityName = null, playerCities = [], playerActiveCityId = null, playerActiveCityName = null }: PortalAppBarProps) {
   const [popoverOpen, setPopoverOpen] = useState(false);
   const router = useRouter();
 
@@ -158,6 +161,28 @@ export default function PortalAppBar({ title, userId, userName, isAdminRole, adm
                 >
                   <ShieldCheck size={15} color="var(--peri-400)" />
                   Switch to admin view
+                </button>
+              )}
+              {isCommissionerRole && commissionerCityId && (
+                <button
+                  onClick={() => { setPopoverOpen(false); router.push("/portal/commissioner"); }}
+                  style={{
+                    width: "100%",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    padding: "12px 16px",
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    fontSize: 14,
+                    color: "var(--ink-800)",
+                    borderBottom: "1px solid var(--hair-200)",
+                    textAlign: "left",
+                  }}
+                >
+                  <ShieldCheck size={15} color="var(--lime-600)" />
+                  Switch to commissioner view
                 </button>
               )}
               <button
