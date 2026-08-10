@@ -80,7 +80,9 @@ export default function OpenTableCard({ table, currentUserId }: { table: LeagueT
               </span>
             ) : null}
             <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 13, color: "var(--ink-500)" }}>
-              <MapPin size={12} /> {table.location_name}
+              <MapPin size={12} />
+              {table.location_name}
+              {table.location_address ? `, ${table.location_address}` : ""}
             </span>
           </div>
         </div>
