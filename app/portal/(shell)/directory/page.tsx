@@ -10,6 +10,7 @@ type DirectoryRow = {
   city_name: string | null;
   skill_level: string | null;
   is_commissioner: boolean;
+  is_founding_player: boolean;
   avatar_url: string | null;
 };
 
@@ -40,7 +41,7 @@ export default async function DirectoryPage() {
   const supabase = await createClient();
   let query = supabase
     .from("directory_members")
-    .select("profile_id, full_name, city_name, skill_level, is_commissioner, avatar_url")
+    .select("profile_id, full_name, city_name, skill_level, is_commissioner, is_founding_player, avatar_url")
     .order("full_name", { ascending: true });
   if (activeCityId) query = query.eq("city_id", activeCityId);
   const { data, error } = await query;
@@ -102,6 +103,11 @@ export default async function DirectoryPage() {
                   {member.is_commissioner ? (
                     <span style={{ fontSize: 12, fontWeight: 600, color: "var(--pink-700)", background: "var(--pink-50)", border: "1px solid var(--pink-100)", borderRadius: 999, padding: "4px 8px", whiteSpace: "nowrap" }}>
                       Commissioner
+                    </span>
+                  ) : null}
+                  {member.is_founding_player ? (
+                    <span style={{ fontSize: 12, fontWeight: 600, color: "var(--crimson-600)", background: "var(--crimson-50)", border: "1px solid var(--crimson-100)", borderRadius: 999, padding: "4px 8px", whiteSpace: "nowrap" }}>
+                      Founding Player
                     </span>
                   ) : null}
                 </div>

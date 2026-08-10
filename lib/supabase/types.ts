@@ -513,6 +513,7 @@ export interface Database {
           city_name: string | null;
           skill_level: SkillLevel | null;
           is_commissioner: boolean | null;
+          is_founding_player: boolean | null;
           series_id: string | null;
           avatar_url: string | null;
         };

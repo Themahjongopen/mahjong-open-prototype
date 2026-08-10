@@ -84,7 +84,7 @@ export default async function PlayerProfilePage({ params }: { params: Promise<{ 
   const supabase = await createClient();
   let dirQuery = supabase
     .from("directory_members")
-    .select("profile_id, full_name, city_id, city_name, skill_level, is_commissioner, series_id, avatar_url")
+    .select("profile_id, full_name, city_id, city_name, skill_level, is_commissioner, is_founding_player, series_id, avatar_url")
     .eq("profile_id", id);
   if (activeCityId) dirQuery = dirQuery.eq("city_id", activeCityId);
   const { data: dirRow } = await dirQuery.maybeSingle();
@@ -112,6 +112,7 @@ export default async function PlayerProfilePage({ params }: { params: Promise<{ 
   const skill = (dirRow?.skill_level ?? ownProfile?.skill_level ?? null) as string | null;
   const avatarUrl = (dirRow?.avatar_url ?? ownProfile?.avatar_url ?? null) as string | null;
   const isCommissioner = dirRow?.is_commissioner ?? ownProfile?.role === "commissioner";
+  const isFoundingPlayer = dirRow?.is_founding_player ?? false;
   // Scope season stats to a single (series, city). Prefer the directory row we
   // matched; for your own profile fall back to your active city (admin) or your
   // registration cohort (regular member) so opted-out members still see stats.
@@ -139,11 +140,18 @@ export default async function PlayerProfilePage({ params }: { params: Promise<{ 
               <p style={{ fontSize: 14, color: "var(--ink-500)", marginTop: 6 }}>{skillLine(skill)}</p>
             </div>
           </div>
-          {isCommissioner ? (
-            <span style={{ fontSize: 12, fontWeight: 600, color: "var(--pink-700)", background: "var(--pink-50)", border: "1px solid var(--pink-100)", borderRadius: 999, padding: "6px 10px", whiteSpace: "nowrap" }}>
-              Commissioner
-            </span>
-          ) : null}
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "flex-end" }}>
+            {isCommissioner ? (
+              <span style={{ fontSize: 12, fontWeight: 600, color: "var(--pink-700)", background: "var(--pink-50)", border: "1px solid var(--pink-100)", borderRadius: 999, padding: "6px 10px", whiteSpace: "nowrap" }}>
+                Commissioner
+              </span>
+            ) : null}
+            {isFoundingPlayer ? (
+              <span style={{ fontSize: 12, fontWeight: 600, color: "var(--crimson-600)", background: "var(--crimson-50)", border: "1px solid var(--crimson-100)", borderRadius: 999, padding: "6px 10px", whiteSpace: "nowrap" }}>
+                Founding Player
+              </span>
+            ) : null}
+          </div>
         </div>
       </div>
 
