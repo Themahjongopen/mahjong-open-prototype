@@ -24,9 +24,11 @@ over an 8-week series, and climb their city's leaderboard.
 - **Launch cities:** Madison, MS and Ocean Springs, MS.
 - **Series One dates:** Aug 17 – Oct 11, 2026 (8 weeks).
 - **Price:** $80 per series.
-- **Two leaderboards:** Top Leader Score (best 7 weekly totals, each = top 2
-  round scores that week) and Top Average Score (per-round average, min 5
-  rounds).
+- **Three leaderboards** (replaced the original two — see the scoring
+  overhaul below): **Ace Award** (single highest round score, no minimum),
+  **Champion Award** (best-7-of-8 weekly `avg(min, max)` round score minus
+  no-show penalties), and **city-vs-city** ("The Mahjong Open Leader" — sum
+  of the top 3 individual round scores recorded in that city).
 
 ## Go-Live milestone — July 22, 2026
 
@@ -61,6 +63,43 @@ Also shipped in the surrounding session (code):
   (admins pass through to `/admin`).
 - Portal "Switch to admin view" now navigates to `/admin` (in-portal admin
   overlay removed).
+
+## Scoring overhaul — August 10, 2026
+
+The original two leaderboards ("Top Leader Score" / "Top Average Score") were
+retired and replaced ahead of legal/wording pushback from other leagues, and a
+new cross-city competition was added (this reverses an earlier "no combined
+leaderboard" scope line — a genuine new feature, not a rename).
+
+- **Ace Award** — a player's single highest round score across the series. No
+  minimum rounds, no tiebreaker (ties share a rank).
+- **Champion Award** — reuses the old "Top Leader Score" engineering (weekly
+  bucketing, best-7-of-8 weeks, no-show penalty subtracted across all 8
+  weeks), but the weekly value changed from `SUM(top 2 round scores)` to
+  `avg(min round, max round)` that week. No minimum. Tiebreak: higher total
+  score across all rounds played.
+- **City-vs-city — "The Mahjong Open Leader"** — city score = sum of the top 3
+  individual round scores recorded by anyone registered in that city that
+  series (not top-3-players'-totals — the 3 highest single round scores
+  city-wide). No floor.
+- All three are scoped per `(series, city)`, so a player registered in two
+  cities (the `2NDCITY` multi-city feature) gets independent numbers in each.
+  A review-stage bug in the first draft — grouping by `(series, user)` only —
+  duplicated a multi-city player's weekly values once per city and inflated
+  Champion Award; caught and fixed before commit by hand-verifying against a
+  real multi-city demo player. **The original migration 013 view had the same
+  latent gap**, so it's worth keeping in mind if historical Series data is
+  ever audited (no real scoring happened before this shipped, so no real data
+  was affected).
+- A second bug shipped post-merge: migration 027 was modeled on migration
+  013's original view shape and silently dropped the `avatar_url` column that
+  migration 015 had since added, breaking both standings pages in production
+  (`avatar_url` is selected for the `<Avatar>` component). Fixed forward via
+  migration `028_standings_avatar_url_fix.sql` rather than editing the
+  already-live `027` in place.
+- Migrations: `027_ace_champion_awards.sql`, `028_standings_avatar_url_fix.sql`.
+- `docs/Scoring-Standings-Final-Spec.md` is superseded;
+  `docs/Scoring-Standings-Final-Spec-v2.md` is the authoritative spec.
 
 ## Pending / next
 

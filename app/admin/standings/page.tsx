@@ -199,7 +199,7 @@ export default function AdminStandingsPage() {
                       <p style={{ fontSize: 15, fontFamily: "var(--font-display)", color: c.city_rank === 1 ? "var(--crimson-500)" : "var(--ink-700)", margin: 0 }}>{c.city_rank ?? "—"}</p>
                       <p style={{ fontSize: 14, color: "var(--ink-900)", margin: 0 }}>{c.city_name}</p>
                       {c.city_rank === 1 ? (
-                        <span style={{ fontSize: 11, fontWeight: 600, color: "var(--crimson-600)", background: "var(--crimson-100)", border: "1px solid var(--crimson-100)", borderRadius: 999, padding: "3px 8px", whiteSpace: "nowrap" }}>
+                        <span style={{ fontSize: 11, fontWeight: 600, color: "var(--crimson-600)", background: "var(--crimson-100)", border: "1px solid var(--crimson-400)", borderRadius: 999, padding: "3px 8px", whiteSpace: "nowrap" }}>
                           The Mahjong Open Leader
                         </span>
                       ) : null}
