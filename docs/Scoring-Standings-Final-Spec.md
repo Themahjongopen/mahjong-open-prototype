@@ -1,3 +1,8 @@
+> ⚠️ **SUPERSEDED as of Aug 2026** — legal/wording requirements forced a scoring
+> system change. See `docs/Scoring-Standings-Final-Spec-v2.md` for the current
+> rules (Ace Award, Champion Award, city-vs-city). This document is kept for
+> history only.
+
 # Scoring & Standings — Final Locked Spec
 _Sources: Shari's completed questionnaire (July 2026) + The Mahjong Open Handbook 2026 Edition + Jordan's clarifications July 17, 2026. All rules below are final and approved for the Phase 2 portal build._
 

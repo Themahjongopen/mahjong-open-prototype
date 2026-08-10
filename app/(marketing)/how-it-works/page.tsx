@@ -11,7 +11,7 @@ const STEPS = [
   { n: "03", title: "Sign up for your weekly table", body: "Each week, browse open tables in your city — or create one. Pick your date, time, and location. You fill seat 1 automatically." },
   { n: "04", title: "Play your game", body: "Your foursome meets at the chosen spot. Play a full session of American mahjong. The table creator records the result." },
   { n: "05", title: "Submit the score", body: "After the round, the host enters each player's score. Scores are visible in the portal immediately and update the standings within the series." },
-  { n: "06", title: "Watch your standings update", body: "Both leaderboards update live as the series runs — Top Leader Score from your best weekly totals, and Top Average Score once you've played at least five rounds. Keep playing to climb your city's standings." },
+  { n: "06", title: "Watch your standings update", body: "Both leaderboards update live as the series runs — Ace Award for your single best round, and Champion Award from your weekly best-and-worst average across your best 7 of 8 weeks. Your city is also competing for the season's Mahjong Open Leader title." },
 ];
 
 const FAQS = [
@@ -102,7 +102,7 @@ export default function HowItWorksPage() {
             After each round, the host submits every player&rsquo;s score. Results post to the portal immediately and update the standings within the series — no approval delay.
           </p>
           <p style={{ fontSize: 16, color: "var(--ink-700)", lineHeight: 1.65 }}>
-            <strong>Top Leader Score</strong>{" "}sums your best 7 weekly totals over the 8-week series — a weekly total is your top two round scores that week. <strong>Top Average Score</strong>{" "}ranks your average points per round, once you&rsquo;ve played at least five rounds.
+            <strong>Ace Award</strong>{" "}tracks your single highest round score of the series — no minimum rounds required. <strong>Champion Award</strong>{" "}averages your best and worst round each week, then sums your best 7 of your 8 weeks. Cities compete too: each city&rsquo;s top 3 individual round scores are added together, and the series&rsquo; leading city is named The Mahjong Open Leader.
           </p>
         </div>
       </section>

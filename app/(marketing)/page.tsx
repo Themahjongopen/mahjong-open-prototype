@@ -26,12 +26,12 @@ const FORMAT_STEPS = [
   {
     icon: Trophy,
     title: "Track your scores",
-    body: "Scores are self-reported each round — Top Leader Score sums your best 7 weekly totals, and Top Average Score ranks your per-round average (minimum 5 rounds).",
+    body: "Scores are self-reported each round — Ace Award tracks your single best round score of the series, and Champion Award ranks the weekly balance between your best and worst rounds across your best 7 of 8 weeks.",
   },
   {
     icon: Repeat2,
     title: "Climb the standings",
-    body: "Track your rank on the city leaderboard. The series finale celebrates your city's top players.",
+    body: "Track your rank on the city leaderboard — and help your city compete for the season's Mahjong Open Leader title.",
   },
   {
     icon: MapPin,
@@ -204,7 +204,7 @@ const FAQS = [
   },
   {
     q: "How do standings work?",
-    a: "Top Leader Score sums your best 7 weekly totals across the 8-week series — a weekly total is your top two round scores that week. Top Average Score ranks your average points per round, once you've played at least five rounds.",
+    a: "Ace Award tracks your single highest round score of the series — no minimum rounds required. Champion Award averages your best and worst round each week, then sums your best 7 of 8 weeks. Cities also compete: each city's top 3 individual round scores are added together, and the leading city is named The Mahjong Open Leader.",
   },
 ];
 
@@ -491,7 +491,8 @@ export default function HomePage() {
             <p className="body-lg" style={{ maxWidth: 560 }}>
               Register in more than one city and play in both — whether that&rsquo;s two cities near each
               other, or a hometown and the place you visit all summer. Each city keeps its own separate
-              leaderboard, so you&rsquo;re competing everywhere you register.
+              Ace Award and Champion Award leaderboard, so you&rsquo;re competing everywhere you register —
+              while your city also competes against every other city for the season&rsquo;s Mahjong Open Leader title.
             </p>
             <p style={{ fontSize: 16, color: "var(--ink-700)", margin: 0 }}>
               Second city registration is just{" "}
