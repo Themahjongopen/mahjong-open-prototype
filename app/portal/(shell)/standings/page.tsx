@@ -1,6 +1,6 @@
 import { getPortalUser } from "@/lib/portal/session";
 import { withAdminCity } from "@/lib/portal/adminCity";
-import { getStandings, byCumulative, byAverage, type StandingRow } from "@/lib/portal/standings";
+import { getStandings, getCityStandings, byAceAward, byChampionAward, type StandingRow } from "@/lib/portal/standings";
 import Avatar from "@/components/portal/Avatar";
 
 const COLS = "36px 1fr 72px 64px";
@@ -94,6 +94,7 @@ export default async function StandingsPage() {
   // Admins have no home city; getStandings reads their active-city selection.
   const member = session && session.status === "active" ? await withAdminCity(session) : null;
   const { cityName, rows } = member ? await getStandings(member) : { cityName: null, rows: [] };
+  const cityStandings = member ? await getCityStandings(member.series_id ?? null) : [];
   const meId = member?.id ?? null;
 
   return (
@@ -105,24 +106,61 @@ export default async function StandingsPage() {
       </div>
 
       <Table
-        title="Top Leader Score"
-        subtitle="Cumulative — your best 7 weekly totals, minus any no-show penalties."
+        title="Ace Award"
+        subtitle="Your single highest round score this series."
         valueHeader="Score"
-        rows={byCumulative(rows)}
+        rows={byAceAward(rows)}
         meId={meId}
-        rankOf={(r) => String(r.cumulative_rank ?? "—")}
-        valueOf={(r) => String(r.cumulative_score)}
+        rankOf={(r) => String(r.ace_award_rank ?? "—")}
+        valueOf={(r) => String(r.ace_award_score)}
       />
 
       <Table
-        title="Top Average Score"
-        subtitle="Average points per round played. Ranks start after 5 rounds."
-        valueHeader="Avg"
-        rows={byAverage(rows)}
+        title="Champion Award"
+        subtitle="Weekly average of your lowest and highest round, summed across your best 7 of 8 weeks."
+        valueHeader="Score"
+        rows={byChampionAward(rows)}
         meId={meId}
-        rankOf={(r) => (r.average_rank != null ? String(r.average_rank) : "—")}
-        valueOf={(r) => (r.average_rank != null ? r.average_score.toFixed(1) : "0")}
+        rankOf={(r) => String(r.champion_award_rank ?? "—")}
+        valueOf={(r) => r.champion_award_score.toFixed(1)}
       />
+
+      {cityStandings.length > 0 ? (
+        <section style={{ marginBottom: 28 }}>
+          <div style={{ marginBottom: 12 }}>
+            <h3 style={{ fontFamily: "var(--font-display)", fontSize: 18, color: "var(--ink-900)", margin: 0 }}>City Leaderboard</h3>
+            <p style={{ fontSize: 12, color: "var(--ink-500)", marginTop: 2 }}>
+              Top 3 individual round scores in each city, added together. The leading city is crowned The Mahjong Open Leader.
+            </p>
+          </div>
+          <div style={{ background: "#fff", border: "1px solid var(--hair-200)", borderRadius: "var(--radius-lg)", overflow: "hidden", boxShadow: "var(--shadow-sm)" }}>
+            {cityStandings.map((c, i) => (
+              <div
+                key={c.city_id}
+                style={{
+                  display: "flex", justifyContent: "space-between", alignItems: "center",
+                  padding: "14px 16px",
+                  borderBottom: i === cityStandings.length - 1 ? "none" : "1px solid var(--hair-200)",
+                  background: c.city_rank === 1 ? "var(--crimson-50)" : "#fff",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <p style={{ fontSize: 15, fontFamily: "var(--font-display)", color: c.city_rank === 1 ? "var(--crimson-500)" : "var(--ink-700)", margin: 0 }}>
+                    {c.city_rank ?? "—"}
+                  </p>
+                  <p style={{ fontSize: 14, color: "var(--ink-900)", margin: 0 }}>{c.city_name}</p>
+                  {c.city_rank === 1 ? (
+                    <span style={{ fontSize: 11, fontWeight: 600, color: "var(--crimson-600)", background: "var(--crimson-100)", border: "1px solid var(--crimson-100)", borderRadius: 999, padding: "3px 8px", whiteSpace: "nowrap" }}>
+                      The Mahjong Open Leader
+                    </span>
+                  ) : null}
+                </div>
+                <p style={{ fontSize: 14, fontWeight: 600, color: "var(--ink-900)" }}>{c.city_score}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
     </div>
   );
 }

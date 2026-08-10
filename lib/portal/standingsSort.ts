@@ -10,20 +10,19 @@ export type StandingRow = {
   rounds_played: number;
   total_score: number;
   average_score: number;
-  cumulative_score: number;
-  cumulative_rank: number | null;
-  average_rank: number | null;
+  ace_award_score: number;
+  ace_award_rank: number | null;
+  champion_award_score: number;
+  champion_award_rank: number | null;
 };
 
-// Cumulative order: by computed rank.
-export function byCumulative(rows: StandingRow[]): StandingRow[] {
-  return [...rows].sort((a, b) => (a.cumulative_rank ?? 9999) - (b.cumulative_rank ?? 9999));
+// Ace Award order: no minimum, no tiebreaker — straight rank order.
+export function byAceAward(rows: StandingRow[]): StandingRow[] {
+  return [...rows].sort((a, b) => (a.ace_award_rank ?? 9999) - (b.ace_award_rank ?? 9999));
 }
 
-// Average order: ranked players (>=5 rounds) first by average_rank, then the
-// unranked (<5 rounds) below, alphabetically.
-export function byAverage(rows: StandingRow[]): StandingRow[] {
-  const ranked = rows.filter((r) => r.average_rank != null).sort((a, b) => (a.average_rank ?? 0) - (b.average_rank ?? 0));
-  const unranked = rows.filter((r) => r.average_rank == null).sort((a, b) => (a.full_name ?? "").localeCompare(b.full_name ?? ""));
-  return [...ranked, ...unranked];
+// Champion Award order: no minimum — straight rank order (rank already applies
+// the total_score tiebreak in SQL).
+export function byChampionAward(rows: StandingRow[]): StandingRow[] {
+  return [...rows].sort((a, b) => (a.champion_award_rank ?? 9999) - (b.champion_award_rank ?? 9999));
 }

@@ -163,9 +163,10 @@ export default async function PlayerProfilePage({ params }: { params: Promise<{ 
             <StatGrid items={coreStats(stats.season)} />
             <StatGrid
               items={[
-                { label: "Top Leader Score", value: String(stats.season.cumulativeScore) },
-                { label: "Top Leader Score rank", value: stats.season.cumulativeRank ? `#${stats.season.cumulativeRank}` : "—" },
-                { label: "Average rank", value: stats.season.averageRank ? `#${stats.season.averageRank}` : "—" },
+                { label: "Ace Award", value: String(stats.season.aceAwardScore) },
+                { label: "Ace Award rank", value: stats.season.aceAwardRank ? `#${stats.season.aceAwardRank}` : "—" },
+                { label: "Champion Award", value: stats.season.championAwardScore.toFixed(1) },
+                { label: "Champion Award rank", value: stats.season.championAwardRank ? `#${stats.season.championAwardRank}` : "—" },
               ]}
             />
           </div>

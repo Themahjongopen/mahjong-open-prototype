@@ -3,17 +3,18 @@
 // "Rounds played" and totals/averages count only real played rounds — rows that
 // are neither a no-show nor a stay-bonus.
 //
-// REMAINING HOOK (standings step): the two ranks. Standings splits into
-// Cumulative (best-7-of-8 weekly top-2 minus all no-show penalties) and Average
-// (per-round avg, min 5 rounds) as computed VIEWS. `season.cumulativeRank` reads
-// the placeholder `standings.rank` for now; `averageRank` stays null until the
-// standings views land and this reads from them.
+// Season awards (Ace + Champion) come from the member_series_standings view
+// (migration 027). Ace Award = the player's single highest round score; Champion
+// Award = best-7-of-8 weekly avg(min,max) minus all no-show penalties.
 
 export type StatBlock = { rounds: number; totalScore: number; avgScore: number };
 
 export type ProfileStats = {
   allTime: StatBlock;
-  season: StatBlock & { cumulativeScore: number; cumulativeRank: number | null; averageRank: number | null };
+  season: StatBlock & {
+    aceAwardScore: number; aceAwardRank: number | null;
+    championAwardScore: number; championAwardRank: number | null;
+  };
 };
 
 type ScoreRow = { round_score: number; is_no_show: boolean; is_no_show_bonus: boolean };
@@ -47,15 +48,15 @@ export async function getProfileStats(admin: any, userId: string, seriesId: stri
   // Season stats are per (series, city): member_series_standings has one row per
   // city a player has been active in, so both are required to pick the right row.
   if (!seriesId || !cityId) {
-    return { allTime, season: { ...EMPTY, cumulativeScore: 0, cumulativeRank: null, averageRank: null } };
+    return { allTime, season: { ...EMPTY, aceAwardScore: 0, aceAwardRank: null, championAwardScore: 0, championAwardRank: null } };
   }
 
   // Current season: read straight from the standings view so the profile always
-  // matches the standings page (rounds/total/average, the Cumulative score +
-  // rank, and the Average rank — 5-round gate leaves averageRank null).
+  // matches the standings page (rounds/total/average plus the Ace Award and
+  // Champion Award scores + ranks).
   const { data: standing } = await admin
     .from("member_series_standings")
-    .select("rounds_played, total_score, average_score, cumulative_score, cumulative_rank, average_rank")
+    .select("rounds_played, total_score, average_score, ace_award_score, ace_award_rank, champion_award_score, champion_award_rank")
     .eq("series_id", seriesId)
     .eq("city_id", cityId)
     .eq("user_id", userId)
@@ -65,16 +66,16 @@ export async function getProfileStats(admin: any, userId: string, seriesId: stri
     ? {
         rounds: standing.rounds_played ?? 0,
         totalScore: standing.total_score ?? 0,
-        // Average is only meaningful with a full sample: the standings view gates
-        // average_rank at rounds_played >= 5, so mirror that here — otherwise the
-        // profile's "Average score" tile would show a raw sub-5-round average
-        // (e.g. 100.0 off 4 rounds) that the standings board correctly hides.
-        avgScore: (standing.rounds_played ?? 0) >= 5 ? Number(standing.average_score ?? 0) : 0,
-        cumulativeScore: standing.cumulative_score ?? 0,
-        cumulativeRank: standing.cumulative_rank ?? null,
-        averageRank: standing.average_rank ?? null,
+        // No minimum anymore under the new system — show the raw average directly
+        // (the old 5-round gate existed only to protect the retired Average
+        // Standing's ranking fairness; nothing plays that role now).
+        avgScore: Number(standing.average_score ?? 0),
+        aceAwardScore: Number(standing.ace_award_score ?? 0),
+        aceAwardRank: standing.ace_award_rank ?? null,
+        championAwardScore: Number(standing.champion_award_score ?? 0),
+        championAwardRank: standing.champion_award_rank ?? null,
       }
-    : { ...EMPTY, cumulativeScore: 0, cumulativeRank: null, averageRank: null };
+    : { ...EMPTY, aceAwardScore: 0, aceAwardRank: null, championAwardScore: 0, championAwardRank: null };
 
   return { allTime, season };
 }

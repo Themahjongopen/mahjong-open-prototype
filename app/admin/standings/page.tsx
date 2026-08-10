@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { byCumulative, byAverage, type StandingRow } from "@/lib/portal/standingsSort";
+import { byAceAward, byChampionAward, type StandingRow } from "@/lib/portal/standingsSort";
 import Avatar from "@/components/portal/Avatar";
 
 type City = { id: string; name: string; state: string | null; is_active: boolean };
 type Series = { id: string; name: string; is_active: boolean };
+type CityStandingRow = { city_id: string; city_name: string | null; city_score: number; city_rank: number | null };
 
 const COLS = "40px 1fr 84px 72px";
 
@@ -56,6 +57,7 @@ export default function AdminStandingsPage() {
   const [cityName, setCityName] = useState<string | null>(null);
   const [seriesName, setSeriesName] = useState<string | null>(null);
   const [rows, setRows] = useState<StandingRow[]>([]);
+  const [cityRows, setCityRows] = useState<CityStandingRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const reqRef = useRef(0);
@@ -95,6 +97,19 @@ export default function AdminStandingsPage() {
       setLoading(false);
     })();
   }, [cityId, seriesId]);
+
+  // City-vs-city board is inherently cross-city — it only depends on the series.
+  useEffect(() => {
+    if (!seriesId) { setCityRows([]); return; }
+    let active = true;
+    (async () => {
+      const res = await fetch(`/api/admin/city-standings?series_id=${encodeURIComponent(seriesId)}`);
+      const payload = await res.json().catch(() => ({}));
+      if (!active) return;
+      setCityRows(res.ok ? (payload.rows ?? []) : []);
+    })();
+    return () => { active = false; };
+  }, [seriesId]);
 
   const selectStyle: React.CSSProperties = { padding: "9px 12px", borderRadius: 10, border: "1px solid var(--hair-200)", background: "#fff", fontSize: 14, color: "var(--ink-900)", minWidth: 200 };
 
@@ -145,22 +160,56 @@ export default function AdminStandingsPage() {
           ) : null}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 24, alignItems: "start" }}>
             <Board
-              title="Top Leader Score"
-              subtitle="Cumulative — best 7 weekly totals, minus any no-show penalties."
+              title="Ace Award"
+              subtitle="Your single highest round score this series."
               valueHeader="Score"
-              rows={byCumulative(rows)}
-              rankOf={(r) => String(r.cumulative_rank ?? "—")}
-              valueOf={(r) => String(r.cumulative_score)}
+              rows={byAceAward(rows)}
+              rankOf={(r) => String(r.ace_award_rank ?? "—")}
+              valueOf={(r) => String(r.ace_award_score)}
             />
             <Board
-              title="Top Average Score"
-              subtitle="Average points per round. Ranks start after 5 rounds played."
-              valueHeader="Avg"
-              rows={byAverage(rows)}
-              rankOf={(r) => (r.average_rank != null ? String(r.average_rank) : "—")}
-              valueOf={(r) => (r.average_rank != null ? r.average_score.toFixed(1) : "0")}
+              title="Champion Award"
+              subtitle="Weekly average of your lowest and highest round, summed across your best 7 of 8 weeks."
+              valueHeader="Score"
+              rows={byChampionAward(rows)}
+              rankOf={(r) => String(r.champion_award_rank ?? "—")}
+              valueOf={(r) => r.champion_award_score.toFixed(1)}
             />
           </div>
+          {cityRows.length > 0 ? (
+            <section style={{ marginTop: 32, maxWidth: 520 }}>
+              <div style={{ marginBottom: 12 }}>
+                <h2 style={{ fontFamily: "var(--font-display)", fontSize: 18, color: "var(--ink-900)", margin: 0 }}>City Leaderboard</h2>
+                <p style={{ fontSize: 12, color: "var(--ink-500)", marginTop: 3 }}>
+                  Top 3 individual round scores in each city, added together. The leading city is The Mahjong Open Leader.
+                </p>
+              </div>
+              <div style={{ background: "#fff", border: "1px solid var(--hair-200)", borderRadius: "var(--radius-lg)", overflow: "hidden", boxShadow: "var(--shadow-xs)" }}>
+                {cityRows.map((c, i) => (
+                  <div
+                    key={c.city_id}
+                    style={{
+                      display: "flex", justifyContent: "space-between", alignItems: "center",
+                      padding: "14px 16px",
+                      borderBottom: i === cityRows.length - 1 ? "none" : "1px solid var(--hair-200)",
+                      background: c.city_rank === 1 ? "var(--crimson-50)" : "#fff",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <p style={{ fontSize: 15, fontFamily: "var(--font-display)", color: c.city_rank === 1 ? "var(--crimson-500)" : "var(--ink-700)", margin: 0 }}>{c.city_rank ?? "—"}</p>
+                      <p style={{ fontSize: 14, color: "var(--ink-900)", margin: 0 }}>{c.city_name}</p>
+                      {c.city_rank === 1 ? (
+                        <span style={{ fontSize: 11, fontWeight: 600, color: "var(--crimson-600)", background: "var(--crimson-100)", border: "1px solid var(--crimson-100)", borderRadius: 999, padding: "3px 8px", whiteSpace: "nowrap" }}>
+                          The Mahjong Open Leader
+                        </span>
+                      ) : null}
+                    </div>
+                    <p style={{ fontSize: 14, fontWeight: 600, color: "var(--ink-900)", margin: 0 }}>{c.city_score}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+          ) : null}
         </>
       )}
     </div>

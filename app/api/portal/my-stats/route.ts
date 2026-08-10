@@ -7,8 +7,8 @@ import { getAdminContext } from "@/lib/portal/adminCity";
 // member_series_standings view. Same shape as the admin metrics route: resolve
 // the session, then query with the admin (service-role) client.
 export type MyStats = {
-  rank: number | null; // cumulative_rank (null until they have a standing)
-  score: number; // cumulative_score
+  rank: number | null; // champion_award_rank (null until they have a standing)
+  score: number; // champion_award_score
   rounds: number; // rounds_played
 };
 
@@ -42,7 +42,7 @@ export async function GET() {
 
   const { data } = await supabase
     .from("member_series_standings")
-    .select("cumulative_rank, cumulative_score, rounds_played")
+    .select("champion_award_rank, champion_award_score, rounds_played")
     .eq("user_id", session.id)
     .eq("series_id", seriesId)
     .eq("city_id", cityId)
@@ -50,8 +50,8 @@ export async function GET() {
 
   const stats: MyStats = data
     ? {
-        rank: data.cumulative_rank ?? null,
-        score: data.cumulative_score ?? 0,
+        rank: data.champion_award_rank ?? null,
+        score: Number(data.champion_award_score ?? 0),
         rounds: data.rounds_played ?? 0,
       }
     : EMPTY_STATS;
