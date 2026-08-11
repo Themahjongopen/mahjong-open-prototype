@@ -120,6 +120,7 @@ const LAUNCH_CITIES = [
   { name: "Yuma", state: "Arizona", photo: "/brand-photo-42.jpg" },
   { name: "Oklahoma City", state: "Oklahoma", photo: "/brand-photo-43.jpg" },
   { name: "Greensboro", state: "North Carolina", photo: "/brand-photo-44.jpg" },
+  { name: "Midland", state: "Texas", photo: "/brand-photo-45.jpg" },
 ];
 
 type LaunchCity = (typeof LAUNCH_CITIES)[number];
@@ -531,7 +532,7 @@ export default function HomePage() {
             <p className="eyebrow" style={{ display: "inline-flex", alignItems: "center", gap: 7, marginBottom: 14 }}>
               <Sparkles size={14} /> Now launching
             </p>
-            <h2 className="h2">Series One starts in{" "}<em className="serif-italic">forty-four cities</em></h2>
+            <h2 className="h2">Series One starts in{" "}<em className="serif-italic">forty-five cities</em></h2>
             <p className="body-lg" style={{ marginTop: 16, maxWidth: 540, marginInline: "auto" }}>
               Our inaugural 8-week series kicks off this August. Be one of the first to take a seat at the table in your city.
             </p>
