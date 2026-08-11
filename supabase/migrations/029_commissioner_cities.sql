@@ -27,6 +27,11 @@ CREATE TABLE IF NOT EXISTS public.commissioner_cities (
   PRIMARY KEY (profile_id, city_id)
 );
 
+-- RLS on, zero policies — same posture as public.profiles: anon/authenticated
+-- are fully blocked, and the service-role client (the only thing that ever reads
+-- or writes this table) bypasses RLS. Idempotent: a no-op if already enabled.
+ALTER TABLE public.commissioner_cities ENABLE ROW LEVEL SECURITY;
+
 -- 2) Backfill from the existing single-city column — every current commissioner
 --    keeps exactly the one city they already lead, so this is a no-op for
 --    today's data (verify with a query mirroring
