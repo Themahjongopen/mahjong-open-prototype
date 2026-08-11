@@ -66,20 +66,20 @@ export async function GET() {
       .order("created_at", { ascending: false });
 
     if (!error && data) {
-      // Cities each profile leads (migration 029's join table). One batched query
-      // keyed by profile_id, attached as commissioner_city_ids to every row.
-      const profileIds = [...new Set((data as any[]).map((r) => r.profile_id).filter(Boolean))];
+      // Cities each profile leads (migration 029's join table), attached as
+      // commissioner_city_ids to every row. commissioner_cities is tiny (one row
+      // per commissioner-city), so fetch the WHOLE table rather than filtering by
+      // the page's profile ids — a .in(...) with hundreds of registrant ids
+      // overflows PostgREST's URL length limit and 400s, which (being ignored
+      // here) would silently blank every commissioner badge at production scale.
       const commissionerCitiesByProfile = new Map<string, string[]>();
-      if (profileIds.length) {
-        const { data: ccRows } = await supabase
-          .from("commissioner_cities")
-          .select("profile_id, city_id")
-          .in("profile_id", profileIds);
-        for (const cc of (ccRows ?? []) as Array<{ profile_id: string; city_id: string }>) {
-          const arr = commissionerCitiesByProfile.get(cc.profile_id) ?? [];
-          arr.push(cc.city_id);
-          commissionerCitiesByProfile.set(cc.profile_id, arr);
-        }
+      const { data: ccRows } = await supabase
+        .from("commissioner_cities")
+        .select("profile_id, city_id");
+      for (const cc of (ccRows ?? []) as Array<{ profile_id: string; city_id: string }>) {
+        const arr = commissionerCitiesByProfile.get(cc.profile_id) ?? [];
+        arr.push(cc.city_id);
+        commissionerCitiesByProfile.set(cc.profile_id, arr);
       }
       // last_sign_in_at (accepted vs. invited) isn't exposed via PostgREST, so read
       // it from the Auth admin API. Non-fatal if it fails — we degrade to "invited"
