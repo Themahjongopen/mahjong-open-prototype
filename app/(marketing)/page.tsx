@@ -108,7 +108,7 @@ const LAUNCH_CITIES = [
   { name: "North Tarrant Co.", state: "Texas", photo: "/brand-photo-30.jpg" },
   { name: "Lubbock County", state: "Texas", photo: "/brand-photo-31.jpg" },
   { name: "Greater Boston Metro", state: "Massachusetts", photo: "/brand-photo-32.jpg" },
-  { name: "Boerne & Greater San Antonio", state: "Texas", photo: "/brand-photo-33.jpg" },
+  { name: "San Antonio", state: "Texas", photo: "/brand-photo-33.jpg" },
   { name: "Greater Clanton", state: "Alabama", photo: "/brand-photo-34.jpg" },
   { name: "Collin County", state: "Texas", photo: "/brand-photo-35.jpg" },
   { name: "Northwest", state: "Mississippi", photo: "/brand-photo-36.jpg" },
@@ -919,9 +919,8 @@ export default function HomePage() {
         .launch-card-photo { aspect-ratio: 8 / 5; }
         .launch-card-body { padding: 14px 18px 16px; }
         .launch-card-title { font-size: 23px; }
-        /* Long names (>= 20 chars — currently "Greater Cartersville," "Greater
-           Boston Metro," and "Boerne & Greater San Antonio") don't fit the
-           ~227px text area of the 265px desktop card
+        /* Long names (>= 20 chars — currently "Greater Cartersville" and "Greater
+           Boston Metro") don't fit the ~227px text area of the 265px desktop card
            at 23px: both wrap to two lines. Measured against the real display font,
            18px fits each on one line with margin — so step down to 18px. Only
            desktop needs this: the mobile
