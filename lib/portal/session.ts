@@ -1,6 +1,7 @@
 import { cache } from "react";
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { resolvePlayerCity, type Membership } from "@/lib/portal/playerCity";
+import { resolveCommissionerCity, type CommissionerCity } from "@/lib/portal/commissionerCity";
 
 export type PortalMember = {
   status: "active";
@@ -9,9 +10,13 @@ export type PortalMember = {
   email: string;
   role: string;
   isCommissioner: boolean;
-  // The one city this commissioner belongs to (migration 020). Null for everyone
-  // else — and the only city a commissioner may ever see the roster of.
-  commissionerCityId: string | null;
+  // Every city this commissioner leads (migration 029's commissioner_cities join
+  // table — a profile may now lead more than one). Empty for non-commissioners.
+  commissionerCities: CommissionerCity[];
+  // Which of those cities they're currently viewing (cookie-resolved when they
+  // lead >1, their sole city otherwise). Null for non-commissioners. This is the
+  // only city a commissioner may ever see the roster of per request.
+  activeCommissionerCityId: string | null;
   isAdmin: boolean;
   // The player's active city+series (cookie-resolved for multi-city players;
   // their sole registration otherwise). Downstream read helpers scope by these.
@@ -46,9 +51,22 @@ export const getPortalUser = cache(async (): Promise<PortalSession> => {
 
   const { data: profile } = await admin
     .from("profiles")
-    .select("id, full_name, email, role, commissioner_city_id")
+    .select("id, full_name, email, role")
     .eq("id", user.id)
     .maybeSingle();
+
+  // Cities this profile leads (migration 029). Most-recently-added first, so
+  // commissionerCities[0] is the default active city (matching resolvePlayerCity's
+  // latest-first rule). Empty for non-commissioners.
+  const { data: ccRows } = await admin
+    .from("commissioner_cities")
+    .select("city_id, cities(name)")
+    .eq("profile_id", user.id)
+    .order("created_at", { ascending: false });
+  const commissionerCities: CommissionerCity[] = ((ccRows ?? []) as Array<{ city_id: string; cities: { name: string } | { name: string }[] | null }>).map((r) => ({
+    city_id: r.city_id,
+    city_name: Array.isArray(r.cities) ? (r.cities[0]?.name ?? null) : (r.cities?.name ?? null),
+  }));
 
   // All paid registrations for this account (most recent first). A player may
   // now hold one per city within a series (migration 019), so this is a list.
@@ -82,6 +100,8 @@ export const getPortalUser = cache(async (): Promise<PortalSession> => {
   // Resolve which city the player is acting in. For a single-city player this is
   // just their one membership (no cookie read) — identical to the old behavior.
   const active = await resolvePlayerCity(memberships);
+  // Same resolution for which led-city a (possibly multi-city) commissioner is viewing.
+  const activeCommissioner = await resolveCommissionerCity(commissionerCities);
 
   return {
     status: "active",
@@ -90,7 +110,8 @@ export const getPortalUser = cache(async (): Promise<PortalSession> => {
     email: user.email ?? profile?.email ?? "",
     role,
     isCommissioner: role === "commissioner",
-    commissionerCityId: profile?.commissioner_city_id ?? null,
+    commissionerCities,
+    activeCommissionerCityId: activeCommissioner?.city_id ?? null,
     isAdmin,
     city_id: active.city_id,
     series_id: active.series_id,

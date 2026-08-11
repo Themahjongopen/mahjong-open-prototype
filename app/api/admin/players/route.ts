@@ -31,7 +31,9 @@ type RegistrationRow = {
   invite_sent_at: string | null;
   profile_id?: string | null;
   role?: string | null;
-  commissioner_city_id?: string | null;
+  // Every city this profile leads (migration 029). Same list on every row for
+  // that profile; the page shows the badge only on rows whose city is in here.
+  commissioner_city_ids?: string[];
 };
 
 // Local-preview fallback used only when no service-role client is configured.
@@ -60,10 +62,25 @@ export async function GET() {
   if (supabase) {
     const { data, error } = await supabase
       .from("registrations")
-      .select("id, full_name, email, phone, skill_level, paid_status, created_at, profile_id, city_id, series_id, cities(name, state), series(name), profiles(role, commissioner_city_id)")
+      .select("id, full_name, email, phone, skill_level, paid_status, created_at, profile_id, city_id, series_id, cities(name, state), series(name), profiles(role)")
       .order("created_at", { ascending: false });
 
     if (!error && data) {
+      // Cities each profile leads (migration 029's join table). One batched query
+      // keyed by profile_id, attached as commissioner_city_ids to every row.
+      const profileIds = [...new Set((data as any[]).map((r) => r.profile_id).filter(Boolean))];
+      const commissionerCitiesByProfile = new Map<string, string[]>();
+      if (profileIds.length) {
+        const { data: ccRows } = await supabase
+          .from("commissioner_cities")
+          .select("profile_id, city_id")
+          .in("profile_id", profileIds);
+        for (const cc of (ccRows ?? []) as Array<{ profile_id: string; city_id: string }>) {
+          const arr = commissionerCitiesByProfile.get(cc.profile_id) ?? [];
+          arr.push(cc.city_id);
+          commissionerCitiesByProfile.set(cc.profile_id, arr);
+        }
+      }
       // last_sign_in_at (accepted vs. invited) isn't exposed via PostgREST, so read
       // it from the Auth admin API. Non-fatal if it fails — we degrade to "invited"
       // for any linked account rather than blocking the page.
@@ -120,7 +137,7 @@ export async function GET() {
           invite_sent_at: authUser?.invite_sent_at ?? null,
           profile_id: row.profile_id ?? null,
           role: profile?.role ?? null,
-          commissioner_city_id: profile?.commissioner_city_id ?? null,
+          commissioner_city_ids: row.profile_id ? (commissionerCitiesByProfile.get(row.profile_id) ?? []) : [],
         };
       });
       // Empty state is returned cleanly as an empty array (page shows "No registrations yet").
@@ -131,12 +148,14 @@ export async function GET() {
   return NextResponse.json({ players: MOCK_REGISTRATIONS });
 }
 
-// Player↔Commissioner designation against real profiles. A city may have MORE
-// THAN ONE commissioner, tracked per-profile by profiles.commissioner_city_id.
-// Promoting requires the caller to name the city (cityId) — we no longer guess
-// it from the target's most-recent registration, which could pick the wrong city
-// once a player is registered in more than one (migration 019). Promoting only
-// updates the named player's row; it never demotes anyone else who leads that city.
+// Player↔Commissioner designation against real profiles. Commissioner status is
+// now a SET of cities per profile (migration 029's commissioner_cities), so both
+// promote and demote are city-scoped and require an explicit cityId:
+//   - promote: add the city to the set (never touches other cities they lead);
+//   - demote:  remove just that city; only flip role -> 'player' once the set is
+//              empty (they no longer lead ANY city).
+// A city may still have more than one commissioner; nothing here demotes anyone
+// else who leads the same city.
 export async function PUT(request: Request) {
   if (!(await isAdminRequest())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -155,13 +174,29 @@ export async function PUT(request: Request) {
   }
 
   if (designation !== "commissioner") {
-    // Demote: clear both the role and the city link.
-    const { error } = await supabase
-      .from("profiles")
-      .update({ role: "player", commissioner_city_id: null })
-      .eq("id", profileId);
-    if (error) return NextResponse.json({ error: "Could not update the player." }, { status: 500 });
-    return NextResponse.json({ ok: true, designation: "player" });
+    // Demote is CITY-SCOPED — remove just the named city, not every city this
+    // profile leads. cityId is required (the admin UI always has it, since
+    // demote is only ever offered from a specific city's row).
+    const cityId = (body?.cityId)?.toString();
+    if (!cityId) {
+      return NextResponse.json({ error: "A city is required to remove a commissioner." }, { status: 400 });
+    }
+    const { error: delErr } = await supabase
+      .from("commissioner_cities")
+      .delete()
+      .eq("profile_id", profileId)
+      .eq("city_id", cityId);
+    if (delErr) return NextResponse.json({ error: "Could not update the player." }, { status: 500 });
+
+    // Only demote role -> 'player' if they no longer lead ANY city.
+    const { count } = await supabase
+      .from("commissioner_cities")
+      .select("city_id", { count: "exact", head: true })
+      .eq("profile_id", profileId);
+    if (!count) {
+      await supabase.from("profiles").update({ role: "player" }).eq("id", profileId);
+    }
+    return NextResponse.json({ ok: true, designation: "player", cityId });
   }
 
   // Promote to commissioner — the city must be named explicitly, not guessed.
@@ -183,13 +218,14 @@ export async function PUT(request: Request) {
     return NextResponse.json({ error: "That city isn't one of this player's paid registrations." }, { status: 400 });
   }
 
-  // A city can have more than one commissioner — promoting this player does NOT
-  // demote anyone else who already leads the same city; only this row changes.
-  const { error } = await supabase
-    .from("profiles")
-    .update({ role: "commissioner", commissioner_city_id: cityId })
-    .eq("id", profileId);
-  if (error) return NextResponse.json({ error: "Could not update the player." }, { status: 500 });
+  // Add this city to the set they lead — never touches any other city they
+  // already lead. This is the actual fix: promoting to a second city no longer
+  // silently un-commissions the first.
+  const { error: insErr } = await supabase
+    .from("commissioner_cities")
+    .upsert({ profile_id: profileId, city_id: cityId }, { onConflict: "profile_id,city_id" });
+  if (insErr) return NextResponse.json({ error: "Could not update the player." }, { status: 500 });
+  await supabase.from("profiles").update({ role: "commissioner" }).eq("id", profileId);
 
   return NextResponse.json({ ok: true, designation: "commissioner", cityId });
 }

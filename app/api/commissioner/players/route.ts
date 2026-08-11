@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
-import { getCommissionerCityId } from "@/lib/portal/commissionerAuth";
+import { getActiveCommissionerCityId } from "@/lib/portal/commissionerAuth";
 
 export const runtime = "nodejs";
 
@@ -10,7 +10,7 @@ export const runtime = "nodejs";
 // city filter is applied in the query itself (not client-side), so another
 // city's rows are never returned in the payload.
 export async function GET() {
-  const cityId = await getCommissionerCityId();
+  const cityId = await getActiveCommissionerCityId();
   if (!cityId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

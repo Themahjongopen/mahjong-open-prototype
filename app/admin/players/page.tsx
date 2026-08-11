@@ -34,7 +34,9 @@ type RegistrationRow = {
   invite_sent_at: string | null;
   profile_id?: string | null;
   role?: string | null;
-  commissioner_city_id?: string | null;
+  // Every city this profile leads (migration 029). The "Commissioner" badge +
+  // Remove show only on rows whose city_id is in this list.
+  commissioner_city_ids?: string[];
 };
 
 type CityChoice = { city_id: string; label: string };
@@ -93,22 +95,11 @@ export default function AdminRegistrationsPage() {
   const [editError, setEditError] = useState<string>("");
   // When promoting a player who has paid in more than one city, we ask which
   // city rather than guessing. This holds the pending promotion + its choices.
-  const [cityPicker, setCityPicker] = useState<{ row: RegistrationRow; cities: CityChoice[] } | null>(null);
   const confirm = useConfirm();
 
-  // Distinct paid cities for a profile, drawn from the already-loaded rows.
-  function paidCitiesFor(profileId: string): CityChoice[] {
-    const byCity = new Map<string, string>();
-    for (const r of rows) {
-      if (r.profile_id === profileId && r.paid_status === "paid" && r.city_id) {
-        if (!byCity.has(r.city_id)) byCity.set(r.city_id, r.city ?? "Their city");
-      }
-    }
-    return Array.from(byCity, ([city_id, label]) => ({ city_id, label }));
-  }
-
-  // Send the designation change. cityId is required for "commissioner".
-  async function designate(row: RegistrationRow, designation: "commissioner" | "player", city?: CityChoice) {
+  // Send the designation change. Both promote and demote are city-scoped now
+  // (migration 029), so cityId travels with either — the row IS a specific city.
+  async function designate(row: RegistrationRow, designation: "commissioner" | "player", city: CityChoice) {
     if (!row.profile_id) return;
     setRoleBusyId(row.id);
     setMessage(null);
@@ -116,18 +107,14 @@ export default function AdminRegistrationsPage() {
       method: "PUT",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        profileId: row.profile_id,
-        designation,
-        ...(designation === "commissioner" && city ? { cityId: city.city_id } : {}),
-      }),
+      body: JSON.stringify({ profileId: row.profile_id, designation, cityId: city.city_id }),
     });
     const payload = await response.json().catch(() => ({}));
     if (response.ok) {
       setMessage(
         designation === "commissioner"
-          ? `Commissioner updated${city ? ` for ${city.label}` : ""}.`
-          : "Commissioner removed."
+          ? `Commissioner added for ${city.label}.`
+          : `Commissioner removed for ${city.label}.`
       );
       await loadRows();
     } else {
@@ -136,40 +123,37 @@ export default function AdminRegistrationsPage() {
     setRoleBusyId(null);
   }
 
+  // Promote/demote for THIS row's own city — each row is one (profile, city), so
+  // there's nothing to disambiguate. Leading a city is set membership now, so the
+  // branch keys off whether this row's city is in the profile's led set (NOT the
+  // profile-wide role, which stays 'commissioner' while they lead any city).
   async function toggleCommissioner(row: RegistrationRow) {
-    if (!row.profile_id) return;
+    if (!row.profile_id || !row.city_id) return;
+    const city: CityChoice = { city_id: row.city_id, label: row.city ?? "this city" };
+    const leadsThisCity = row.commissioner_city_ids?.includes(row.city_id) ?? false;
 
-    // Demote — no city needed.
-    if (row.role === "commissioner") {
+    if (leadsThisCity) {
       const ok = await confirm({
         title: "Remove commissioner?",
-        message: `Remove commissioner from ${row.full_name ?? row.email}?`,
+        message: `Remove ${row.full_name ?? row.email} as commissioner of ${city.label}?`,
         confirmLabel: "Remove",
         danger: true,
       });
-      if (ok) await designate(row, "player");
+      if (ok) await designate(row, "player", city);
       return;
     }
 
-    // Promote — the commissioner leads a PAID city, so choose among those.
-    const cities = paidCitiesFor(row.profile_id);
-    if (cities.length === 0) {
-      setMessage("This player has no paid registration yet, so they can't lead a city.");
+    // Promote for this city — they must hold a paid registration in it.
+    if (row.paid_status !== "paid") {
+      setMessage("This player hasn't paid for this city yet, so they can't lead it.");
       return;
     }
-    if (cities.length > 1) {
-      // Ambiguous — ask which city instead of guessing.
-      setCityPicker({ row, cities });
-      return;
-    }
-    // Exactly one paid city — keep the existing one-click confirm.
-    const only = cities[0];
     const ok = await confirm({
       title: "Make commissioner?",
-      message: `Make ${row.full_name ?? row.email} a commissioner for ${only.label}?`,
+      message: `Make ${row.full_name ?? row.email} a commissioner of ${city.label}?`,
       confirmLabel: "Make commissioner",
     });
-    if (ok) await designate(row, "commissioner", only);
+    if (ok) await designate(row, "commissioner", city);
   }
 
   // Instantly re-issue a pending registration's checkout link + reminder email.
@@ -294,18 +278,29 @@ export default function AdminRegistrationsPage() {
     [visibleRows]
   );
 
-  // profile_id -> city label, for the ONE row that actually matches
-  // commissioner_city_id. Used so a multi-city commissioner's other rows can
-  // say "Commissioner in {city}" instead of wrongly showing the badge.
-  const commissionerCityLabelByProfileId = useMemo(() => {
-    const map = new Map<string, string>();
+  // profile_id -> labels of ALL cities that profile leads (a profile may now lead
+  // more than one, migration 029). Used so a multi-city commissioner's OTHER rows
+  // can say "Commissioner in {A, B}" instead of showing the badge on a city they
+  // don't actually lead. Labels are drawn from each led city's own row.
+  const commissionerCitiesByProfileId = useMemo(() => {
+    const map = new Map<string, Map<string, string>>(); // profile_id -> (city_id -> label)
     for (const r of rows) {
-      if (r.profile_id && r.role === "commissioner" && r.city_id && r.city_id === r.commissioner_city_id) {
-        map.set(r.profile_id, r.city ?? "another city");
+      if (r.profile_id && r.city_id && (r.commissioner_city_ids?.includes(r.city_id) ?? false)) {
+        const inner = map.get(r.profile_id) ?? new Map<string, string>();
+        inner.set(r.city_id, r.city ?? "a city");
+        map.set(r.profile_id, inner);
       }
     }
     return map;
   }, [rows]);
+
+  // The led-city labels for a profile EXCEPT the given city (for the "Commissioner
+  // in …" note shown on a row whose own city they don't lead).
+  function ledCitiesExcept(profileId: string, exceptCityId: string | null): string[] {
+    const inner = commissionerCitiesByProfileId.get(profileId);
+    if (!inner) return [];
+    return Array.from(inner.entries()).filter(([id]) => id !== exceptCityId).map(([, label]) => label);
+  }
 
   // Distinct (city_id, label) pairs present in the loaded rows, for the City
   // dropdown, each with paid/pending counts (refunded excluded). Counts are over
@@ -903,7 +898,7 @@ export default function AdminRegistrationsPage() {
                     <span style={{ fontSize: 12, color: "var(--ink-500)" }}>—</span>
                   )}
                   {r.profile_id ? (
-                    r.role === "commissioner" && r.city_id === r.commissioner_city_id ? (
+                    r.city_id && (r.commissioner_city_ids?.includes(r.city_id) ?? false) ? (
                       <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginTop: 6 }}>
                         <span className="badge badge-pink" style={{ fontSize: 11 }}>Commissioner</span>
                         <button type="button" className="btn" style={{ fontSize: 11, padding: "3px 9px" }} disabled={roleBusyId === r.id} onClick={() => toggleCommissioner(r)}>
@@ -914,11 +909,14 @@ export default function AdminRegistrationsPage() {
                       <span className="badge badge-mute" style={{ fontSize: 11, marginTop: 6, alignSelf: "flex-start" }}>Admin</span>
                     ) : (
                       <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 4, marginTop: 6 }}>
-                        {r.role === "commissioner" && r.profile_id && commissionerCityLabelByProfileId.has(r.profile_id) ? (
-                          <span style={{ fontSize: 11, color: "var(--ink-500)" }}>
-                            Commissioner in {commissionerCityLabelByProfileId.get(r.profile_id)}
-                          </span>
-                        ) : null}
+                        {(() => {
+                          const otherLed = ledCitiesExcept(r.profile_id!, r.city_id ?? null);
+                          return otherLed.length > 0 ? (
+                            <span style={{ fontSize: 11, color: "var(--ink-500)" }}>
+                              Commissioner in {otherLed.join(", ")}
+                            </span>
+                          ) : null;
+                        })()}
                         <button type="button" className="btn" style={{ fontSize: 11, padding: "3px 9px" }} disabled={roleBusyId === r.id} onClick={() => toggleCommissioner(r)}>
                           {roleBusyId === r.id ? "…" : "Make commissioner"}
                         </button>
@@ -932,66 +930,6 @@ export default function AdminRegistrationsPage() {
         </div>
       </div>
 
-      {cityPicker ? (
-        <div
-          role="presentation"
-          onClick={(e) => { if (e.target === e.currentTarget) setCityPicker(null); }}
-          style={{
-            position: "fixed",
-            inset: 0,
-            zIndex: 300,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: 16,
-            backgroundColor: "var(--overlay-scrim, rgba(20,20,20,0.45))",
-            backdropFilter: "blur(4px)",
-          }}
-        >
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-label="Choose a city"
-            style={{
-              background: "#fff",
-              borderRadius: "var(--radius-xl)",
-              boxShadow: "var(--shadow-lg)",
-              width: "100%",
-              maxWidth: 400,
-              padding: "28px 28px 24px",
-            }}
-          >
-            <h2 style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 400, color: "var(--ink-900)", margin: "0 0 10px" }}>
-              Which city?
-            </h2>
-            <p style={{ fontSize: 15, lineHeight: 1.6, color: "var(--ink-700)", margin: "0 0 20px" }}>
-              {cityPicker.row.full_name ?? cityPicker.row.email} is registered in more than one city. Pick the city they’ll be a commissioner of.
-            </p>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 }}>
-              {cityPicker.cities.map((c) => (
-                <button
-                  key={c.city_id}
-                  type="button"
-                  className="btn"
-                  style={{ justifyContent: "flex-start", padding: "12px 16px", textAlign: "left" }}
-                  onClick={() => {
-                    const { row } = cityPicker;
-                    setCityPicker(null);
-                    void designate(row, "commissioner", c);
-                  }}
-                >
-                  {c.label}
-                </button>
-              ))}
-            </div>
-            <div style={{ display: "flex", justifyContent: "flex-end" }}>
-              <button type="button" className="btn btn-ghost" onClick={() => setCityPicker(null)} style={{ justifyContent: "center", padding: "11px 20px" }}>
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 }
