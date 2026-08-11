@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { X, Check, AlertCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { groupCitiesByState } from "@/lib/cities/groupByState";
+import { compressImage } from "@/lib/image/compressImage";
 
 interface RegisterModalProps {
   open: boolean;
@@ -50,12 +51,18 @@ export default function RegisterModal({ open, onClose }: RegisterModalProps) {
     setUploading(true);
     setError("");
     const supabase: any = createClient();
-    const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+    let upload = file;
+    try {
+      upload = await compressImage(file);
+    } catch {
+      // fall back to the original file if compression itself throws
+    }
+    const ext = (upload.name.split(".").pop() || "jpg").toLowerCase();
     // Pre-auth staging upload (no account yet). RLS allows anon inserts only
     // under the registrations/ prefix; the photo is carried onto the profile
     // when the member later accepts their portal invite.
     const path = `registrations/${crypto.randomUUID()}.${ext}`;
-    const { error: upErr } = await supabase.storage.from("avatars").upload(path, file, { contentType: file.type });
+    const { error: upErr } = await supabase.storage.from("avatars").upload(path, upload, { contentType: upload.type });
     if (upErr) {
       setError("Photo upload failed. Use a JPG, PNG, or WebP under 3 MB.");
       setUploading(false);
@@ -436,7 +443,7 @@ export default function RegisterModal({ open, onClose }: RegisterModalProps) {
                       {uploading ? "Uploading…" : avatarUrl ? "Change photo" : "Upload photo"}
                     </button>
                     <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={handlePhoto} style={{ display: "none" }} />
-                    <p style={{ fontSize: 12, color: "var(--ink-500)", marginTop: 4 }}>Required · JPG, PNG, or WebP · up to 3 MB.</p>
+                    <p style={{ fontSize: 12, color: "var(--ink-500)", marginTop: 4 }}>Required · JPG, PNG, or WebP · any size — large photos are resized automatically.</p>
                     <p style={{ fontSize: 12, color: "var(--ink-500)", marginTop: 4 }}>Please use a real photo of yourself — no avatars, illustrations, or logos.</p>
                   </div>
                 </div>

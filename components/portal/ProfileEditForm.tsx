@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { compressImage } from "@/lib/image/compressImage";
 import { NOTIFICATION_PREFS, type ResolvedPrefs } from "@/lib/portal/notificationPrefs";
 import Avatar from "@/components/portal/Avatar";
 
@@ -42,18 +43,24 @@ export default function ProfileEditForm({
     setFeedback(null);
 
     const supabase = createClient();
-    const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+    let upload = file;
+    try {
+      upload = await compressImage(file);
+    } catch {
+      // fall back to the original file if compression itself throws
+    }
+    const ext = (upload.name.split(".").pop() || "jpg").toLowerCase();
     // Fixed per-user path (RLS: folder must be the member's uid); upsert to
     // replace the old photo. Cache-bust the saved URL so the new image shows.
     const path = `${userId}/avatar.${ext}`;
-    const { error: upErr } = await supabase.storage.from("avatars").upload(path, file, { upsert: true, contentType: file.type });
+    const { error: upErr } = await supabase.storage.from("avatars").upload(path, upload, { upsert: true, contentType: upload.type });
     if (upErr) {
       setError("Photo upload failed. Use a JPG, PNG, or WebP under 3 MB.");
       setUploading(false);
       return;
     }
     const { data } = supabase.storage.from("avatars").getPublicUrl(path);
-    setAvatarUrl(`${data.publicUrl}?v=${file.size}-${file.lastModified}`);
+    setAvatarUrl(`${data.publicUrl}?v=${upload.size}-${upload.lastModified}`);
     setUploading(false);
     if (fileRef.current) fileRef.current.value = "";
   }
@@ -101,7 +108,7 @@ export default function ProfileEditForm({
               {uploading ? "Uploading…" : avatarUrl ? "Change photo" : "Upload photo"}
             </button>
             <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={handlePhoto} style={{ display: "none" }} />
-            <p style={{ fontSize: 12, color: "var(--ink-500)", marginTop: 6 }}>JPG, PNG, or WebP · up to 3 MB.</p>
+            <p style={{ fontSize: 12, color: "var(--ink-500)", marginTop: 6 }}>JPG, PNG, or WebP · any size — large photos are resized automatically.</p>
           </div>
         </div>
       </div>
