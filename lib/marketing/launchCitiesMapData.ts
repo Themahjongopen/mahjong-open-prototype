@@ -281,5 +281,11 @@ export const CITY_PINS: LaunchCityPin[] = [
     "state": "TX",
     "x": -88.0,
     "y": 132.1
+  },
+  {
+    "name": "Tallahassee",
+    "state": "FL",
+    "x": 220.5,
+    "y": 166.4
   }
 ];
