@@ -62,7 +62,7 @@ export default function LaunchCitiesMap() {
         </g>
       </svg>
 
-      <div style={{ display: "flex", justifyContent: "center", gap: 28, marginTop: 8, fontSize: 13, color: "var(--ink-900)" }}>
+      <div style={{ display: "flex", justifyContent: "center", gap: 28, marginTop: 8, fontSize: 13, color: "var(--ink-900)", flexWrap: "wrap" }}>
         <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <span style={{ width: 13, height: 13, borderRadius: "50%", background: "var(--paper-50)", border: "2px solid var(--peri-400)", display: "inline-block" }} />
           Not yet at 20-player minimum
@@ -73,8 +73,10 @@ export default function LaunchCitiesMap() {
         </span>
       </div>
 
+      {/* Desktop only: floating tooltip that follows the cursor. */}
       {tooltip ? (
         <div
+          className="lcm-tooltip-floating"
           style={{
             position: "fixed", left: tooltip.x, top: tooltip.y, transform: "translate(-50%, calc(-100% - 12px))",
             background: "var(--ink-900)", color: "#FFF1F7", fontSize: 13, padding: "8px 12px",
@@ -86,6 +88,46 @@ export default function LaunchCitiesMap() {
           <div style={{ fontSize: 12, opacity: 0.85 }}>{tooltip.hit ? "Hit 20-player minimum" : "Registration open"}</div>
         </div>
       ) : null}
+
+      {/* Touch/mobile only: fixed-location panel below the legend, always in the same spot. */}
+      <div
+        className="lcm-tooltip-mobile"
+        style={{
+          marginTop: 16,
+          padding: "12px 16px",
+          borderRadius: 10,
+          background: "var(--ink-900)",
+          color: "#FFF1F7",
+          textAlign: "center",
+          minHeight: 44,
+          display: "none",
+        }}
+      >
+        {tooltip ? (
+          <>
+            <div style={{ fontWeight: 600, fontSize: 14 }}>{tooltip.name}</div>
+            <div style={{ fontSize: 12, opacity: 0.85, marginTop: 2 }}>{tooltip.hit ? "Hit 20-player minimum" : "Registration open"}</div>
+          </>
+        ) : (
+          <div style={{ fontSize: 13, opacity: 0.7 }}>Tap a pin to see its status</div>
+        )}
+      </div>
+
+      <style jsx>{`
+        @media (hover: hover) and (pointer: fine) {
+          .lcm-tooltip-mobile {
+            display: none !important;
+          }
+        }
+        @media (hover: none), (pointer: coarse) {
+          .lcm-tooltip-floating {
+            display: none !important;
+          }
+          .lcm-tooltip-mobile {
+            display: block !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }
