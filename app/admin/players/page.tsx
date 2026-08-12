@@ -81,6 +81,8 @@ export default function AdminRegistrationsPage() {
   const [resendMsg, setResendMsg] = useState<Record<string, string>>({});
   const [refundBusyId, setRefundBusyId] = useState<string | null>(null);
   const [refundMsg, setRefundMsg] = useState<Record<string, string>>({});
+  const [deleteBusyId, setDeleteBusyId] = useState<string | null>(null);
+  const [deleteMsg, setDeleteMsg] = useState<Record<string, string>>({});
   const [bulkBusy, setBulkBusy] = useState(false);
   const [bulkResendBusy, setBulkResendBusy] = useState(false);
   // Checkbox selection for the selective bulk actions.
@@ -197,6 +199,33 @@ export default function AdminRegistrationsPage() {
       }
     } finally {
       setRefundBusyId(null);
+    }
+  }
+
+  // Permanently delete a PENDING registration — for cleaning up duplicate/
+  // abandoned entries. Confirms first (this can't be undone). Only pending rows
+  // offer this button; the API also enforces pending-only as a safety rail.
+  async function deleteRegistration(row: RegistrationRow) {
+    const ok = await confirm({
+      title: "Delete this registration?",
+      message: `Permanently delete ${row.full_name ?? row.email}'s pending registration for ${row.city ?? "this city"}? This can't be undone.`,
+      confirmLabel: "Delete",
+      danger: true,
+    });
+    if (!ok) return;
+
+    setDeleteBusyId(row.id);
+    setDeleteMsg((m) => ({ ...m, [row.id]: "" }));
+    try {
+      const res = await fetch(`/api/admin/registrations/${row.id}`, { method: "DELETE", credentials: "include" });
+      const payload = await res.json().catch(() => ({}));
+      if (res.ok) {
+        await loadRows(); // refetch so the deleted row + counts disappear
+      } else {
+        setDeleteMsg((m) => ({ ...m, [row.id]: payload.error ?? "Could not delete the registration." }));
+      }
+    } finally {
+      setDeleteBusyId(null);
     }
   }
 
@@ -822,6 +851,17 @@ export default function AdminRegistrationsPage() {
                           {resendBusyId === r.id ? "Sending…" : "Resend link"}
                         </button>
                         {resendMsg[r.id] ? <span style={{ fontSize: 12, color: "var(--ink-500)" }}>{resendMsg[r.id]}</span> : null}
+                        <button
+                          type="button"
+                          className="btn"
+                          style={{ fontSize: 12, padding: "5px 11px", color: "var(--danger)" }}
+                          disabled={deleteBusyId === r.id}
+                          onClick={() => deleteRegistration(r)}
+                          title="Permanently delete this pending registration — for cleaning up duplicates"
+                        >
+                          {deleteBusyId === r.id ? "Deleting…" : "Delete"}
+                        </button>
+                        {deleteMsg[r.id] ? <span style={{ fontSize: 12, color: "var(--danger)" }}>{deleteMsg[r.id]}</span> : null}
                       </>
                     ) : null}
                     {r.paid_status === "paid" ? (

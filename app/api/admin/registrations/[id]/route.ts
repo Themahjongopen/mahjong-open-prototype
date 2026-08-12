@@ -110,3 +110,52 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
 
   return NextResponse.json({ ok: true });
 }
+
+// Delete a PENDING registration — for cleaning up duplicate/abandoned entries
+// (e.g. a player who registered twice, one row paid, one still pending). Safety
+// rail: only pending rows can be deleted; paid/refunded rows represent real
+// payment/participation history and keep using "Mark refunded" instead.
+//
+// Deleting is safe to cascade: payments.registration_id is the only FK anywhere
+// referencing registrations.id, and it's ON DELETE CASCADE, so any linked
+// payment artifact (rare for a still-pending row) cleans up automatically. It
+// never touches profiles — even if this row carries a profile_id (the email may
+// already have a profile from another paid registration), that profile and the
+// player's other registrations are unaffected.
+export async function DELETE(_request: Request, context: { params: Promise<{ id: string }> }) {
+  if (!(await isAdminRequest())) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { id } = await context.params;
+
+  const supabase: any = createAdminClient();
+  if (!supabase) {
+    return NextResponse.json({ error: "Admin service is unavailable." }, { status: 503 });
+  }
+
+  const { data: reg, error: loadError } = await supabase
+    .from("registrations")
+    .select("id, paid_status")
+    .eq("id", id)
+    .maybeSingle();
+  if (loadError) {
+    return NextResponse.json({ error: "Could not load the registration." }, { status: 502 });
+  }
+  if (!reg) {
+    return NextResponse.json({ error: "That registration no longer exists." }, { status: 404 });
+  }
+  if (reg.paid_status !== "pending") {
+    return NextResponse.json(
+      { error: "Only pending registrations can be deleted. Use “Mark refunded” for paid registrations." },
+      { status: 400 }
+    );
+  }
+
+  const { error: delError } = await supabase.from("registrations").delete().eq("id", id);
+  if (delError) {
+    return NextResponse.json({ error: "Could not delete the registration." }, { status: 500 });
+  }
+
+  return NextResponse.json({ ok: true });
+}
