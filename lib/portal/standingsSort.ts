@@ -14,6 +14,8 @@ export type StandingRow = {
   ace_award_rank: number | null;
   champion_award_score: number;
   champion_award_rank: number | null;
+  flight_winner_score: number;
+  flight_winner_rank: number | null;
 };
 
 // Ace Award order: no minimum, no tiebreaker — straight rank order.
@@ -25,4 +27,10 @@ export function byAceAward(rows: StandingRow[]): StandingRow[] {
 // the total_score tiebreak in SQL).
 export function byChampionAward(rows: StandingRow[]): StandingRow[] {
   return [...rows].sort((a, b) => (a.champion_award_rank ?? 9999) - (b.champion_award_rank ?? 9999));
+}
+
+// Flight Winner order: gated (rank is null below the 5-round minimum) — push
+// ungated rows to the bottom instead of sorting them first.
+export function byFlightWinner(rows: StandingRow[]): StandingRow[] {
+  return [...rows].sort((a, b) => (a.flight_winner_rank ?? 9999) - (b.flight_winner_rank ?? 9999));
 }

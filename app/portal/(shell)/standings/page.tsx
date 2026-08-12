@@ -1,6 +1,6 @@
 import { getPortalUser } from "@/lib/portal/session";
 import { withAdminCity } from "@/lib/portal/adminCity";
-import { getStandings, getCityStandings, byAceAward, byChampionAward, type StandingRow } from "@/lib/portal/standings";
+import { getStandings, getCityStandings, byAceAward, byChampionAward, byFlightWinner, type StandingRow } from "@/lib/portal/standings";
 import Avatar from "@/components/portal/Avatar";
 
 const COLS = "36px 1fr 72px 64px";
@@ -102,7 +102,7 @@ export default async function StandingsPage() {
       <div style={{ marginBottom: 24 }}>
         {cityName ? <p className="eyebrow" style={{ marginBottom: 4 }}>{cityName}</p> : null}
         <h2 style={{ fontFamily: "var(--font-display)", fontSize: 22, color: "var(--ink-900)" }}>Standings</h2>
-        <p style={{ fontSize: 13, color: "var(--ink-500)", marginTop: 8 }}>Two leaderboards, updated live after each round is scored.</p>
+        <p style={{ fontSize: 13, color: "var(--ink-500)", marginTop: 8 }}>Three leaderboards, updated live after each round is scored.</p>
       </div>
 
       <Table
@@ -117,12 +117,22 @@ export default async function StandingsPage() {
 
       <Table
         title="Champion Award"
-        subtitle="Weekly average of your lowest and highest round, summed across your best 7 of 8 weeks."
+        subtitle="Your single highest round each week, summed across all 8 weeks."
         valueHeader="Score"
         rows={byChampionAward(rows)}
         meId={meId}
         rankOf={(r) => String(r.champion_award_rank ?? "—")}
         valueOf={(r) => r.champion_award_score.toFixed(1)}
+      />
+
+      <Table
+        title="Flight Winner"
+        subtitle="Total points ÷ total rounds across your best 7 of 8 weeks. Requires 5 rounds played to qualify."
+        valueHeader="Avg"
+        rows={byFlightWinner(rows)}
+        meId={meId}
+        rankOf={(r) => String(r.flight_winner_rank ?? "—")}
+        valueOf={(r) => r.flight_winner_score.toFixed(2)}
       />
 
       {cityStandings.length > 0 ? (

@@ -28,7 +28,7 @@ export async function GET(request: Request) {
   const [{ data: rows }, { data: city }, { data: series }] = await Promise.all([
     admin
       .from("member_series_standings")
-      .select("user_id, full_name, avatar_url, rounds_played, total_score, average_score, ace_award_score, ace_award_rank, champion_award_score, champion_award_rank")
+      .select("user_id, full_name, avatar_url, rounds_played, total_score, average_score, ace_award_score, ace_award_rank, champion_award_score, champion_award_rank, flight_winner_score, flight_winner_rank")
       .eq("series_id", seriesId)
       .eq("city_id", cityId),
     admin.from("cities").select("name").eq("id", cityId).maybeSingle(),
@@ -48,6 +48,8 @@ export async function GET(request: Request) {
     ace_award_rank: r.ace_award_rank ?? null,
     champion_award_score: Number(r.champion_award_score ?? 0),
     champion_award_rank: r.champion_award_rank ?? null,
+    flight_winner_score: Number(r.flight_winner_score ?? 0),
+    flight_winner_rank: r.flight_winner_rank ?? null,
   }));
 
   return NextResponse.json({ cityName: city?.name ?? null, seriesName: series?.name ?? null, rows: normalized });

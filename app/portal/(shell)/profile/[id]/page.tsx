@@ -40,7 +40,7 @@ function coreStats(b: StatBlock) {
   return [
     { label: "Rounds played", value: String(b.rounds) },
     { label: "Total score", value: String(b.totalScore) },
-    { label: "Average score", value: b.avgScore.toFixed(1) },
+    { label: "Points per round", value: b.avgScore.toFixed(1) },
   ];
 }
 
@@ -167,6 +167,8 @@ export default async function PlayerProfilePage({ params }: { params: Promise<{ 
                 { label: "Ace Award rank", value: stats.season.aceAwardRank ? `#${stats.season.aceAwardRank}` : "—" },
                 { label: "Champion Award", value: stats.season.championAwardScore.toFixed(1) },
                 { label: "Champion Award rank", value: stats.season.championAwardRank ? `#${stats.season.championAwardRank}` : "—" },
+                { label: "Flight Winner", value: stats.season.flightWinnerScore.toFixed(2) },
+                { label: "Flight Winner rank", value: stats.season.flightWinnerRank ? `#${stats.season.flightWinnerRank}` : "—" },
               ]}
             />
           </div>

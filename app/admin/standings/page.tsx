@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { byAceAward, byChampionAward, type StandingRow } from "@/lib/portal/standingsSort";
+import { byAceAward, byChampionAward, byFlightWinner, type StandingRow } from "@/lib/portal/standingsSort";
 import Avatar from "@/components/portal/Avatar";
 
 type City = { id: string; name: string; state: string | null; is_active: boolean };
@@ -169,11 +169,19 @@ export default function AdminStandingsPage() {
             />
             <Board
               title="Champion Award"
-              subtitle="Weekly average of your lowest and highest round, summed across your best 7 of 8 weeks."
+              subtitle="Your single highest round each week, summed across all 8 weeks."
               valueHeader="Score"
               rows={byChampionAward(rows)}
               rankOf={(r) => String(r.champion_award_rank ?? "—")}
               valueOf={(r) => r.champion_award_score.toFixed(1)}
+            />
+            <Board
+              title="Flight Winner"
+              subtitle="Total points ÷ total rounds across your best 7 of 8 weeks. Requires 5 rounds played to qualify."
+              valueHeader="Avg"
+              rows={byFlightWinner(rows)}
+              rankOf={(r) => String(r.flight_winner_rank ?? "—")}
+              valueOf={(r) => r.flight_winner_score.toFixed(2)}
             />
           </div>
           {cityRows.length > 0 ? (

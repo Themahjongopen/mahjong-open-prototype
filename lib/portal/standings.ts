@@ -9,7 +9,7 @@ import type { StandingRow } from "@/lib/portal/standingsSort";
 // The row shape + orderings (StandingRow, byAceAward, byChampionAward) live in
 // the client-safe standingsSort module and are re-exported here for callers.
 export type { StandingRow } from "@/lib/portal/standingsSort";
-export { byAceAward, byChampionAward } from "@/lib/portal/standingsSort";
+export { byAceAward, byChampionAward, byFlightWinner } from "@/lib/portal/standingsSort";
 
 export async function getStandings(member: PortalMember): Promise<{ cityName: string | null; rows: StandingRow[] }> {
   const admin: any = createAdminClient();
@@ -18,7 +18,7 @@ export async function getStandings(member: PortalMember): Promise<{ cityName: st
   const [{ data: rows }, { data: city }] = await Promise.all([
     admin
       .from("member_series_standings")
-      .select("user_id, full_name, avatar_url, rounds_played, total_score, average_score, ace_award_score, ace_award_rank, champion_award_score, champion_award_rank")
+      .select("user_id, full_name, avatar_url, rounds_played, total_score, average_score, ace_award_score, ace_award_rank, champion_award_score, champion_award_rank, flight_winner_score, flight_winner_rank")
       .eq("series_id", member.series_id)
       .eq("city_id", member.city_id),
     admin.from("cities").select("name").eq("id", member.city_id).maybeSingle(),
@@ -35,6 +35,8 @@ export async function getStandings(member: PortalMember): Promise<{ cityName: st
     ace_award_rank: r.ace_award_rank ?? null,
     champion_award_score: Number(r.champion_award_score ?? 0),
     champion_award_rank: r.champion_award_rank ?? null,
+    flight_winner_score: Number(r.flight_winner_score ?? 0),
+    flight_winner_rank: r.flight_winner_rank ?? null,
   }));
 
   return { cityName: city?.name ?? null, rows: normalized };

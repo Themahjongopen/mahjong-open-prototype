@@ -3,12 +3,12 @@ _Supersedes `docs/Scoring-Standings-Final-Spec-v2.md`. Source: Shari, Aug 11 202
 
 > **Why a v3 doc (not an edit in place):** v1 and v2 are kept as historical record. This file is the authoritative current reference.
 
-> **Status: NOT yet built.** This spec is the reference; the code still implements v2. Implementation is blocked on the open tiebreaker item below.
+> **Status: LOCKED + BUILT (2026-08-12).** Implemented in migration `030_flight_winner.sql` and the app read-side/UI. The tiebreaker below is confirmed.
 
 ---
 
-## ⚠️ One open item — not yet confirmed
-**Flight Winner has no confirmed tiebreaker.** Every other award has one (see the table below). Recommend defaulting to the same rule Champion Award and City-vs-City effectively use in spirit — but this has NOT been confirmed by Shari and should not be built until it is. Flag this explicitly before implementation.
+## ✅ Resolved — Flight Winner tiebreaker (confirmed 2026-08-12)
+**Flight Winner tiebreaker: most rounds played, then higher `total_score`** (mirrors the retired Average Standing's tiebreak). Applied in migration 030's `flight_winner_rank` window: `ORDER BY flight_winner_score DESC, rounds_played DESC, total_score DESC`, gated to `rounds_played >= 5`.
 
 ---
 
@@ -64,7 +64,7 @@ Single highest individual round score across the series, no minimum, no tiebreak
 
 - **Minimum to qualify:** 5 total rounds played across the whole series (same series-wide gate the old retired Average Standing used) — below that, not ranked.
 - Scoped per city, same as Ace and Champion Award.
-- **Tiebreaker: not yet confirmed** — see the open item at the top of this doc.
+- **Tiebreaker (confirmed 2026-08-12):** most rounds played, then higher `total_score`.
 
 **Worked example (Player A, using the confirmed drop-week rule):**
 
@@ -100,7 +100,7 @@ No changes requested. Still: sum of the top 3 individual round scores city-wide,
 |---|---|---|
 | **Ace Award** | highest single round score | *none* — ties share a rank |
 | **Champion Award** | highest sum of all 8 weekly-highest values (minus penalties) | higher `total_score` across all rounds played |
-| **Flight Winner** | highest total-points-÷-total-rounds across best 7 of 8 weeks | **⚠️ NOT YET CONFIRMED** |
+| **Flight Winner** | highest total-points-÷-total-rounds across best 7 of 8 weeks | most rounds played, then higher `total_score` (confirmed 2026-08-12) |
 | **City-vs-City** | highest city score | *none* — ties share a rank |
 
 ---
@@ -118,7 +118,7 @@ That's 4 total distinct titles/leaderboards — 3 individual (Ace, Champion, Fli
 
 ---
 
-## Database Notes for Claude Code (not yet built — sketch only)
+## Database Notes for Claude Code (implemented in migration 030)
 
 This will need a new migration dropping/recreating `member_weekly_scores` and `member_series_standings` (same dependency-order pattern as migration 027). `city_series_standings` is untouched.
 
@@ -128,7 +128,7 @@ This will need a new migration dropping/recreating `member_weekly_scores` and `m
 - **`member_series_standings`** changes:
   - `champion_award_score`: **drop the `rn <= 7` windowing entirely** — just `SUM(weekly_champion_value)` across all 8 weeks, minus `SUM(no_show_penalty)` across all 8 weeks. This is a simplification vs. today's code.
   - New `flight_winner_score`: needs the 3-tier drop-week priority described above, expressed as a composite sort key, e.g. (pseudocode): `tier = CASE WHEN weekly_rounds_played > 0 AND weekly_total_score = 0 THEN 0 WHEN weekly_rounds_played = 0 THEN 1 ELSE 2 END`, then `ORDER BY tier ASC, (CASE WHEN tier = 0 THEN weekly_rounds_played END) DESC, (CASE WHEN tier = 2 THEN weekly_total_score::numeric / NULLIF(weekly_rounds_played,0) END) ASC` — row 1 of that order is the drop week; sum points/rounds over the other 7.
-  - New `flight_winner_rank`, gated on series-wide `rounds_played >= 5` (NULL rank below that, matching how the old Average Standing gate worked) — **rank order/tiebreak SQL can't be finalized until the open tiebreaker question above is answered.**
+  - New `flight_winner_rank`, gated on series-wide `rounds_played >= 5` (NULL rank below that, matching how the old Average Standing gate worked) — tiebreak (confirmed 2026-08-12): rounds_played DESC, then total_score DESC.
 - **Read-side:** `flight_winner_score` will come back from PostgREST as a numeric string like the other computed scores — coerce with `Number(...)` before `.toFixed()`.
 
 ## Copy locations that will need updating once this is built
@@ -139,8 +139,17 @@ Same surfaces v2 touched, plus one new one:
 - `app/portal/(shell)/profile/[id]/page.tsx` — season stat grid needs a third award (Flight Winner) added alongside Ace/Champion, and the `average_score` info-stat label should be reviewed so it doesn't read as a duplicate of Flight Winner (see the note above).
 - **New:** the handbook "Scoring & Standings" page copy drafted earlier in this project needs a correction — the Champion Award paragraph drafted said "your best 7 of 8 weekly values are added together — your one lowest week is dropped," which was accurate under v2 but is now wrong under v3 (no week is dropped for Champion Award anymore). A new Flight Winner paragraph also needs to be added to that page. Happy to redraft both once this spec is confirmed.
 
+## Handbook "Scoring & Standings" page copy — final v3 redraft
+_The handbook page lives outside this repo (like the Supabase email templates); paste these in. Ace Award and City Leaderboard paragraphs are unchanged from the earlier draft — only Champion Award is corrected and Flight Winner is added._
+
+**CHAMPION AWARD (corrected — no week is dropped anymore):**
+> Each week, your single highest-scoring round counts toward your Champion Award. Add up your best round from every week of the series — all 8 weeks count, nothing is dropped — and that total is your Champion Award score. Missing a week without notice costs 25 points off your total for each no-show.
+
+**FLIGHT WINNER (new):**
+> Flight Winner rewards your most consistent scoring across the series. Each week, we total the points you scored and the rounds you played. Your one lowest-scoring week is set aside, and the rest — your best 7 of 8 weeks — are combined into a single points-per-round average. That average is your Flight Winner score. You need to have played at least 5 rounds across the series to qualify.
+
 ## Still NOT in Scope (carried over from v2)
 - Tracking individual game scores within a round.
 - Enforcing who finds a replacement (etiquette, not a system rule).
 - Prize amounts or percentage splits.
-- Weekly tiebreakers (only end-of-series tiebreakers apply) — **and Flight Winner's own end-of-series tiebreaker is still open, see top of doc.**
+- Weekly tiebreakers (only end-of-series tiebreakers apply).

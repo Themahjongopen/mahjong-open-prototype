@@ -3,17 +3,24 @@
 // "Rounds played" and totals/averages count only real played rounds — rows that
 // are neither a no-show nor a stay-bonus.
 //
-// Season awards (Ace + Champion) come from the member_series_standings view
-// (migration 027). Ace Award = the player's single highest round score; Champion
-// Award = best-7-of-8 weekly avg(min,max) minus all no-show penalties.
+// Season awards (Ace + Champion + Flight Winner) come from the
+// member_series_standings view (migration 030, scoring v3). Ace Award = single
+// highest round score; Champion Award = sum of all 8 weekly-highest values minus
+// no-show penalties; Flight Winner = best-7-of-8 combined points/rounds average
+// (5-round minimum to be ranked).
 
 export type StatBlock = { rounds: number; totalScore: number; avgScore: number };
+// NOTE: the profile page labels avgScore "Points per round" (not "Average
+// score") so it reads as clearly distinct from the ranked Flight Winner award,
+// which is also a points-per-round figure but over the player's best 7 of 8
+// weeks — see app/portal/(shell)/profile/[id]/page.tsx coreStats().
 
 export type ProfileStats = {
   allTime: StatBlock;
   season: StatBlock & {
     aceAwardScore: number; aceAwardRank: number | null;
     championAwardScore: number; championAwardRank: number | null;
+    flightWinnerScore: number; flightWinnerRank: number | null;
   };
 };
 
@@ -48,7 +55,7 @@ export async function getProfileStats(admin: any, userId: string, seriesId: stri
   // Season stats are per (series, city): member_series_standings has one row per
   // city a player has been active in, so both are required to pick the right row.
   if (!seriesId || !cityId) {
-    return { allTime, season: { ...EMPTY, aceAwardScore: 0, aceAwardRank: null, championAwardScore: 0, championAwardRank: null } };
+    return { allTime, season: { ...EMPTY, aceAwardScore: 0, aceAwardRank: null, championAwardScore: 0, championAwardRank: null, flightWinnerScore: 0, flightWinnerRank: null } };
   }
 
   // Current season: read straight from the standings view so the profile always
@@ -56,7 +63,7 @@ export async function getProfileStats(admin: any, userId: string, seriesId: stri
   // Champion Award scores + ranks).
   const { data: standing } = await admin
     .from("member_series_standings")
-    .select("rounds_played, total_score, average_score, ace_award_score, ace_award_rank, champion_award_score, champion_award_rank")
+    .select("rounds_played, total_score, average_score, ace_award_score, ace_award_rank, champion_award_score, champion_award_rank, flight_winner_score, flight_winner_rank")
     .eq("series_id", seriesId)
     .eq("city_id", cityId)
     .eq("user_id", userId)
@@ -74,8 +81,10 @@ export async function getProfileStats(admin: any, userId: string, seriesId: stri
         aceAwardRank: standing.ace_award_rank ?? null,
         championAwardScore: Number(standing.champion_award_score ?? 0),
         championAwardRank: standing.champion_award_rank ?? null,
+        flightWinnerScore: Number(standing.flight_winner_score ?? 0),
+        flightWinnerRank: standing.flight_winner_rank ?? null,
       }
-    : { ...EMPTY, aceAwardScore: 0, aceAwardRank: null, championAwardScore: 0, championAwardRank: null };
+    : { ...EMPTY, aceAwardScore: 0, aceAwardRank: null, championAwardScore: 0, championAwardRank: null, flightWinnerScore: 0, flightWinnerRank: null };
 
   return { allTime, season };
 }
