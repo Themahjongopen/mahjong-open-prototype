@@ -287,5 +287,11 @@ export const CITY_PINS: LaunchCityPin[] = [
     "state": "FL",
     "x": 220.5,
     "y": 166.4
+  },
+  {
+    "name": "Kingwood",
+    "state": "TX",
+    "x": 39.5,
+    "y": 172.5
   }
 ];
