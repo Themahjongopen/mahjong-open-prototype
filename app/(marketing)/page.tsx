@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import RegisterModal from "@/components/marketing/RegisterModal";
 import CommissionerSection from "@/components/marketing/CommissionerSection";
+import LaunchCitiesMap from "@/components/marketing/LaunchCitiesMap";
 import { Users, CalendarDays, Repeat2, Trophy, MapPin, Shuffle, Sparkles } from "lucide-react";
 
 const FORMAT_STEPS = [
@@ -560,6 +561,18 @@ export default function HomePage() {
               Save my spot →
             </button>
           </div>
+        </div>
+      </section>
+
+      <section style={{ padding: "72px 0", background: "var(--pink-wash)" }}>
+        <div className="container-mo">
+          <div style={{ textAlign: "center", marginBottom: 40 }}>
+            <h2 className="h2">See live launch status</h2>
+            <p className="body-lg" style={{ marginTop: 16, maxWidth: 540, marginInline: "auto" }}>
+              Every city needs 20 players to run. Hover a pin to see which cities are ready to go.
+            </p>
+          </div>
+          <LaunchCitiesMap />
         </div>
       </section>
 
