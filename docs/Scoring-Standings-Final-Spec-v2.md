@@ -1,3 +1,10 @@
+> ⚠️ **SUPERSEDED as of Aug 11, 2026** — Shari redefined Champion Award (now all
+> 8 weekly-highest values summed, no week dropped) and added a third individual
+> prize, **Flight Winner**. See `docs/Scoring-Standings-Final-Spec-v3.md` for the
+> current rules. Ace Award and City-vs-City are unchanged. This document is kept
+> for history only. **Note: v3 is not yet built — Flight Winner's tiebreaker is
+> still open and must be confirmed before implementation.**
+
 # Scoring & Standings — Final Locked Spec v2 (Ace Award · Champion Award · City-vs-City)
 _Supersedes `docs/Scoring-Standings-Final-Spec.md`. Sources: Shari + Jordan, Aug 2026 — a legal/wording requirement forced a change to the two headline award names and formulas, and added a city-vs-city competition. All rules below are final and approved. Series One had not started scoring when this landed (the score tables were empty), so the swap carried no live data to reconcile._
 
