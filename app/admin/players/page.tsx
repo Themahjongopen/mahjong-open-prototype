@@ -83,6 +83,8 @@ export default function AdminRegistrationsPage() {
   const [refundMsg, setRefundMsg] = useState<Record<string, string>>({});
   const [deleteBusyId, setDeleteBusyId] = useState<string | null>(null);
   const [deleteMsg, setDeleteMsg] = useState<Record<string, string>>({});
+  const [copyBusyId, setCopyBusyId] = useState<string | null>(null);
+  const [copyMsg, setCopyMsg] = useState<Record<string, string>>({});
   const [bulkBusy, setBulkBusy] = useState(false);
   const [bulkResendBusy, setBulkResendBusy] = useState(false);
   // Checkbox selection for the selective bulk actions.
@@ -454,6 +456,31 @@ export default function AdminRegistrationsPage() {
     });
     const payload = await response.json().catch(() => ({}));
     return { ok: response.ok, payload };
+  }
+
+  // Generate the player's portal set-password link and copy it to the clipboard —
+  // a last-resort path when their invite email won't arrive. On clipboard failure
+  // (older browsers / blocked permission) the raw URL is stored in copyMsg and
+  // rendered as selectable text below so it can still be copied by hand.
+  async function handleCopyInviteLink(row: RegistrationRow) {
+    setCopyBusyId(row.id);
+    setCopyMsg((m) => ({ ...m, [row.id]: "" }));
+    try {
+      const res = await fetch(`/api/admin/registrations/${row.id}/invite-link`, { method: "POST", credentials: "include" });
+      const payload = await res.json().catch(() => ({}));
+      if (res.ok && payload.actionUrl) {
+        try {
+          await navigator.clipboard.writeText(payload.actionUrl);
+          setCopyMsg((m) => ({ ...m, [row.id]: "Link copied — expires in 24 hours" }));
+        } catch {
+          setCopyMsg((m) => ({ ...m, [row.id]: payload.actionUrl }));
+        }
+      } else {
+        setCopyMsg((m) => ({ ...m, [row.id]: payload.error ?? "Could not generate a link." }));
+      }
+    } finally {
+      setCopyBusyId(null);
+    }
   }
 
   async function handleRowInvite(row: RegistrationRow, resend: boolean) {
@@ -937,6 +964,40 @@ export default function AdminRegistrationsPage() {
                   ) : (
                     <span style={{ fontSize: 12, color: "var(--ink-500)" }}>—</span>
                   )}
+                  {/* Copy-link fallback for the bounced-email problem — paid rows only,
+                      not "active" (they already have a password; a set-password link
+                      isn't the right tool). Same guard as Invite/Resend. */}
+                  {r.paid_status === "paid" && r.invite_state !== "active" ? (
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 4, marginTop: 6 }}>
+                      <button
+                        type="button"
+                        className="btn"
+                        style={{ fontSize: 12, padding: "5px 11px" }}
+                        disabled={copyBusyId === r.id}
+                        onClick={() => handleCopyInviteLink(r)}
+                        title="Generate a set-password link and copy it — hand it to the player directly if their email won't arrive."
+                      >
+                        {copyBusyId === r.id ? "Generating…" : "Copy link"}
+                      </button>
+                      {copyMsg[r.id] ? (
+                        copyMsg[r.id].startsWith("http") ? (
+                          <input
+                            type="text"
+                            readOnly
+                            value={copyMsg[r.id]}
+                            onFocus={(e) => e.currentTarget.select()}
+                            aria-label="Set-password link"
+                            style={{ fontSize: 11, padding: "4px 6px", width: "100%", maxWidth: 280, border: "1px solid var(--hair-200)", borderRadius: 6, color: "var(--ink-700)" }}
+                          />
+                        ) : (
+                          <span style={{ fontSize: 11, color: "var(--ink-500)" }}>{copyMsg[r.id]}</span>
+                        )
+                      ) : null}
+                      <span style={{ fontSize: 10, color: "var(--ink-500)", lineHeight: 1.4, maxWidth: 280 }}>
+                        Paste directly to the player — anyone with this link can set their password.
+                      </span>
+                    </div>
+                  ) : null}
                   {r.profile_id ? (
                     r.city_id && (r.commissioner_city_ids?.includes(r.city_id) ?? false) ? (
                       <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginTop: 6 }}>

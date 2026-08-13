@@ -5,26 +5,28 @@ import { SITE_URL } from "@/lib/site";
 const FROM = "The Mahjong Open <welcome@themahjongopen.com>";
 
 export type PortalInviteResult = { ok: boolean; error?: string };
+export type GeneratedInviteLink = { ok: true; actionUrl: string } | { ok: false; error: string };
 
 /**
- * Generates a portal set-password link and sends it as a fully branded email via
- * Resend — independent of Supabase's SMTP templates. Used by every app-initiated
- * invite (single, bulk, and Resend invite).
+ * Generates the one-time portal set-password link — WITHOUT sending any email.
  *
  * Link strategy: try a one-time `invite` link first (this also creates the auth
  * user, which fires the 007 trigger to create the profile + backfill
  * registrations.profile_id). If the user already exists (a re-send), fall back to
  * a `recovery` link so the same "set your password" flow still works. Either way
- * the email points at our own /portal/auth/confirm, matching the reset template.
+ * the link points at our own /portal/auth/confirm, matching the reset template.
+ *
+ * Extracted from sendPortalInvite so the admin "Copy invite link" action can
+ * hand the URL to an admin directly when the email itself is the problem
+ * (bounced/undeliverable). Creating an `invite` link for a never-invited player
+ * still creates their auth account as a side effect, same as it always has when
+ * emailing — that's why their row flips none -> invited afterward.
  */
-export async function sendPortalInvite(
+export async function generateInviteLink(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   supabase: any,
   { email, fullName }: { email: string; fullName?: string | null }
-): Promise<PortalInviteResult> {
-  const resendApiKey = process.env.RESEND_API_KEY;
-  if (!resendApiKey) return { ok: false, error: "Email service is not configured." };
-
+): Promise<GeneratedInviteLink> {
   let linkType: "invite" | "recovery" = "invite";
   let gen = await supabase.auth.admin.generateLink({
     type: "invite",
@@ -44,6 +46,26 @@ export async function sendPortalInvite(
   }
 
   const actionUrl = `${SITE_URL}/portal/auth/confirm?token_hash=${hashedToken}&type=${linkType}&next=/portal/set-password`;
+  return { ok: true, actionUrl };
+}
+
+/**
+ * Generates a portal set-password link (via generateInviteLink) and sends it as
+ * a fully branded email via Resend — independent of Supabase's SMTP templates.
+ * Used by every app-initiated invite (single, bulk, and Resend invite).
+ */
+export async function sendPortalInvite(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
+  { email, fullName }: { email: string; fullName?: string | null }
+): Promise<PortalInviteResult> {
+  const resendApiKey = process.env.RESEND_API_KEY;
+  if (!resendApiKey) return { ok: false, error: "Email service is not configured." };
+
+  const link = await generateInviteLink(supabase, { email, fullName });
+  if (!link.ok) return { ok: false, error: link.error };
+  const actionUrl = link.actionUrl;
+
   const firstName = (fullName ?? "").trim().split(/\s+/)[0] || "there";
 
   const innerHtml = `
