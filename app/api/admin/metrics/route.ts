@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
 import { getPortalUser } from "@/lib/portal/session";
+import { fetchAllRows } from "@/lib/supabase/paginate";
 
 // Live operations metrics for the admin dashboard tiles.
 export type AdminMetrics = {
@@ -88,13 +89,17 @@ export async function GET() {
     // haven't yet, so profile_id would massively undercount). Case-insensitive to
     // match the email matching used elsewhere (e.g. the handle_new_user trigger).
     (async () => {
-      const { data } = await supabase
-        .from("registrations")
-        .select("email, cities!inner(is_active)")
-        .eq("paid_status", "paid")
-        .eq("cities.is_active", true);
+      const data = await fetchAllRows<{ email: string | null }>((from, to) =>
+        supabase
+          .from("registrations")
+          .select("email, cities!inner(is_active)")
+          .eq("paid_status", "paid")
+          .eq("cities.is_active", true)
+          .order("email", { ascending: true })
+          .range(from, to)
+      );
       const emails = new Set<string>();
-      for (const row of (data ?? []) as { email: string | null }[]) {
+      for (const row of data) {
         if (row.email) emails.add(row.email.toLowerCase());
       }
       return emails.size;
@@ -106,23 +111,28 @@ export async function GET() {
   // registrationsThisSeries above), split into paid vs pending so the dashboard
   // can show how many players per city are confirmed vs. still owe payment.
   // Falls back to all registrations if no series is currently marked active.
-  let cityCountQuery = supabase.from("registrations").select("paid_status, cities(name, state)");
-  if (activeSeriesId) cityCountQuery = cityCountQuery.eq("series_id", activeSeriesId);
-  const { data: cityRows } = (await cityCountQuery) as {
-    data: { paid_status: string | null; cities: { name: string | null; state: string | null } | { name: string | null; state: string | null }[] | null }[] | null;
-  };
-  const cityCountMap = new Map<string, { paid: number; pending: number }>();
-  for (const row of cityRows ?? []) {
+  type CityRow = { paid_status: string | null; city_id: string | null; cities: { name: string | null; state: string | null } | { name: string | null; state: string | null }[] | null };
+  const cityRows = await fetchAllRows<CityRow>((from, to) => {
+    let q = supabase.from("registrations").select("paid_status, city_id, cities(name, state)");
+    if (activeSeriesId) q = q.eq("series_id", activeSeriesId);
+    return q.order("created_at", { ascending: true }).range(from, to);
+  });
+  // Group by city_id (not the display label): there are duplicate-named city rows
+  // in the table (e.g. a real "Madison, MS" and an inactive demo one), so keying
+  // on the label would merge distinct cities that happen to share a name.
+  const cityCountMap = new Map<string, { label: string; paid: number; pending: number }>();
+  for (const row of cityRows) {
     const city = Array.isArray(row.cities) ? row.cities[0] : row.cities;
     const label = city?.name ? (city.state ? `${city.name}, ${city.state}` : city.name) : "No city";
-    const entry = cityCountMap.get(label) ?? { paid: 0, pending: 0 };
+    const key = row.city_id ?? label; // fall back to label only for the rare no-city-id row
+    const entry = cityCountMap.get(key) ?? { label, paid: 0, pending: 0 };
     if (row.paid_status === "paid") entry.paid += 1;
     else if (row.paid_status === "pending") entry.pending += 1;
     // Other statuses (e.g. refunded) are excluded from the paid/pending split.
-    cityCountMap.set(label, entry);
+    cityCountMap.set(key, entry);
   }
-  const playersByCity = Array.from(cityCountMap.entries())
-    .map(([city, c]) => ({ city, paid: c.paid, pending: c.pending }))
+  const playersByCity = Array.from(cityCountMap.values())
+    .map((c) => ({ city: c.label, paid: c.paid, pending: c.pending }))
     .sort((a, b) => b.paid + b.pending - (a.paid + a.pending) || a.city.localeCompare(b.city));
 
   // Table fill rate — filled (non-canceled) seats across all active tables.
@@ -145,12 +155,16 @@ export async function GET() {
   // contribute $0.
   let revenueThisSeriesCents = 0;
   if (activeSeriesId) {
-    const { data: seriesPayments } = await supabase
-      .from("payments")
-      .select("amount_cents, registrations!inner(series_id)")
-      .eq("status", "succeeded")
-      .eq("registrations.series_id", activeSeriesId);
-    revenueThisSeriesCents = (seriesPayments ?? []).reduce(
+    const seriesPayments = await fetchAllRows<{ amount_cents: number | null }>((from, to) =>
+      supabase
+        .from("payments")
+        .select("amount_cents, registrations!inner(series_id)")
+        .eq("status", "succeeded")
+        .eq("registrations.series_id", activeSeriesId)
+        .order("created_at", { ascending: true })
+        .range(from, to)
+    );
+    revenueThisSeriesCents = seriesPayments.reduce(
       (sum: number, p: any) => sum + (p.amount_cents ?? 0),
       0
     );
@@ -160,13 +174,17 @@ export async function GET() {
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
   const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString();
-  const { data: monthPayments } = await supabase
-    .from("payments")
-    .select("amount_cents")
-    .eq("status", "succeeded")
-    .gte("created_at", monthStart)
-    .lt("created_at", monthEnd);
-  const revenueThisMonthCents = (monthPayments ?? []).reduce(
+  const monthPayments = await fetchAllRows<{ amount_cents: number | null }>((from, to) =>
+    supabase
+      .from("payments")
+      .select("amount_cents")
+      .eq("status", "succeeded")
+      .gte("created_at", monthStart)
+      .lt("created_at", monthEnd)
+      .order("created_at", { ascending: true })
+      .range(from, to)
+  );
+  const revenueThisMonthCents = monthPayments.reduce(
     (sum: number, p: any) => sum + (p.amount_cents ?? 0),
     0
   );

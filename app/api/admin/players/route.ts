@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAdminClient, listAuthUsersByEmail, type AuthUserSummary } from "@/lib/supabase/server";
 import { isAdminRequest } from "@/lib/admin/auth";
+import { fetchAllRows } from "@/lib/supabase/paginate";
 
 // Portal account state for a registrant:
 //   none     — no auth account yet (can be invited if paid)
@@ -60,12 +61,23 @@ export async function GET() {
   // an untyped client for this query (same pattern as /api/register).
   const supabase: any = createAdminClient();
   if (supabase) {
-    const { data, error } = await supabase
-      .from("registrations")
-      .select("id, full_name, email, phone, skill_level, paid_status, created_at, profile_id, city_id, series_id, cities(name, state), series(name), profiles(role)")
-      .order("created_at", { ascending: false });
+    // Paginate past PostgREST's per-request row cap — registrations crossed 1,000
+    // rows before launch, and an unbounded .select() silently dropped the oldest
+    // (created_at DESC) rows past the cap, undercounting the table.
+    let data: any[] | null = null;
+    try {
+      data = await fetchAllRows((from, to) =>
+        supabase
+          .from("registrations")
+          .select("id, full_name, email, phone, skill_level, paid_status, created_at, profile_id, city_id, series_id, cities(name, state), series(name), profiles(role)")
+          .order("created_at", { ascending: false })
+          .range(from, to)
+      );
+    } catch {
+      data = null;
+    }
 
-    if (!error && data) {
+    if (data) {
       // Cities each profile leads (migration 029's join table), attached as
       // commissioner_city_ids to every row. commissioner_cities is tiny (one row
       // per commissioner-city), so fetch the WHOLE table rather than filtering by
