@@ -293,5 +293,11 @@ export const CITY_PINS: LaunchCityPin[] = [
     "state": "TX",
     "x": 39.5,
     "y": 172.5
+  },
+  {
+    "name": "Bloomington",
+    "state": "IN",
+    "x": 181.6,
+    "y": -25.6
   }
 ];
