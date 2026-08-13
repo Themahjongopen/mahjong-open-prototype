@@ -21,9 +21,14 @@ export async function GET() {
     return NextResponse.json({ error: "Unavailable right now." }, { status: 503 });
   }
 
+  // LEFT join to profiles (NOT !inner): registrations.profile_id is null until a
+  // player confirms their portal account, and this roster must still show every
+  // paid/pending registrant — an inner join would silently drop exactly the
+  // players a commissioner is most likely asking about. hometown/skill_level are
+  // simply blank for anyone without a profile row yet.
   const { data, error } = await supabase
     .from("registrations")
-    .select("id, full_name, email, phone, paid_status, created_at")
+    .select("id, full_name, email, phone, paid_status, created_at, profiles(hometown, skill_level)")
     .eq("city_id", cityId)
     .in("paid_status", ["paid", "pending"])
     .order("created_at", { ascending: false });
@@ -32,5 +37,17 @@ export async function GET() {
     return NextResponse.json({ error: "Could not load players." }, { status: 500 });
   }
 
-  return NextResponse.json({ players: data ?? [] });
+  // Supabase embeds a to-one relation as either an object or a single-element
+  // array; normalize to one object (or null), same as the admin players route.
+  const players = ((data ?? []) as any[]).map((r) => ({
+    id: r.id,
+    full_name: r.full_name,
+    email: r.email,
+    phone: r.phone,
+    paid_status: r.paid_status,
+    created_at: r.created_at,
+    profiles: (Array.isArray(r.profiles) ? r.profiles[0] : r.profiles) ?? null,
+  }));
+
+  return NextResponse.json({ players });
 }

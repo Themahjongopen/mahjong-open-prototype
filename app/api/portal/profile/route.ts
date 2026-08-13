@@ -25,6 +25,7 @@ export async function PATCH(request: Request) {
 
   const update: {
     full_name?: string;
+    hometown?: string | null;
     skill_level?: string | null;
     notification_preferences?: Record<string, boolean>;
     avatar_url?: string | null;
@@ -36,6 +37,11 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "Please enter your name." }, { status: 400 });
     }
     update.full_name = name;
+  }
+
+  // Optional free-text — no validation; empty string persists as null (not "").
+  if ("hometown" in body) {
+    update.hometown = body.hometown?.toString().trim() || null;
   }
 
   if ("skill_level" in body) {
@@ -78,7 +84,7 @@ export async function PATCH(request: Request) {
     .from("profiles")
     .update(update)
     .eq("id", user.id)
-    .select("full_name, skill_level, notification_preferences, avatar_url")
+    .select("full_name, hometown, skill_level, notification_preferences, avatar_url")
     .single();
 
   if (error) {

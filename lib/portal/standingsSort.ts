@@ -6,6 +6,7 @@
 export type StandingRow = {
   user_id: string;
   full_name: string | null;
+  skill_level: string | null;
   avatar_url: string | null;
   rounds_played: number;
   total_score: number;

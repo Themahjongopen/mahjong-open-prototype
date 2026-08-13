@@ -14,12 +14,14 @@ const labelStyle: React.CSSProperties = { fontSize: 13, fontWeight: 600, color: 
 export default function ProfileEditForm({
   userId,
   initialName,
+  initialHometown,
   initialSkill,
   initialPrefs,
   initialAvatarUrl,
 }: {
   userId: string;
   initialName: string;
+  initialHometown: string;
   initialSkill: SkillValue;
   initialPrefs: ResolvedPrefs;
   initialAvatarUrl: string | null;
@@ -27,6 +29,7 @@ export default function ProfileEditForm({
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
   const [name, setName] = useState(initialName);
+  const [hometown, setHometown] = useState(initialHometown);
   const [skill, setSkill] = useState<SkillValue>(initialSkill);
   const [prefs, setPrefs] = useState<ResolvedPrefs>(initialPrefs);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(initialAvatarUrl);
@@ -76,6 +79,7 @@ export default function ProfileEditForm({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         full_name: name,
+        hometown,
         skill_level: skill === "" ? null : skill,
         notification_preferences: prefs,
         avatar_url: avatarUrl,
@@ -116,6 +120,12 @@ export default function ProfileEditForm({
       <div>
         <label style={labelStyle} htmlFor="full_name">Name</label>
         <input id="full_name" className="input-mo" type="text" value={name} onChange={(e) => setName(e.target.value)} required />
+      </div>
+
+      <div>
+        <label style={labelStyle} htmlFor="hometown">Hometown</label>
+        <input id="hometown" className="input-mo" type="text" value={hometown} onChange={(e) => setHometown(e.target.value)} placeholder="Optional" />
+        <p style={{ fontSize: 12, color: "var(--ink-500)", marginTop: 6 }}>Optional — the city or town you&rsquo;re actually from, separate from your registered league city or region.</p>
       </div>
 
       <div>

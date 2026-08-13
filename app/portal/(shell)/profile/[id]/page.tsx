@@ -101,7 +101,7 @@ export default async function PlayerProfilePage({ params }: { params: Promise<{ 
     ? (
         await admin
           .from("profiles")
-          .select("full_name, email, skill_level, notification_preferences, role, avatar_url")
+          .select("full_name, email, hometown, skill_level, notification_preferences, role, avatar_url")
           .eq("id", id)
           .maybeSingle()
       ).data
@@ -206,6 +206,7 @@ export default async function PlayerProfilePage({ params }: { params: Promise<{ 
           <ProfileEditForm
             userId={id}
             initialName={ownProfile?.full_name ?? fullName}
+            initialHometown={ownProfile?.hometown ?? ""}
             initialSkill={((ownProfile?.skill_level ?? "") as SkillValue)}
             initialPrefs={resolvePrefs(ownProfile?.notification_preferences)}
             initialAvatarUrl={avatarUrl}

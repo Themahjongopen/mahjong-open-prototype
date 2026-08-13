@@ -18,7 +18,7 @@ export async function getStandings(member: PortalMember): Promise<{ cityName: st
   const [{ data: rows }, { data: city }] = await Promise.all([
     admin
       .from("member_series_standings")
-      .select("user_id, full_name, avatar_url, rounds_played, total_score, average_score, ace_award_score, ace_award_rank, champion_award_score, champion_award_rank, flight_winner_score, flight_winner_rank")
+      .select("user_id, full_name, skill_level, avatar_url, rounds_played, total_score, average_score, ace_award_score, ace_award_rank, champion_award_score, champion_award_rank, flight_winner_score, flight_winner_rank")
       .eq("series_id", member.series_id)
       .eq("city_id", member.city_id),
     admin.from("cities").select("name").eq("id", member.city_id).maybeSingle(),
@@ -27,6 +27,7 @@ export async function getStandings(member: PortalMember): Promise<{ cityName: st
   const normalized: StandingRow[] = ((rows ?? []) as any[]).map((r) => ({
     user_id: r.user_id,
     full_name: r.full_name,
+    skill_level: r.skill_level ?? null,
     avatar_url: r.avatar_url ?? null,
     rounds_played: r.rounds_played ?? 0,
     total_score: r.total_score ?? 0,

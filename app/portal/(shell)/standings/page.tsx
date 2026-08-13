@@ -5,6 +5,19 @@ import Avatar from "@/components/portal/Avatar";
 
 const COLS = "36px 1fr 72px 64px";
 
+// Same skill → badge-color map as OpenTableCard / the commissioner roster, with
+// short labels (the stored values are the full words).
+const SKILL_COLORS: Record<string, string> = {
+  beginner: "badge-lime",
+  intermediate: "badge-peri",
+  advanced: "badge-pink",
+};
+const SKILL_ABBR: Record<string, string> = {
+  beginner: "Beg",
+  intermediate: "Int",
+  advanced: "Adv",
+};
+
 function firstName(name: string | null) {
   return (name ?? "Player").split(" ")[0];
 }
@@ -41,6 +54,11 @@ function Row({
         <p style={{ fontSize: 14, fontWeight: isMe ? 600 : 400, color: "var(--ink-900)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {isMe ? "You" : firstName(name)}
         </p>
+        {row.skill_level ? (
+          <span className={`badge ${SKILL_COLORS[row.skill_level] ?? "badge-mute"}`} style={{ fontSize: 10, flexShrink: 0 }}>
+            {SKILL_ABBR[row.skill_level] ?? row.skill_level}
+          </span>
+        ) : null}
       </div>
       <p style={{ fontSize: 14, fontWeight: 600, color: "var(--ink-900)" }}>{value}</p>
       <p style={{ fontSize: 13, color: "var(--ink-500)" }}>{row.rounds_played}</p>
