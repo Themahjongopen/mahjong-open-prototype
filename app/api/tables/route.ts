@@ -4,6 +4,8 @@ import { getAdminContext } from "@/lib/portal/adminCity";
 import { createAdminClient } from "@/lib/supabase/server";
 import { getSeriesStartDate, getSeriesEndDate } from "@/lib/portal/tables";
 import { seriesWeekForDate } from "@/lib/portal/seriesWeek";
+import { resolvePrefs } from "@/lib/portal/notificationPrefs";
+import { sendNewTableEmail } from "@/lib/email/newTableEmail";
 
 const ROUND_TYPES = new Set(["social", "focused", "lightning"]);
 
@@ -98,6 +100,38 @@ export async function POST(request: Request) {
     // Roll back the table so we don't leave a creator-less table behind.
     await admin.from("league_tables").delete().eq("id", table.id);
     return NextResponse.json({ error: "Your table could not be created." }, { status: 500 });
+  }
+
+  // Notify opted-in paid players in this city+series that a new table opened —
+  // gated on the email_new_tables preference (opt-in), excluding the creator.
+  // City+series-scoped, so the recipient set is small. Best-effort with a
+  // per-recipient try/catch (same shape as tableUnderfilled/tableUpdated) — the
+  // table is already created and a send failure must not surface to the host.
+  try {
+    const { data: cityRow } = await admin.from("cities").select("name").eq("id", cityId).maybeSingle();
+    const cityName = cityRow?.name ?? "your city";
+    const { data: regs } = await admin
+      .from("registrations")
+      .select("profile_id, profiles!inner(id, email, full_name, notification_preferences)")
+      .eq("paid_status", "paid")
+      .eq("city_id", cityId)
+      .eq("series_id", seriesId);
+    for (const r of (regs ?? []) as any[]) {
+      const p = Array.isArray(r.profiles) ? r.profiles[0] : r.profiles;
+      if (!p || p.id === session.id || !p.email) continue; // skip the creator + any no-email row
+      if (!resolvePrefs(p.notification_preferences).email_new_tables) continue; // opt-in
+      try {
+        const res = await sendNewTableEmail(
+          { email: p.email, fullName: p.full_name },
+          { tableId: table.id, cityName, tableDate, tableTime, locationName, locationAddress, roundType }
+        );
+        if (!res.ok) console.error("newTableEmail not sent", p.email, res.error);
+      } catch (err) {
+        console.error("newTableEmail send failed", p.email, err);
+      }
+    }
+  } catch (err) {
+    console.error("newTableEmail batch failed", err);
   }
 
   return NextResponse.json({ id: table.id });

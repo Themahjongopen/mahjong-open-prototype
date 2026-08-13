@@ -6,7 +6,9 @@
 export type NotificationPrefKey =
   | "email_table_reminders"
   | "email_score_posted"
-  | "email_series_updates";
+  | "email_series_updates"
+  | "email_new_tables"
+  | "email_table_filled";
 
 export const NOTIFICATION_PREFS: {
   key: NotificationPrefKey;
@@ -30,6 +32,23 @@ export const NOTIFICATION_PREFS: {
     key: "email_series_updates",
     label: "Series updates",
     description: "Occasional announcements about my current series.",
+    default: true,
+  },
+  {
+    // Opt-IN by default (false): fires once per new table to every opted-in paid
+    // player in the city, so in a busy city this is the highest-volume type —
+    // defaulted off so players choose it rather than being auto-subscribed.
+    key: "email_new_tables",
+    label: "New tables",
+    description: "Email me when a new table opens in my city.",
+    default: false,
+  },
+  {
+    // Low volume (once per table, on the 4th-seat transition) — opt-out like the
+    // other three.
+    key: "email_table_filled",
+    label: "Table filled",
+    description: "Email me when a table I'm seated at fills up.",
     default: true,
   },
 ];

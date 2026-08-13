@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { getPortalUser } from "@/lib/portal/session";
 import { createAdminClient } from "@/lib/supabase/server";
+import { resolvePrefs } from "@/lib/portal/notificationPrefs";
+import { sendTableFilledEmail } from "@/lib/email/tableFilledEmail";
 
 // Claim an open seat at a table in the member's series.
 export async function POST(_request: Request, context: { params: Promise<{ id: string }> }) {
@@ -17,7 +19,7 @@ export async function POST(_request: Request, context: { params: Promise<{ id: s
 
   const { data: table } = await admin
     .from("league_tables")
-    .select("id, series_id, status, table_seats(seat_number, user_id, canceled_at)")
+    .select("id, series_id, status, table_date, table_time, location_name, location_address, round_type, table_seats(seat_number, user_id, canceled_at)")
     .eq("id", id)
     .maybeSingle();
 
@@ -60,6 +62,41 @@ export async function POST(_request: Request, context: { params: Promise<{ id: s
   // Fourth seat closes the table.
   if (active.length + 1 >= 4) {
     await admin.from("league_tables").update({ status: "full" }).eq("id", id);
+    // Tell the other 3 players the table just filled (the joiner isn't in
+    // `active` — they weren't seated when it was read). Gated on the
+    // email_table_filled pref (default on). Best-effort with per-recipient
+    // try/catch — the join has already committed and must not be blocked.
+    try {
+      const otherIds = active.map((s: any) => s.user_id).filter((uid: string) => uid && uid !== session.id);
+      if (otherIds.length) {
+        const { data: profiles } = await admin
+          .from("profiles")
+          .select("id, email, full_name, notification_preferences")
+          .in("id", otherIds);
+        for (const p of (profiles ?? []) as any[]) {
+          if (!p.email) continue;
+          if (resolvePrefs(p.notification_preferences).email_table_filled === false) continue; // opted out
+          try {
+            const res = await sendTableFilledEmail(
+              { email: p.email, fullName: p.full_name },
+              {
+                tableId: id,
+                tableDate: table.table_date,
+                tableTime: table.table_time,
+                locationName: table.location_name,
+                locationAddress: table.location_address,
+                roundType: table.round_type,
+              }
+            );
+            if (!res.ok) console.error("tableFilledEmail not sent", p.email, res.error);
+          } catch (err) {
+            console.error("tableFilledEmail send failed", p.email, err);
+          }
+        }
+      }
+    } catch (err) {
+      console.error("tableFilledEmail batch failed", err);
+    }
   }
 
   return NextResponse.json({ ok: true, seat_number: seatNumber });
