@@ -516,6 +516,7 @@ export interface Database {
           is_founding_player: boolean | null;
           series_id: string | null;
           avatar_url: string | null;
+          hometown: string | null;
         };
         Relationships: [];
       };

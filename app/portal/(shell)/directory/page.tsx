@@ -12,6 +12,7 @@ type DirectoryRow = {
   is_commissioner: boolean;
   is_founding_player: boolean;
   avatar_url: string | null;
+  hometown: string | null;
 };
 
 function skillLabel(skill: string | null) {
@@ -41,7 +42,7 @@ export default async function DirectoryPage() {
   const supabase = await createClient();
   let query = supabase
     .from("directory_members")
-    .select("profile_id, full_name, city_name, skill_level, is_commissioner, is_founding_player, avatar_url")
+    .select("profile_id, full_name, city_name, skill_level, is_commissioner, is_founding_player, avatar_url, hometown")
     .order("full_name", { ascending: true });
   if (activeCityId) query = query.eq("city_id", activeCityId);
   const { data, error } = await query;
@@ -97,6 +98,7 @@ export default async function DirectoryPage() {
                       </p>
                     </Link>
                     <p style={{ fontSize: 13, color: "var(--ink-500)" }}>{skillLabel(member.skill_level)}</p>
+                    {member.hometown ? <p style={{ fontSize: 12, color: "var(--ink-400)", marginTop: 2 }}>{member.hometown}</p> : null}
                   </div>
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "flex-end" }}>

@@ -7,10 +7,12 @@ import { getRegisterCityOptions } from "@/lib/portal/registerCity";
 import HomeStats from "@/components/portal/HomeStats";
 import { formatTableTime } from "@/lib/format/time";
 
+// Greet by name only — no time-of-day. A server component runs on the server's
+// clock (Vercel = UTC), not the viewer's local time, so `new Date().getHours()`
+// here would give a Central-time player "Good evening" mid-afternoon. Sidestep
+// the whole timezone problem rather than plumb the client's clock through.
 function greeting(name: string) {
-  const hour = new Date().getHours();
-  const part = hour < 12 ? "morning" : hour < 17 ? "afternoon" : "evening";
-  return `Good ${part}, ${name}`;
+  return `Hello, ${name}`;
 }
 
 export default async function PortalDashboard() {
