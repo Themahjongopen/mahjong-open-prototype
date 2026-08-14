@@ -7,7 +7,7 @@ import { useToast } from "@/components/portal/PortalShellClient";
 import { useConfirm } from "@/components/ConfirmProvider";
 import Avatar from "@/components/portal/Avatar";
 import InvitePlayersModal from "@/components/portal/InvitePlayersModal";
-import { scoringSeats, type LeagueTable } from "@/lib/portal/seats";
+import { scoringSeats, type LeagueTable, type SeatRow } from "@/lib/portal/seats";
 import type { TableSubmission } from "@/lib/portal/scores";
 import { formatTableTime } from "@/lib/format/time";
 import { zonedTimeToUtc } from "@/lib/format/zonedTime";
@@ -24,7 +24,7 @@ const STATUS_COLORS: Record<string, string> = {
   canceled: "badge-mute",
 };
 
-type Action = "join" | "leave" | "cancel" | "complete" | "edit" | "delete" | null;
+type Action = "join" | "leave" | "cancel" | "complete" | "edit" | "delete" | "handoff" | null;
 
 // Edit form state — the fields a host/admin may change (round/week is not among
 // them). Pre-filled from the table's current values.
@@ -54,6 +54,7 @@ export default function TableDetailClient({
   const [loading, setLoading] = useState<Action>(null);
   const [editing, setEditing] = useState(false);
   const [inviting, setInviting] = useState(false);
+  const [pickingHost, setPickingHost] = useState(false);
   const [editForm, setEditForm] = useState<EditForm>({
     table_date: table.table_date,
     table_time: (table.table_time ?? "").slice(0, 5), // <input type=time> wants HH:MM
@@ -91,6 +92,12 @@ export default function TableDetailClient({
   // a host reaches for it. Non-seated admins don't see it (myActiveSeat is null).
   const openSeats = 4 - seatsFilled;
   const canInvite = !!myActiveSeat && table.status === "open" && openSeats > 0;
+  // Hand off hosting: the creator OR an admin (admin = rescue a silent host) may
+  // reassign the host to any OTHER active-seated player, while the table is still
+  // open/upcoming. No 24h cutoff (that's the point). Hidden if there's no other
+  // seated player to hand to.
+  const handoffCandidates = active.filter((s) => s.user_id !== table.creator_id);
+  const canHandoff = (isCreator || isAdmin) && (table.status === "open" || table.status === "full") && handoffCandidates.length > 0;
 
   // Resolve the venue-local start time to a real UTC instant so the 24h warning
   // (and the calendar links below) are correct regardless of the viewer's phone
@@ -208,6 +215,28 @@ export default function TableDetailClient({
     }
     showToast(parts.join(" ") || "No invites were sent.");
     router.refresh();
+  }
+
+  // Hand the host role to another seated player. run() ends with router.refresh(),
+  // which is what flips this page into the outgoing host's new non-creator state:
+  // "Cancel my spot" appears, "Mark as played" disappears — no manual reload.
+  async function handleHandoff(seat: SeatRow) {
+    const name = seat.profiles?.full_name ?? "this player";
+    const first = name.split(" ")[0];
+    const ok = await confirm({
+      title: "Hand off hosting?",
+      message: `${name} will take over as host of this table. You'll no longer be able to mark it as played or enter scores, and you won't be able to take hosting back yourself.`,
+      confirmLabel: `Hand off to ${first}`,
+      danger: true,
+    });
+    if (!ok) return;
+    setPickingHost(false);
+    run(
+      "handoff",
+      `/api/tables/${table.id}`,
+      { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "handoff", newHostId: seat.user_id }) },
+      "Hosting handed off."
+    );
   }
 
   async function handleEditSubmit(e: React.FormEvent) {
@@ -461,6 +490,42 @@ export default function TableDetailClient({
                 </span>
               </div>
             ))}
+          </div>
+        )}
+
+        {canHandoff && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {!pickingHost ? (
+              <button className="btn btn-ghost" onClick={() => setPickingHost(true)} style={{ justifyContent: "center", padding: "13px" }}>
+                Hand off hosting
+              </button>
+            ) : (
+              <div style={{ background: "#fff", border: "1px solid var(--hair-200)", borderRadius: "var(--radius-lg)", overflow: "hidden", boxShadow: "var(--shadow-xs)" }}>
+                <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--hair-200)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <p style={{ fontSize: 13, fontWeight: 600, color: "var(--ink-800)", margin: 0 }}>Hand off hosting to…</p>
+                  <button type="button" onClick={() => setPickingHost(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--ink-500)", fontSize: 13 }}>
+                    Cancel
+                  </button>
+                </div>
+                {handoffCandidates.map((s, i) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => handleHandoff(s)}
+                    disabled={loading === "handoff"}
+                    style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", background: "none", border: "none", borderBottom: i < handoffCandidates.length - 1 ? "1px solid var(--hair-200)" : "none", cursor: "pointer", textAlign: "left" }}
+                  >
+                    <Avatar src={s.profiles?.avatar_url} size={32} alt={s.profiles?.full_name ?? "Player"} />
+                    <span style={{ fontSize: 14, fontWeight: 500, color: "var(--ink-900)" }}>{s.profiles?.full_name ?? "Player"}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+            {isCreator && (
+              <div style={{ fontSize: 12, color: "var(--ink-500)", textAlign: "center", padding: "0 8px" }}>
+                After handing off, you&rsquo;ll be able to cancel your own spot without cancelling the table.
+              </div>
+            )}
           </div>
         )}
 

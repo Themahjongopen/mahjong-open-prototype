@@ -5,6 +5,7 @@ import { scoringSeats } from "@/lib/portal/tables";
 import { zonedTimeToUtc } from "@/lib/format/zonedTime";
 import { seriesWeekForDate } from "@/lib/portal/seriesWeek";
 import { sendTableUpdatedEmail } from "@/lib/email/tableUpdatedEmail";
+import { sendTableHostChangedEmail } from "@/lib/email/tableHostChangedEmail";
 
 const ROUND_TYPES = new Set(["social", "focused", "lightning"]);
 const DEFAULT_TIMEZONE = "America/Chicago";
@@ -24,7 +25,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
 
   const body = await request.json().catch(() => null);
   const action = body?.action;
-  if (action !== "cancel" && action !== "complete" && action !== "edit") {
+  if (action !== "cancel" && action !== "complete" && action !== "edit" && action !== "handoff") {
     return NextResponse.json({ error: "Unsupported action." }, { status: 400 });
   }
 
@@ -35,7 +36,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
 
   const { data: table } = await admin
     .from("league_tables")
-    .select("id, creator_id, status, table_date, table_time, location_name, location_address, round_type, notes, series_id, cities(timezone), series(starts_at), table_seats(seat_number, user_id, canceled_at)")
+    .select("id, creator_id, status, week_number, table_date, table_time, location_name, location_address, round_type, notes, series_id, cities(name, timezone), series(starts_at), table_seats(seat_number, user_id, canceled_at)")
     .eq("id", id)
     .maybeSingle();
 
@@ -44,6 +45,83 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
   }
   if (table.creator_id !== session.id && !session.isAdmin) {
     return NextResponse.json({ error: "Only the table host can do that." }, { status: 403 });
+  }
+
+  if (action === "handoff") {
+    // Reassign the host to another SEATED player. Auth is the shared creator‖admin
+    // check above — an admin can rescue a table whose host has gone silent.
+    // Deliberately NO 24h cutoff (unlike edit): a host realizing the morning-of
+    // that she can't make it is exactly when this is needed — the whole point is
+    // avoiding a cancellation. Once creator_id moves, the outgoing host's normal
+    // "Cancel my spot" unblocks (the existing !isCreator gate) — no extra leave
+    // logic here.
+    if (table.status !== "open" && table.status !== "full") {
+      // Completed matters: scores are already in, reassigning would muddy the audit trail.
+      return NextResponse.json({ error: "Only an open or upcoming table can be handed off." }, { status: 409 });
+    }
+    const newHostId = body?.newHostId?.toString();
+    if (!newHostId) {
+      return NextResponse.json({ error: "A new host is required." }, { status: 400 });
+    }
+    if (newHostId === table.creator_id) {
+      return NextResponse.json({ error: "That player is already the host." }, { status: 400 });
+    }
+    // The new host must hold an ACTIVE seat here — a cancelled seat doesn't count.
+    const newSeat = (table.table_seats ?? []).find((s: any) => s.user_id === newHostId && !s.canceled_at);
+    if (!newSeat) {
+      return NextResponse.json({ error: "The new host must be seated at this table." }, { status: 400 });
+    }
+
+    const { error: handoffError } = await admin
+      .from("league_tables")
+      .update({ creator_id: newHostId })
+      .eq("id", id);
+    if (handoffError) {
+      return NextResponse.json({ error: "The table couldn't be handed off. Please try again." }, { status: 500 });
+    }
+
+    // Best-effort notices — the DB change is what matters; a send failure must
+    // never block or roll back the handoff (no orphaned-row risk here, unlike
+    // invites). Sent UNCONDITIONALLY (not gated on notification_preferences):
+    // knowing who runs your table is transactional. The NEW host gets a
+    // responsibilities email; every OTHER active-seated player — INCLUDING the
+    // outgoing host, essential in the admin-rescue case — gets a short notice.
+    try {
+      const activeSeatedIds = [
+        ...new Set((table.table_seats ?? []).filter((s: any) => !s.canceled_at && s.user_id).map((s: any) => s.user_id)),
+      ] as string[];
+      const { data: profiles } = await admin
+        .from("profiles")
+        .select("id, email, full_name")
+        .in("id", activeSeatedIds);
+      const newHostName = (profiles ?? []).find((p: any) => p.id === newHostId)?.full_name ?? "A player";
+      const city = Array.isArray(table.cities) ? table.cities[0] : table.cities;
+      for (const p of (profiles ?? []) as any[]) {
+        if (!p.email) continue;
+        try {
+          const res = await sendTableHostChangedEmail(
+            { email: p.email, fullName: p.full_name },
+            {
+              tableId: id,
+              tableDate: table.table_date,
+              tableTime: table.table_time,
+              locationName: table.location_name,
+              cityName: city?.name ?? null,
+              weekNumber: table.week_number,
+              roundType: table.round_type,
+            },
+            { isNewHost: p.id === newHostId, newHostName }
+          );
+          if (!res.ok) console.error("tableHostChangedEmail not sent", p.email, res.error);
+        } catch (err) {
+          console.error("tableHostChangedEmail send failed", p.email, err);
+        }
+      }
+    } catch (err) {
+      console.error("tableHostChangedEmail batch failed", err);
+    }
+
+    return NextResponse.json({ ok: true });
   }
 
   if (action === "edit") {
