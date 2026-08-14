@@ -190,58 +190,69 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   let sent = 0;
   let skipped = 0;
   let failed = 0;
+  const failedNames: string[] = []; // names of players whose email couldn't be sent
 
   // Sequential (not Promise.all) to avoid bursting Resend's rate limit, matching
   // /api/admin/registrations/resend-bulk.
   for (const pid of profileIds) {
+    const cand = eligible.get(pid)!;
     // Insert the invite row. A unique-violation (23505) means someone else
     // invited this player a moment earlier — count as skipped, not failed, and
     // send no email (the first inviter's email already went out).
-    const { error: insErr } = await admin
+    const { data: inserted, error: insErr } = await admin
       .from("table_invites")
-      .insert({ table_id: id, invited_profile_id: pid, invited_by_profile_id: session.id });
+      .insert({ table_id: id, invited_profile_id: pid, invited_by_profile_id: session.id })
+      .select("id")
+      .single();
     if (insErr) {
       if (insErr.code === "23505") {
         skipped += 1;
       } else {
         failed += 1;
+        failedNames.push(cand.full_name ?? "a player");
       }
       continue;
     }
 
-    // Row is committed. Email is best-effort — a send failure records a `failed`
-    // entry but never rolls back the row or 500s the request.
-    const cand = eligible.get(pid)!;
-    if (!cand.email) {
-      failed += 1;
-      continue;
-    }
-    try {
-      const res = await sendTableInviteEmail(
-        { email: cand.email, fullName: cand.full_name },
-        {
-          tableId: id,
-          inviterName: session.full_name,
-          cityName,
-          weekNumber: table.week_number,
-          tableDate: table.table_date,
-          tableTime: table.table_time,
-          locationName: table.location_name,
-          roundType: table.round_type,
-          openSeats,
-        }
-      );
-      if (res.ok) {
-        sent += 1;
-      } else {
-        console.error("tableInviteEmail not sent", cand.email, res.error);
-        failed += 1;
+    // The email IS the invite — a row with no delivered notice invites no one. So
+    // if the send fails (bounce, transient Resend outage, missing address), DELETE
+    // the row we just wrote so "email failed" means "not invited" and a retry
+    // works. Otherwise the once-per-table unique constraint would silently and
+    // permanently lock this player out of ever being invited to this table. A
+    // failure is surfaced (failedNames) so the host can reach them another way.
+    const undo = () => admin.from("table_invites").delete().eq("id", inserted.id);
+    let ok = false;
+    if (cand.email) {
+      try {
+        const res = await sendTableInviteEmail(
+          { email: cand.email, fullName: cand.full_name },
+          {
+            tableId: id,
+            inviterName: session.full_name,
+            cityName,
+            weekNumber: table.week_number,
+            tableDate: table.table_date,
+            tableTime: table.table_time,
+            locationName: table.location_name,
+            roundType: table.round_type,
+            openSeats,
+          }
+        );
+        ok = res.ok;
+        if (!ok) console.error("tableInviteEmail not sent", cand.email, res.error);
+      } catch (err) {
+        console.error("tableInviteEmail send failed", cand.email, err);
       }
-    } catch (err) {
-      console.error("tableInviteEmail send failed", cand.email, err);
+    }
+
+    if (ok) {
+      sent += 1;
+    } else {
+      await undo(); // roll the invite back so the player isn't permanently locked out
       failed += 1;
+      failedNames.push(cand.full_name ?? "a player");
     }
   }
 
-  return NextResponse.json({ ok: sent > 0, sent, skipped, failed });
+  return NextResponse.json({ ok: sent > 0, sent, skipped, failed, failedNames });
 }

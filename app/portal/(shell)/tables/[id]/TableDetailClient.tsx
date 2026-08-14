@@ -195,12 +195,17 @@ export default function TableDetailClient({
   }
 
   // Surface partial invite results honestly — "Invited 2 players. 1 was already
-  // invited." — rather than a flat success when some were skipped/failed.
-  function handleInvited(result: { sent: number; skipped: number; failed: number }) {
+  // invited." — rather than a flat success when some were skipped/failed. A failed
+  // send left NO row (the server rolls it back), so we name the person the host
+  // couldn't reach — "Couldn't reach Marcus — try again" — instead of a bare count.
+  function handleInvited(result: { sent: number; skipped: number; failed: number; failedNames?: string[] }) {
     const parts: string[] = [];
     if (result.sent > 0) parts.push(`Invited ${result.sent} player${result.sent === 1 ? "" : "s"}.`);
     if (result.skipped > 0) parts.push(`${result.skipped} ${result.skipped === 1 ? "was" : "were"} already invited.`);
-    if (result.failed > 0) parts.push(`${result.failed} couldn't be emailed.`);
+    if (result.failed > 0) {
+      const names = (result.failedNames ?? []).filter(Boolean);
+      parts.push(names.length ? `Couldn't reach ${names.join(", ")} — try again.` : `${result.failed} couldn't be emailed — try again.`);
+    }
     showToast(parts.join(" ") || "No invites were sent.");
     router.refresh();
   }

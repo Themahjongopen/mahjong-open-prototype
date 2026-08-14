@@ -21,7 +21,7 @@ type Candidate = {
   already_invited: boolean;
 };
 
-type InviteResult = { sent: number; skipped: number; failed: number };
+type InviteResult = { sent: number; skipped: number; failed: number; failedNames?: string[] };
 
 // "Invite players" modal for a table. Opened from TableDetailClient by a seated
 // player. Fetches eligible candidates for THIS table (GET), lets the player pick
@@ -114,7 +114,7 @@ export default function InvitePlayersModal({
         setSendError(payload.error || "Couldn't send the invites.");
         return;
       }
-      onInvited({ sent: payload.sent ?? 0, skipped: payload.skipped ?? 0, failed: payload.failed ?? 0 });
+      onInvited({ sent: payload.sent ?? 0, skipped: payload.skipped ?? 0, failed: payload.failed ?? 0, failedNames: payload.failedNames ?? [] });
       onClose();
     } finally {
       setSending(false);
