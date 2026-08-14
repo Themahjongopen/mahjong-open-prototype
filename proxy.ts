@@ -23,6 +23,11 @@ function isComingSoonExempt(pathname: string) {
     pathname.startsWith("/coming-soon/") ||
     pathname.startsWith("/api/") ||
     pathname.startsWith("/admin") ||
+    // Commissioner referral links must resolve unauthenticated even if the
+    // coming-soon gate is ever re-enabled — they redirect to the homepage
+    // registration modal. (Same "make the public route reachable" step that was
+    // missed once on /portal/auth/confirm.)
+    pathname.startsWith("/join") ||
     // Members reach the portal even while the marketing site is gated.
     pathname.startsWith("/portal") ||
     // Metadata image routes (extensionless): social crawlers must get the actual

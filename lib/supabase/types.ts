@@ -48,6 +48,7 @@ export interface Database {
           state: string | null;
           slug: string;
           is_active: boolean;
+          split_commission: boolean;
           created_at: string;
         };
         Insert: {
@@ -56,6 +57,7 @@ export interface Database {
           state?: string | null;
           slug: string;
           is_active?: boolean;
+          split_commission?: boolean;
           created_at?: string;
         };
         Update: {
@@ -63,8 +65,86 @@ export interface Database {
           state?: string | null;
           slug?: string;
           is_active?: boolean;
+          split_commission?: boolean;
         };
         Relationships: [];
+      };
+      commissioner_referral_codes: {
+        Row: {
+          id: string;
+          profile_id: string;
+          city_id: string;
+          code: string;
+          is_active: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          profile_id: string;
+          city_id: string;
+          code: string;
+          is_active?: boolean;
+          created_at?: string;
+        };
+        Update: {
+          is_active?: boolean;
+          code?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "commissioner_referral_codes_profile_id_fkey";
+            columns: ["profile_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "commissioner_referral_codes_city_id_fkey";
+            columns: ["city_id"];
+            isOneToOne: false;
+            referencedRelation: "cities";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      registration_attributions: {
+        Row: {
+          id: string;
+          registration_id: string;
+          commissioner_profile_id: string | null;
+          weight: number;
+          source: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          registration_id: string;
+          commissioner_profile_id?: string | null;
+          weight?: number;
+          source: string;
+          created_at?: string;
+        };
+        Update: {
+          commissioner_profile_id?: string | null;
+          weight?: number;
+          source?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "registration_attributions_registration_id_fkey";
+            columns: ["registration_id"];
+            isOneToOne: false;
+            referencedRelation: "registrations";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "registration_attributions_commissioner_profile_id_fkey";
+            columns: ["commissioner_profile_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       seasons: {
         Row: {

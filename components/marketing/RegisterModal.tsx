@@ -9,6 +9,10 @@ import { compressImage } from "@/lib/image/compressImage";
 interface RegisterModalProps {
   open: boolean;
   onClose: () => void;
+  // Present only when the visitor arrived via a commissioner referral link
+  // (/join/<code>). Determines attribution up front — the dropdown is suppressed
+  // and a quiet confirmation is shown instead. Absent for every normal visitor.
+  referral?: { code: string; cityId: string; host: string } | null;
 }
 
 type Step = "form" | "success";
@@ -17,7 +21,10 @@ type CityOption = {
   id: string;
   name: string;
   state: string | null;
+  split_commission?: boolean;
 };
+
+type Commissioner = { profile_id: string; full_name: string };
 
 type SeriesOption = {
   id: string;
@@ -25,12 +32,17 @@ type SeriesOption = {
   registration_closes_at: string | null;
 };
 
-export default function RegisterModal({ open, onClose }: RegisterModalProps) {
+export default function RegisterModal({ open, onClose, referral = null }: RegisterModalProps) {
   const [step, setStep] = useState<Step>("form");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [cities, setCities] = useState<CityOption[]>([]);
   const [currentSeries, setCurrentSeries] = useState<SeriesOption | null>(null);
+  // "How did you hear about us?" — only used for split_commission cities with no
+  // referral link. "" = unanswered, a profile_id = a specific commissioner,
+  // "organic" = "I found it on my own".
+  const [heardAbout, setHeardAbout] = useState("");
+  const [commissioners, setCommissioners] = useState<Commissioner[]>([]);
   const [form, setForm] = useState({
     full_name: "",
     email: "",
@@ -104,7 +116,7 @@ export default function RegisterModal({ open, onClose }: RegisterModalProps) {
 
     async function loadCatalog() {
       const [{ data: cityData, error: cityError }, { data: seriesData, error: seriesError }] = await Promise.all([
-        supabase.from("cities").select("id, name, state").eq("is_active", true).order("name", { ascending: true }),
+        supabase.from("cities").select("id, name, state, split_commission").eq("is_active", true).order("name", { ascending: true }),
         supabase.from("series").select("id, name, registration_closes_at").eq("is_active", true).order("starts_at", { ascending: true }),
       ]);
 
@@ -125,7 +137,9 @@ export default function RegisterModal({ open, onClose }: RegisterModalProps) {
       setCurrentSeries(nextSeries as SeriesOption | null);
       setForm((current) => ({
         ...current,
-        city_id: current.city_id || "",
+        // A referral link preselects the commissioner's city; otherwise leave the
+        // player's own selection (or empty) untouched.
+        city_id: current.city_id || referral?.cityId || "",
         series_id: current.series_id || nextSeries?.id || "",
       }));
     }
@@ -137,6 +151,33 @@ export default function RegisterModal({ open, onClose }: RegisterModalProps) {
     };
   }, [open]);
 
+  // Load the "How did you hear about us?" options for a split_commission city
+  // that has no applicable referral. For every non-split city (21 of 22) this
+  // just clears the list and makes no request — the common path is untouched.
+  useEffect(() => {
+    if (!open) return;
+    const selected = cities.find((c) => c.id === form.city_id);
+    const isSplit = selected?.split_commission === true;
+    const referralApplies = !!referral && form.city_id === referral.cityId;
+    if (!isSplit || referralApplies || !form.city_id) {
+      setCommissioners([]);
+      return;
+    }
+    let active = true;
+    (async () => {
+      try {
+        const res = await fetch(`/api/commissioners?city_id=${encodeURIComponent(form.city_id)}`);
+        const payload = await res.json().catch(() => ({}));
+        if (active) setCommissioners((payload.commissioners ?? []) as Commissioner[]);
+      } catch {
+        if (active) setCommissioners([]);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [open, form.city_id, cities, referral]);
+
   function reset() {
     setStep("form");
     setForm({ full_name: "", email: "", phone: "", city_id: "", series_id: currentSeries?.id ?? "", skill_level: "" });
@@ -144,6 +185,7 @@ export default function RegisterModal({ open, onClose }: RegisterModalProps) {
     setUploading(false);
     setError("");
     setLoading(false);
+    setHeardAbout("");
   }
 
   function handleClose() {
@@ -166,6 +208,16 @@ export default function RegisterModal({ open, onClose }: RegisterModalProps) {
       return;
     }
 
+    // Split-city "How did you hear about us?" is required — unless a referral link
+    // already determined attribution. Recomputed here; never trust render state.
+    const selCity = cities.find((c) => c.id === form.city_id);
+    const referralApplies = !!referral && form.city_id === referral.cityId;
+    const dropdownRequired = selCity?.split_commission === true && !referralApplies;
+    if (dropdownRequired && !heardAbout) {
+      setError("Please let us know how you heard about us.");
+      return;
+    }
+
     setLoading(true);
     // Bound how long "Saving your spot…" can hang: /api/register creates a Stripe
     // session, so give it a generous 20s, then abort so the button re-enables with
@@ -184,6 +236,10 @@ export default function RegisterModal({ open, onClose }: RegisterModalProps) {
           series_id: selectedSeriesId,
           skill_level: form.skill_level,
           avatar_url: avatarUrl,
+          // Attribution inputs — both omitted on the common path, so a normal
+          // registration payload is unchanged.
+          referral_code: referralApplies ? referral!.code : undefined,
+          heard_about: dropdownRequired ? heardAbout : undefined,
         }),
         signal: controller.signal,
       });
@@ -217,6 +273,14 @@ export default function RegisterModal({ open, onClose }: RegisterModalProps) {
       setLoading(false);
     }
   }
+
+  // Attribution UI state (all false for the 21 non-split cities with no referral,
+  // so the form below renders exactly as it did before this feature).
+  const selectedCity = cities.find((c) => c.id === form.city_id) ?? null;
+  const cityIsSplit = selectedCity?.split_commission === true;
+  // A referral applies only to its own city; switching cities drops it.
+  const hasReferral = !!referral && form.city_id === referral.cityId;
+  const showDropdown = cityIsSplit && !hasReferral && !!form.city_id;
 
   // Registration stays open through the close date (inclusive). The catalog
   // query only returns active series, so this handles the "series still active
@@ -401,7 +465,7 @@ export default function RegisterModal({ open, onClose }: RegisterModalProps) {
                 <select
                   className="input-mo"
                   value={form.city_id}
-                  onChange={(e) => setForm((f) => ({ ...f, city_id: e.target.value }))}
+                  onChange={(e) => { setForm((f) => ({ ...f, city_id: e.target.value })); setHeardAbout(""); }}
                   disabled={cities.length === 0}
                 >
                   <option value="">Select your city</option>
@@ -416,6 +480,32 @@ export default function RegisterModal({ open, onClose }: RegisterModalProps) {
                   ))}
                 </select>
               </Field>
+
+              {/* Attribution: nothing for the 21 non-split cities with no referral
+                  (byte-identical to the pre-feature form). A referral link shows a
+                  quiet confirmation and no input; a split city with no link shows a
+                  required "How did you hear about us?" select. */}
+              {hasReferral ? (
+                referral?.host ? (
+                  <p style={{ fontSize: 13, color: "var(--ink-500)", marginTop: -4 }}>
+                    Registering with <strong style={{ color: "var(--ink-800)" }}>{referral.host}</strong>.
+                  </p>
+                ) : null
+              ) : showDropdown ? (
+                <Field label="How did you hear about us?">
+                  <select
+                    className="input-mo"
+                    value={heardAbout}
+                    onChange={(e) => setHeardAbout(e.target.value)}
+                  >
+                    <option value="">Select an option</option>
+                    {commissioners.map((c) => (
+                      <option key={c.profile_id} value={c.profile_id}>{c.full_name}</option>
+                    ))}
+                    <option value="organic">I found it on my own</option>
+                  </select>
+                </Field>
+              ) : null}
 
               <Field label="Skill level">
                 <select

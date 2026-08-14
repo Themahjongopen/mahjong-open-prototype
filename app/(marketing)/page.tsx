@@ -229,10 +229,24 @@ const faqJsonLd = {
 
 export default function HomePage() {
   const [modalOpen, setModalOpen] = useState(false);
+  const [referral, setReferral] = useState<{ code: string; cityId: string; host: string } | null>(null);
   const [formatVisible, setFormatVisible] = useState(false);
   const formatRef = useRef<HTMLDivElement | null>(null);
   const heroMediaRef = useRef<HTMLDivElement | null>(null);
   const [heroParallax, setHeroParallax] = useState(0);
+
+  // Open the registration modal on ?register=1 (used by the /join/<code>
+  // commissioner referral redirect, which also carries ref/city/host for
+  // attribution). Then strip the params so a refresh doesn't re-trigger it.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("register") !== "1") return;
+    const ref = params.get("ref");
+    const city = params.get("city");
+    if (ref && city) setReferral({ code: ref, cityId: city, host: params.get("host") ?? "" });
+    setModalOpen(true);
+    window.history.replaceState({}, "", window.location.pathname);
+  }, []);
 
   useEffect(() => {
     const el = formatRef.current;
@@ -811,7 +825,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <RegisterModal open={modalOpen} onClose={() => setModalOpen(false)} />
+      <RegisterModal open={modalOpen} onClose={() => setModalOpen(false)} referral={referral} />
 
       <style>{`
         .hero-grid {
