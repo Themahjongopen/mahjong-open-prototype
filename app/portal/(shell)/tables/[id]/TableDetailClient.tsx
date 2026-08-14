@@ -6,6 +6,7 @@ import { CalendarDays, MapPin, Clock } from "lucide-react";
 import { useToast } from "@/components/portal/PortalShellClient";
 import { useConfirm } from "@/components/ConfirmProvider";
 import Avatar from "@/components/portal/Avatar";
+import InvitePlayersModal from "@/components/portal/InvitePlayersModal";
 import { scoringSeats, type LeagueTable } from "@/lib/portal/seats";
 import type { TableSubmission } from "@/lib/portal/scores";
 import { formatTableTime } from "@/lib/format/time";
@@ -52,6 +53,7 @@ export default function TableDetailClient({
   const router = useRouter();
   const [loading, setLoading] = useState<Action>(null);
   const [editing, setEditing] = useState(false);
+  const [inviting, setInviting] = useState(false);
   const [editForm, setEditForm] = useState<EditForm>({
     table_date: table.table_date,
     table_time: (table.table_time ?? "").slice(0, 5), // <input type=time> wants HH:MM
@@ -83,6 +85,12 @@ export default function TableDetailClient({
   const isHostOrAdmin = isCreator || isAdmin;
   const canManageEdit = isHostOrAdmin && (table.status === "open" || table.status === "full");
   const canDeleteTable = isHostOrAdmin && table.status === "canceled";
+  // Invite is open to ANY player actively seated here (creator or joined), only
+  // while the table is open with a real open seat. Deliberately NOT gated on the
+  // 24h cutoff (unlike edit) — needing a fourth the night before is exactly when
+  // a host reaches for it. Non-seated admins don't see it (myActiveSeat is null).
+  const openSeats = 4 - seatsFilled;
+  const canInvite = !!myActiveSeat && table.status === "open" && openSeats > 0;
 
   // Resolve the venue-local start time to a real UTC instant so the 24h warning
   // (and the calendar links below) are correct regardless of the viewer's phone
@@ -184,6 +192,17 @@ export default function TableDetailClient({
       { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "complete" }) },
       "Table marked as played."
     );
+  }
+
+  // Surface partial invite results honestly — "Invited 2 players. 1 was already
+  // invited." — rather than a flat success when some were skipped/failed.
+  function handleInvited(result: { sent: number; skipped: number; failed: number }) {
+    const parts: string[] = [];
+    if (result.sent > 0) parts.push(`Invited ${result.sent} player${result.sent === 1 ? "" : "s"}.`);
+    if (result.skipped > 0) parts.push(`${result.skipped} ${result.skipped === 1 ? "was" : "were"} already invited.`);
+    if (result.failed > 0) parts.push(`${result.failed} couldn't be emailed.`);
+    showToast(parts.join(" ") || "No invites were sent.");
+    router.refresh();
   }
 
   async function handleEditSubmit(e: React.FormEvent) {
@@ -377,6 +396,12 @@ export default function TableDetailClient({
           </div>
         )}
 
+        {canInvite && (
+          <button className="btn btn-ghost" onClick={() => setInviting(true)} style={{ justifyContent: "center", padding: "13px" }}>
+            Invite players
+          </button>
+        )}
+
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
           <a
             href={`/api/tables/${table.id}/calendar.ics`}
@@ -456,6 +481,15 @@ export default function TableDetailClient({
           </button>
         )}
       </div>
+
+      {inviting && (
+        <InvitePlayersModal
+          tableId={table.id}
+          openSeats={openSeats}
+          onClose={() => setInviting(false)}
+          onInvited={handleInvited}
+        />
+      )}
     </>
   );
 }

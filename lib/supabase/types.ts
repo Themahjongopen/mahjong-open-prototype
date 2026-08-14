@@ -277,6 +277,48 @@ export interface Database {
           },
         ];
       };
+      table_invites: {
+        Row: {
+          id: string;
+          table_id: string;
+          invited_profile_id: string;
+          invited_by_profile_id: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          table_id: string;
+          invited_profile_id: string;
+          invited_by_profile_id: string;
+          created_at?: string;
+        };
+        Update: {
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "table_invites_table_id_fkey";
+            columns: ["table_id"];
+            isOneToOne: false;
+            referencedRelation: "league_tables";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "table_invites_invited_profile_id_fkey";
+            columns: ["invited_profile_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "table_invites_invited_by_profile_id_fkey";
+            columns: ["invited_by_profile_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       table_seats: {
         Row: {
           id: string;
