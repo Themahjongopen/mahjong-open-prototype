@@ -17,10 +17,11 @@
  * Pass --apply to actually update rows.
  *
  * This touches PRODUCTION data. Registrations/payment intents were created with
- * the LIVE Stripe account, so run with the LIVE secret key (an inline var wins
- * over .env.local):
+ * the LIVE Stripe account, so run with a LIVE key (an inline var wins over
+ * .env.local). A restricted key (rk_live_...) works too — it needs read access to
+ * PaymentIntents; the dry run only reads, so no write scopes are required:
  *
- *   STRIPE_SECRET_KEY=sk_live_... npx tsx scripts/backfill-payment-amounts.ts
+ *   STRIPE_SECRET_KEY=rk_live_... npx tsx scripts/backfill-payment-amounts.ts
  *   STRIPE_SECRET_KEY=sk_live_... npx tsx scripts/backfill-payment-amounts.ts --apply
  */
 import { readFileSync } from "node:fs";
@@ -52,6 +53,10 @@ function loadEnvLocal() {
 }
 
 async function main() {
+  // Capture any shell-provided key BEFORE loading .env.local. loadEnvLocal only
+  // fills vars that are undefined, so a shell value already wins — this is just so
+  // we can REPORT the source below and make that unambiguous.
+  const stripeKeyFromShell = process.env.STRIPE_SECRET_KEY;
   loadEnvLocal();
   const APPLY = process.argv.includes("--apply");
 
@@ -63,8 +68,13 @@ async function main() {
   }
   if (!stripeKey) throw new Error("Missing STRIPE_SECRET_KEY.");
 
-  const liveMode = stripeKey.startsWith("sk_live_");
+  // Live vs test by the _live_/_test_ infix, NOT the prefix — so both standard
+  // (sk_live_/sk_test_) AND restricted (rk_live_/rk_test_) keys are classified
+  // correctly. A restricted rk_live_ key was previously mislabeled "TEST".
+  const liveMode = stripeKey.includes("_live_");
+  const keySource = stripeKeyFromShell !== undefined ? "shell env" : ".env.local";
   console.log("\nBackfill payments.amount_cents from Stripe");
+  console.log(`  Stripe key:  ${stripeKey.slice(0, 8)}… (from ${keySource})`);
   console.log(`  Stripe mode: ${liveMode ? "LIVE" : "TEST"}`);
   console.log(`  Run mode:    ${APPLY ? "APPLY (writes rows)" : "DRY RUN (no writes)"}\n`);
 
