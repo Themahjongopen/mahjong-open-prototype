@@ -32,6 +32,7 @@ type RegistrationRow = {
   invited: boolean;
   invite_state: InviteState;
   invite_sent_at: string | null;
+  reminder_sent_at: string | null;
   profile_id?: string | null;
   role?: string | null;
   // Every city this profile leads (migration 029). The "Commissioner" badge +
@@ -889,6 +890,11 @@ export default function AdminRegistrationsPage() {
                           {deleteBusyId === r.id ? "Deleting…" : "Delete"}
                         </button>
                         {deleteMsg[r.id] ? <span style={{ fontSize: 12, color: "var(--danger)" }}>{deleteMsg[r.id]}</span> : null}
+                        {r.reminder_sent_at ? (
+                          <span style={{ fontSize: 12, color: "var(--ink-500)" }}>
+                            Reminder sent {formatDateTime(r.reminder_sent_at)}
+                          </span>
+                        ) : null}
                       </>
                     ) : null}
                     {r.paid_status === "paid" ? (

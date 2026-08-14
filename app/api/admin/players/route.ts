@@ -30,6 +30,10 @@ type RegistrationRow = {
   // When the last portal set-password link was sent (invited_at/recovery_sent_at
   // off the Auth user). Null for never-invited or unreadable accounts.
   invite_sent_at: string | null;
+  // When the last payment reminder was sent for a still-pending registration —
+  // set by the abandoned-checkout timer (checkout.session.expired) and the admin
+  // "Resend link" button. Null until one is sent; only shown on pending rows.
+  reminder_sent_at: string | null;
   profile_id?: string | null;
   role?: string | null;
   // Every city this profile leads (migration 029). Same list on every row for
@@ -40,10 +44,10 @@ type RegistrationRow = {
 // Local-preview fallback used only when no service-role client is configured.
 // Reshaped to look like real registrations (name/email/phone/city/series/paid_status/date).
 const MOCK_REGISTRATIONS: RegistrationRow[] = [
-  { id: "reg-1", full_name: "Morgan Park", email: "morgan@example.com", phone: "(213) 555-0142", skill_level: "advanced", paid_status: "paid", created_at: "2026-06-28T18:30:00Z", city: "Los Angeles, CA", city_id: null, series: "Spring 2026", series_id: null, paid_city_count: 1, invited: true, invite_state: "active", invite_sent_at: "2026-06-28T19:00:00Z" },
-  { id: "reg-2", full_name: "Alex Kim", email: "alex@example.com", phone: "(310) 555-0199", skill_level: "intermediate", paid_status: "paid", created_at: "2026-06-27T14:05:00Z", city: "Los Angeles, CA", city_id: null, series: "Spring 2026", series_id: null, paid_city_count: 1, invited: true, invite_state: "invited", invite_sent_at: "2026-06-27T15:10:00Z" },
-  { id: "reg-3", full_name: "Sam Rivera", email: "sam@example.com", phone: null, skill_level: "beginner", paid_status: "pending", created_at: "2026-06-26T21:12:00Z", city: "San Francisco, CA", city_id: null, series: "Spring 2026", series_id: null, paid_city_count: 0, invited: false, invite_state: "none", invite_sent_at: null },
-  { id: "reg-4", full_name: "Taylor Brooks", email: "taylor@example.com", phone: "(415) 555-0173", skill_level: "intermediate", paid_status: "refunded", created_at: "2026-06-24T09:47:00Z", city: "San Francisco, CA", city_id: null, series: "Spring 2026", series_id: null, paid_city_count: 0, invited: false, invite_state: "none", invite_sent_at: null },
+  { id: "reg-1", full_name: "Morgan Park", email: "morgan@example.com", phone: "(213) 555-0142", skill_level: "advanced", paid_status: "paid", created_at: "2026-06-28T18:30:00Z", city: "Los Angeles, CA", city_id: null, series: "Spring 2026", series_id: null, paid_city_count: 1, invited: true, invite_state: "active", invite_sent_at: "2026-06-28T19:00:00Z", reminder_sent_at: null },
+  { id: "reg-2", full_name: "Alex Kim", email: "alex@example.com", phone: "(310) 555-0199", skill_level: "intermediate", paid_status: "paid", created_at: "2026-06-27T14:05:00Z", city: "Los Angeles, CA", city_id: null, series: "Spring 2026", series_id: null, paid_city_count: 1, invited: true, invite_state: "invited", invite_sent_at: "2026-06-27T15:10:00Z", reminder_sent_at: null },
+  { id: "reg-3", full_name: "Sam Rivera", email: "sam@example.com", phone: null, skill_level: "beginner", paid_status: "pending", created_at: "2026-06-26T21:12:00Z", city: "San Francisco, CA", city_id: null, series: "Spring 2026", series_id: null, paid_city_count: 0, invited: false, invite_state: "none", invite_sent_at: null, reminder_sent_at: null },
+  { id: "reg-4", full_name: "Taylor Brooks", email: "taylor@example.com", phone: "(415) 555-0173", skill_level: "intermediate", paid_status: "refunded", created_at: "2026-06-24T09:47:00Z", city: "San Francisco, CA", city_id: null, series: "Spring 2026", series_id: null, paid_city_count: 0, invited: false, invite_state: "none", invite_sent_at: null, reminder_sent_at: null },
 ];
 
 function formatCity(city: { name: string | null; state: string | null } | null | undefined): string | null {
@@ -69,7 +73,7 @@ export async function GET() {
       data = await fetchAllRows((from, to) =>
         supabase
           .from("registrations")
-          .select("id, full_name, email, phone, skill_level, paid_status, created_at, profile_id, city_id, series_id, cities(name, state), series(name), profiles(role)")
+          .select("id, full_name, email, phone, skill_level, paid_status, created_at, reminder_sent_at, profile_id, city_id, series_id, cities(name, state), series(name), profiles(role)")
           .order("created_at", { ascending: false })
           .range(from, to)
       );
@@ -147,6 +151,7 @@ export async function GET() {
           invited: invite_state !== "none",
           invite_state,
           invite_sent_at: authUser?.invite_sent_at ?? null,
+          reminder_sent_at: row.reminder_sent_at ?? null,
           profile_id: row.profile_id ?? null,
           role: profile?.role ?? null,
           commissioner_city_ids: row.profile_id ? (commissionerCitiesByProfile.get(row.profile_id) ?? []) : [],
