@@ -317,11 +317,24 @@ async function writeAttribution(
     }
 
     // 3) No code, no (valid) dropdown — non-split city, or a fall-through above.
-    //    Sole active commissioner → credited ('link'); zero or several → an honest
-    //    unattributed 'organic_split' NULL row (kept distinct from 'backfill').
+    //    1 active commissioner  → credited at 1.0 ('link').
+    //    N ≥ 2 active           → split EVENLY, 1/N per commissioner ('organic_split'),
+    //                             the same frozen-weight shape the split-flagged path
+    //                             produces — so a non-split multi-commissioner city
+    //                             (Greater Tuscaloosa, Golden Triangle, Dallas County)
+    //                             credits both/all commissioners instead of a NULL row.
+    //                             This is NOT split_commission: those pairs work
+    //                             together and don't get the "How did you hear about
+    //                             us?" dropdown; that flag stays reserved for cities
+    //                             (e.g. Memphis) that want to be asked individually.
+    //    0 active               → one honest unattributed NULL 'organic_split' row
+    //                             (genuine zero-commissioner cities — Pensacola, 30A).
     if (!handled) {
       if (active.length === 1) {
         rows.push({ commissioner_profile_id: active[0].profile_id, weight: 1.0, source: "link" });
+      } else if (active.length >= 2) {
+        const w = Math.round((1 / active.length) * 10000) / 10000; // frozen at write time
+        for (const c of active) rows.push({ commissioner_profile_id: c.profile_id, weight: w, source: "organic_split" });
       } else {
         rows.push({ commissioner_profile_id: null, weight: 1.0, source: "organic_split" });
       }
