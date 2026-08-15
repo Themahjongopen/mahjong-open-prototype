@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { MapPin, ChevronDown, Check } from "lucide-react";
 
@@ -21,7 +21,13 @@ export default function AdminCitySwitcher({
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  // See PlayerCitySwitcher: keep the switcher disabled from click through the
+  // committed refetch, so it never looks idle/clickable while the page still
+  // shows the old city. `busy` covers the cookie POST; `isPending` covers
+  // router.refresh()'s refetch (which router.refresh() itself does NOT await).
   const [busy, setBusy] = useState(false);
+  const [isPending, startTransition] = useTransition();
+  const pending = busy || isPending;
   const [query, setQuery] = useState("");
 
   if (cities.length === 0) return null;
@@ -37,7 +43,7 @@ export default function AdminCitySwitcher({
 
   async function pick(cityId: string) {
     close();
-    if (cityId === activeCityId) return;
+    if (cityId === activeCityId) return; // no-op: just close, never enter pending
     setBusy(true);
     try {
       await fetch("/api/portal/admin-city", {
@@ -46,9 +52,13 @@ export default function AdminCitySwitcher({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ cityId }),
       });
-      router.refresh();
     } finally {
+      // Hand pending off from the POST (busy) to the refetch (isPending) in one
+      // batched update — no frame where the pill looks idle while data is stale.
       setBusy(false);
+      startTransition(() => {
+        router.refresh();
+      });
     }
   }
 
@@ -57,7 +67,7 @@ export default function AdminCitySwitcher({
       <button
         type="button"
         onClick={() => (open ? close() : setOpen(true))}
-        disabled={busy}
+        disabled={pending}
         aria-label="Switch active city"
         style={{
           display: "inline-flex",
@@ -70,8 +80,8 @@ export default function AdminCitySwitcher({
           fontSize: 13,
           fontWeight: 600,
           color: "var(--pink-700)",
-          cursor: busy ? "default" : "pointer",
-          opacity: busy ? 0.6 : 1,
+          cursor: pending ? "default" : "pointer",
+          opacity: pending ? 0.6 : 1,
           maxWidth: 200,
         }}
       >

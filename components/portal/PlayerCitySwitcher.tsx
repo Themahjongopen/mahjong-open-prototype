@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { MapPin, ChevronDown, Check } from "lucide-react";
 
@@ -22,13 +22,23 @@ export default function PlayerCitySwitcher({
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  // The switcher must never look idle/clickable while the page still shows the
+  // OLD city. Two overlapping phases keep it disabled the whole way:
+  //   busy       — the POST that sets the cookie (isPending isn't true yet here)
+  //   isPending  — router.refresh()'s server refetch. router.refresh() returns
+  //                void and does NOT await the refetch, so a transition is what
+  //                holds "pending" true until the new data actually commits.
+  // Keying the disabled state off the POST alone (the original bug) left the pill
+  // clickable while stale ~75% of the time at a normal click-then-glance speed.
   const [busy, setBusy] = useState(false);
+  const [isPending, startTransition] = useTransition();
+  const pending = busy || isPending;
 
   if (cities.length === 0) return null;
 
   async function pick(cityId: string) {
     setOpen(false);
-    if (cityId === activeCityId) return;
+    if (cityId === activeCityId) return; // no-op: just close, never enter pending
     setBusy(true);
     try {
       await fetch("/api/portal/active-city", {
@@ -37,9 +47,13 @@ export default function PlayerCitySwitcher({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ cityId }),
       });
-      router.refresh();
     } finally {
+      // Hand the pending state off from the POST (busy) to the refetch (isPending)
+      // in one batched update, so there's no frame where the pill looks idle.
       setBusy(false);
+      startTransition(() => {
+        router.refresh();
+      });
     }
   }
 
@@ -48,7 +62,7 @@ export default function PlayerCitySwitcher({
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        disabled={busy}
+        disabled={pending}
         aria-label="Switch viewing city"
         style={{
           display: "inline-flex",
@@ -61,8 +75,8 @@ export default function PlayerCitySwitcher({
           fontSize: 13,
           fontWeight: 600,
           color: "var(--pink-700)",
-          cursor: busy ? "default" : "pointer",
-          opacity: busy ? 0.6 : 1,
+          cursor: pending ? "default" : "pointer",
+          opacity: pending ? 0.6 : 1,
           maxWidth: 200,
         }}
       >
