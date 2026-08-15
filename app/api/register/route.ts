@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createAdminClient } from "@/lib/supabase/server";
+import { canonicalReferralCode } from "@/lib/referral/aliases";
 
 export async function POST(request: Request) {
   try {
@@ -288,10 +289,11 @@ async function writeAttribution(
     // 1) Referral link — must be active AND for THIS city (a switched city drops it).
     let handled = false;
     if (referralCode) {
+      // Canonicalize so a pre-rename (aliased) code still attributes to its city.
       const { data: rc } = await supabase
         .from("commissioner_referral_codes")
         .select("profile_id, city_id, is_active")
-        .eq("code", referralCode)
+        .eq("code", canonicalReferralCode(referralCode))
         .maybeSingle();
       if (rc && rc.is_active && rc.city_id === cityId) {
         rows.push({ commissioner_profile_id: rc.profile_id, weight: 1.0, source: "link" });

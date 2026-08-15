@@ -109,13 +109,13 @@ export const CITY_PINS: LaunchCityPin[] = [
     "y": -137.8
   },
   {
-    "name": "Charlotte",
+    "name": "Matthews",
     "state": "NC",
     "x": 280.1,
     "y": 61.0
   },
   {
-    "name": "Greater Greenville",
+    "name": "Greenville/Pickens",
     "state": "SC",
     "x": 253.2,
     "y": 69.2
@@ -271,7 +271,7 @@ export const CITY_PINS: LaunchCityPin[] = [
     "y": 55.7
   },
   {
-    "name": "Greensboro",
+    "name": "The Triad",
     "state": "NC",
     "x": 298.3,
     "y": 42.4

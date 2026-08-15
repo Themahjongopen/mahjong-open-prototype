@@ -75,8 +75,10 @@ const WHY_LOVE = [
 ];
 
 // Series One launch cities. Add another object here and the grid below
-// accommodates it automatically — no layout changes needed.
-const LAUNCH_CITIES = [
+// accommodates it automatically — no layout changes needed. `description` is an
+// optional tagline rendered under the name; omit it and the card shows nothing.
+type LaunchCity = { name: string; state: string; photo: string; description?: string };
+const LAUNCH_CITIES: LaunchCity[] = [
   { name: "Madison", state: "Mississippi", photo: "/brand-photo-2.jpg" },
   { name: "Gulf Coast", state: "Mississippi", photo: "/brand-photo-3.jpg" },
   { name: "Meridian", state: "Mississippi", photo: "/brand-photo-1.jpg" },
@@ -93,8 +95,8 @@ const LAUNCH_CITIES = [
   { name: "30A", state: "Florida", photo: "/brand-photo-14.jpg" },
   { name: "Greenbrier Region", state: "West Virginia", photo: "/brand-photo-15.jpg" },
   { name: "Appleton", state: "Wisconsin", photo: "/brand-photo-16.jpg" },
-  { name: "Charlotte", state: "North Carolina", photo: "/brand-photo-17.jpg" },
-  { name: "Greater Greenville", state: "South Carolina", photo: "/brand-photo-18.jpg" },
+  { name: "Matthews", state: "North Carolina", photo: "/brand-photo-17.jpg" },
+  { name: "Greenville/Pickens", state: "South Carolina", photo: "/brand-photo-18.jpg" },
   { name: "Central Arkansas", state: "Arkansas", photo: "/brand-photo-19.jpg" },
   { name: "Vicksburg", state: "Mississippi", photo: "/brand-photo-20.jpg" },
   { name: "Greater Cartersville", state: "Georgia", photo: "/brand-photo-21.jpg" },
@@ -120,14 +122,13 @@ const LAUNCH_CITIES = [
   { name: "Grand Rapids", state: "Michigan", photo: "/brand-photo-41.jpg" },
   { name: "Yuma", state: "Arizona", photo: "/brand-photo-42.jpg" },
   { name: "Oklahoma City", state: "Oklahoma", photo: "/brand-photo-43.jpg" },
-  { name: "Greensboro", state: "North Carolina", photo: "/brand-photo-44.jpg" },
+  { name: "The Triad", state: "North Carolina", photo: "/brand-photo-44.jpg", description: "Greensboro, High Point & Winston-Salem." },
   { name: "Midland", state: "Texas", photo: "/brand-photo-45.jpg" },
   { name: "Tallahassee", state: "Florida", photo: "/brand-photo-11.jpg" },
   { name: "Kingwood", state: "Texas", photo: "/brand-photo-28.jpg" },
   { name: "Bloomington", state: "Indiana", photo: "/brand-photo-29.jpg" },
 ];
 
-type LaunchCity = (typeof LAUNCH_CITIES)[number];
 
 // Split the launch cities into balanced, symmetric rows of at most 4, with the
 // larger rows toward the center (a centered pyramid) — e.g.
@@ -188,6 +189,9 @@ function LaunchCityCard({ city }: { city: LaunchCity }) {
         >
           {city.name}
         </h3>
+        {city.description ? (
+          <p style={{ fontSize: 13, color: "var(--ink-700)", margin: "0 0 6px 0", lineHeight: 1.4 }}>{city.description}</p>
+        ) : null}
         <p style={{ fontSize: 14, color: "var(--ink-700)", margin: 0 }}>{city.state}</p>
       </div>
     </div>

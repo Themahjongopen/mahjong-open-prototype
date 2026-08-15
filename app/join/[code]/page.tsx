@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/server";
+import { canonicalReferralCode } from "@/lib/referral/aliases";
 
 // Public commissioner referral landing route: /join/<code>.
 //
@@ -19,10 +20,12 @@ export default async function JoinPage({ params }: { params: Promise<{ code: str
   const admin: any = createAdminClient();
   if (admin && code) {
     try {
+      // Canonicalize first so a pre-rename code resolves to its current row and
+      // the redirect below carries the NEW code forward for attribution.
       const { data } = await admin
         .from("commissioner_referral_codes")
         .select("code, city_id, is_active, profiles(full_name)")
-        .eq("code", code)
+        .eq("code", canonicalReferralCode(code))
         .maybeSingle();
 
       if (data && data.is_active) {
