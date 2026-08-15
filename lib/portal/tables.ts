@@ -155,6 +155,14 @@ export type NextTable = {
 // their active-city selection (via withAdminCity); for regular players it's
 // their own registration cohort, which is a no-op since they only ever sit in
 // tables there. Returns null if they have none.
+//
+// Sorting happens in JS, NOT via PostgREST .order(): ordering the root
+// table_seats rows by an embedded to-one column (league_tables.table_date) is a
+// no-op in PostgREST — .order(referencedTable) only sorts embedded rows, of
+// which there is exactly one per seat — so a .limit(1) there would return an
+// arbitrary (insertion-order) seat, not the soonest table. We fetch all of the
+// member's active upcoming seats and pick the earliest by (date, then time), so
+// same-day tables are tie-broken chronologically.
 export async function getNextTable(member: PortalMember): Promise<NextTable | null> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const admin: any = createAdminClient();
@@ -166,30 +174,46 @@ export async function getNextTable(member: PortalMember): Promise<NextTable | nu
     .eq("user_id", member.id)
     .is("canceled_at", null)
     .in("league_tables.status", ["open", "full"])
-    .gte("league_tables.table_date", today())
-    .order("table_date", { referencedTable: "league_tables", ascending: true })
-    .limit(1);
+    .gte("league_tables.table_date", today());
 
   if (member.city_id) query = query.eq("league_tables.city_id", member.city_id);
   if (member.series_id) query = query.eq("league_tables.series_id", member.series_id);
 
   const { data } = await query;
-  const row = (data ?? [])[0] as { seat_number: number; league_tables: unknown } | undefined;
-  if (!row) return null;
 
-  const t = (Array.isArray(row.league_tables) ? row.league_tables[0] : row.league_tables) as
-    | { id: string; week_number: number; table_date: string; table_time: string | null; location_name: string }
-    | undefined;
-  if (!t) return null;
+  type Row = {
+    seat_number: number;
+    table: { id: string; week_number: number; table_date: string; table_time: string | null; location_name: string };
+  };
+  const rows: Row[] = ((data ?? []) as { seat_number: number; league_tables: unknown }[])
+    .map((r) => {
+      const t = (Array.isArray(r.league_tables) ? r.league_tables[0] : r.league_tables) as
+        | { id: string; week_number: number; table_date: string; table_time: string | null; location_name: string }
+        | undefined;
+      return t ? { seat_number: r.seat_number, table: t } : null;
+    })
+    .filter((r): r is Row => r !== null);
 
+  if (rows.length === 0) return null;
+
+  // Earliest date, then earliest time (nulls last so a timed table beats an
+  // untimed one on the same day).
+  rows.sort((a, b) => {
+    if (a.table.table_date !== b.table.table_date) return a.table.table_date < b.table.table_date ? -1 : 1;
+    const at = a.table.table_time ?? "99:99:99";
+    const bt = b.table.table_time ?? "99:99:99";
+    return at < bt ? -1 : at > bt ? 1 : 0;
+  });
+
+  const { seat_number, table } = rows[0];
   return {
-    seat_number: row.seat_number,
+    seat_number,
     table: {
-      id: t.id,
-      week_number: t.week_number,
-      table_date: t.table_date,
-      table_time: t.table_time,
-      location_name: t.location_name,
+      id: table.id,
+      week_number: table.week_number,
+      table_date: table.table_date,
+      table_time: table.table_time,
+      location_name: table.location_name,
     },
   };
 }
