@@ -122,7 +122,10 @@ const LAUNCH_CITIES: LaunchCity[] = [
   { name: "Grand Rapids", state: "Michigan", photo: "/brand-photo-41.jpg" },
   { name: "Yuma", state: "Arizona", photo: "/brand-photo-42.jpg" },
   { name: "Oklahoma City", state: "Oklahoma", photo: "/brand-photo-43.jpg" },
-  { name: "The Triad", state: "North Carolina", photo: "/brand-photo-44.jpg", description: "Greensboro, High Point & Winston-Salem." },
+  // Winston‑Salem uses a non-breaking hyphen (U+2011) so it never splits across
+  // lines; text-wrap:balance then breaks the phrase only at spaces. No trailing
+  // period — no other card text has one.
+  { name: "The Triad", state: "North Carolina", photo: "/brand-photo-44.jpg", description: "Greensboro, High Point & Winston‑Salem" },
   { name: "Midland", state: "Texas", photo: "/brand-photo-45.jpg" },
   { name: "Tallahassee", state: "Florida", photo: "/brand-photo-11.jpg" },
   { name: "Kingwood", state: "Texas", photo: "/brand-photo-28.jpg" },
@@ -189,10 +192,13 @@ function LaunchCityCard({ city }: { city: LaunchCity }) {
         >
           {city.name}
         </h3>
-        {city.description ? (
-          <p style={{ fontSize: 13, color: "var(--ink-700)", margin: "0 0 6px 0", lineHeight: 1.4 }}>{city.description}</p>
-        ) : null}
         <p style={{ fontSize: 14, color: "var(--ink-700)", margin: 0 }}>{city.state}</p>
+        {/* Tagline LAST (below the state) so every card's name + state line up across
+            a desktop row regardless of whether a card has one; only the optional
+            tagline hangs below. Rendered only when present. */}
+        {city.description ? (
+          <p className="launch-card-tagline">{city.description}</p>
+        ) : null}
       </div>
     </div>
   );
@@ -965,6 +971,17 @@ export default function HomePage() {
            below overrides this one there (equal specificity, later in source), so
            mobile long names stay at the normal 20px. */
         .launch-card-title--long { font-size: 18px; }
+        /* Optional tagline under the state line. Smaller + muted so it reads as a
+           subtitle, not competing with the city name. text-wrap:balance evens the
+           two lines instead of orphaning a trailing word; combined with the
+           non-breaking hyphen in the data it keeps "Winston-Salem" intact. */
+        .launch-card-tagline {
+          font-size: 12px;
+          line-height: 1.35;
+          color: var(--ink-500);
+          margin: 6px 0 0;
+          text-wrap: balance;
+        }
         @media (max-width: 600px) {
           /* One card per row on mobile: fill the column width and shorten each
              (wider/shorter photo crop + tighter text padding). Desktop untouched. */
