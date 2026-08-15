@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import PageBanner from "@/components/marketing/PageBanner";
 import CommissionerSection from "@/components/marketing/CommissionerSection";
 import { ChevronDown } from "lucide-react";
@@ -103,6 +104,54 @@ export default function HowItWorksPage() {
           </p>
           <p style={{ fontSize: 16, color: "var(--ink-700)", lineHeight: 1.65 }}>
             <strong>Ace Award</strong>{" "}tracks your single highest round score of the series — no minimum rounds required. <strong>Champion Award</strong>{" "}sums your single highest round from every week of the series. <strong>Flight Winner</strong>{" "}ranks your best 7-of-8-week combined scoring average (5 rounds minimum to qualify). Cities compete too: each city&rsquo;s top 3 individual round scores are added together, and the series&rsquo; leading city is named The Mahjong Open Leader.
+          </p>
+        </div>
+      </section>
+
+      {/* Scorecard — illustrates the scoring just described. Pink-wash to keep the
+          white→pink→lime section rhythm (Scoring white, FAQ lime). Both the image
+          and the text link open the printable PDF in a new tab. */}
+      <section style={{ padding: "72px 0", background: "var(--pink-wash)" }}>
+        <div className="container-mo" style={{ maxWidth: 800 }}>
+          <p className="eyebrow" style={{ marginBottom: 16 }}>Score every game</p>
+          <h2 className="h2" style={{ marginBottom: 24 }}>The official scorecard</h2>
+          <p style={{ fontSize: 16, color: "var(--ink-700)", lineHeight: 1.65, marginBottom: 28 }}>
+            Every table keeps score on the same card — print it at home or grab one from your host.
+          </p>
+          <a
+            href="/scorecard.pdf"
+            target="_blank"
+            rel="noopener noreferrer"
+            download
+            aria-label="Open the printable Mahjong Open scorecard (PDF)"
+            style={{
+              display: "inline-block",
+              maxWidth: 340,
+              width: "100%",
+              borderRadius: "var(--radius-lg)",
+              overflow: "hidden",
+              border: "1px solid var(--hair-200)",
+              boxShadow: "var(--shadow-sm)",
+              cursor: "pointer",
+              transition: "box-shadow 160ms, transform 160ms",
+              lineHeight: 0,
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.boxShadow = "var(--shadow-lg)"; e.currentTarget.style.transform = "translateY(-2px)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.boxShadow = "var(--shadow-sm)"; e.currentTarget.style.transform = "none"; }}
+          >
+            <Image
+              src="/scorecard-preview.png"
+              alt="The Mahjong Open official scorecard"
+              width={1200}
+              height={1650}
+              sizes="(max-width: 480px) 90vw, 340px"
+              style={{ display: "block", width: "100%", height: "auto" }}
+            />
+          </a>
+          <p style={{ marginTop: 20 }}>
+            <a href="/scorecard.pdf" target="_blank" rel="noopener noreferrer" download style={{ fontSize: 16, fontWeight: 600, color: "var(--pink-600)", textDecoration: "none" }}>
+              Print the scorecard →
+            </a>
           </p>
         </div>
       </section>
