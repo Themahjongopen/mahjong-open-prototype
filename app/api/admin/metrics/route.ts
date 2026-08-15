@@ -10,9 +10,11 @@ export type AdminMetrics = {
   registrationsAllTime: number;
   activePlayers: number;
   activeCities: number;
+  lockedInCities: number; // active cities with >= 20 paid regs in the active series (same rule as the public launch-cities map)
   tableFillRate: number; // 0..1 — filled seats / (4 × active tables)
   revenueThisSeries: number; // USD dollars — succeeded payments only
   revenueThisMonth: number; // USD dollars — succeeded payments only
+  revenueToday: number; // USD dollars — succeeded payments created today
   playersByCity: { city: string; paid: number; pending: number }[]; // active-series registrations per city, highest total first
 };
 
@@ -22,9 +24,11 @@ const EMPTY_METRICS: AdminMetrics = {
   registrationsAllTime: 0,
   activePlayers: 0,
   activeCities: 0,
+  lockedInCities: 0,
   tableFillRate: 0,
   revenueThisSeries: 0,
   revenueThisMonth: 0,
+  revenueToday: 0,
   playersByCity: [],
 };
 
@@ -111,21 +115,25 @@ export async function GET() {
   // registrationsThisSeries above), split into paid vs pending so the dashboard
   // can show how many players per city are confirmed vs. still owe payment.
   // Falls back to all registrations if no series is currently marked active.
-  type CityRow = { paid_status: string | null; city_id: string | null; cities: { name: string | null; state: string | null } | { name: string | null; state: string | null }[] | null };
+  type CityRow = {
+    paid_status: string | null;
+    city_id: string | null;
+    cities: { name: string | null; state: string | null; is_active: boolean | null } | { name: string | null; state: string | null; is_active: boolean | null }[] | null;
+  };
   const cityRows = await fetchAllRows<CityRow>((from, to) => {
-    let q = supabase.from("registrations").select("paid_status, city_id, cities(name, state)");
+    let q = supabase.from("registrations").select("paid_status, city_id, cities(name, state, is_active)");
     if (activeSeriesId) q = q.eq("series_id", activeSeriesId);
     return q.order("created_at", { ascending: true }).range(from, to);
   });
   // Group by city_id (not the display label): there are duplicate-named city rows
   // in the table (e.g. a real "Madison, MS" and an inactive demo one), so keying
   // on the label would merge distinct cities that happen to share a name.
-  const cityCountMap = new Map<string, { label: string; paid: number; pending: number }>();
+  const cityCountMap = new Map<string, { label: string; paid: number; pending: number; isActive: boolean }>();
   for (const row of cityRows) {
     const city = Array.isArray(row.cities) ? row.cities[0] : row.cities;
     const label = city?.name ? (city.state ? `${city.name}, ${city.state}` : city.name) : "No city";
     const key = row.city_id ?? label; // fall back to label only for the rare no-city-id row
-    const entry = cityCountMap.get(key) ?? { label, paid: 0, pending: 0 };
+    const entry = cityCountMap.get(key) ?? { label, paid: 0, pending: 0, isActive: city?.is_active ?? false };
     if (row.paid_status === "paid") entry.paid += 1;
     else if (row.paid_status === "pending") entry.pending += 1;
     // Other statuses (e.g. refunded) are excluded from the paid/pending split.
@@ -134,6 +142,11 @@ export async function GET() {
   const playersByCity = Array.from(cityCountMap.values())
     .map((c) => ({ city: c.label, paid: c.paid, pending: c.pending }))
     .sort((a, b) => b.paid + b.pending - (a.paid + a.pending) || a.city.localeCompare(b.city));
+  // Locked-in cities — active cities that have hit the 20-paid-player minimum in
+  // the active series. SAME threshold + scope as the public launch-cities map
+  // (app/api/public/launch-cities: is_active cities, active series, paid >= 20),
+  // so this admin number always agrees with the "hit minimum" pins.
+  const lockedInCities = Array.from(cityCountMap.values()).filter((c) => c.isActive && c.paid >= 20).length;
 
   // Table fill rate — filled (non-canceled) seats across all active tables.
   let tableFillRate = 0;
@@ -170,24 +183,29 @@ export async function GET() {
     );
   }
 
-  // Revenue this month — payments created within the current calendar month.
+  // Revenue this month + today — succeeded payments created within the current
+  // calendar month. "Today" is derived from the SAME result set (today is always
+  // inside the current month) rather than a second query. Server-local
+  // calendar-day boundaries, same convention as the month tile (on Vercel the
+  // server clock is UTC, so this is a UTC day — consistent across both tiles).
   const now = new Date();
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString();
-  const monthPayments = await fetchAllRows<{ amount_cents: number | null }>((from, to) =>
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const monthPayments = await fetchAllRows<{ amount_cents: number | null; created_at: string }>((from, to) =>
     supabase
       .from("payments")
-      .select("amount_cents")
+      .select("amount_cents, created_at")
       .eq("status", "succeeded")
-      .gte("created_at", monthStart)
-      .lt("created_at", monthEnd)
+      .gte("created_at", monthStart.toISOString())
+      .lt("created_at", monthEnd.toISOString())
       .order("created_at", { ascending: true })
       .range(from, to)
   );
-  const revenueThisMonthCents = monthPayments.reduce(
-    (sum: number, p: any) => sum + (p.amount_cents ?? 0),
-    0
-  );
+  const revenueThisMonthCents = monthPayments.reduce((sum, p) => sum + (p.amount_cents ?? 0), 0);
+  const revenueTodayCents = monthPayments
+    .filter((p) => new Date(p.created_at) >= dayStart)
+    .reduce((sum, p) => sum + (p.amount_cents ?? 0), 0);
 
   const metrics: AdminMetrics = {
     registrationsThisSeries,
@@ -195,9 +213,11 @@ export async function GET() {
     registrationsAllTime,
     activePlayers,
     activeCities,
+    lockedInCities,
     tableFillRate,
     revenueThisSeries: revenueThisSeriesCents / 100,
     revenueThisMonth: revenueThisMonthCents / 100,
+    revenueToday: revenueTodayCents / 100,
     playersByCity,
   };
 

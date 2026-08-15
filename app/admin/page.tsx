@@ -53,9 +53,11 @@ export default function AdminDashboard() {
     { label: "Paid this series", value: metrics ? metrics.paidRegistrationsThisSeries.toLocaleString() : "—" },
     { label: "Registrations all-time", value: metrics ? metrics.registrationsAllTime.toLocaleString() : "—" },
     { label: "Active players", value: metrics ? metrics.activePlayers.toLocaleString() : "—" },
+    { label: "Revenue today", value: metrics ? usd(metrics.revenueToday) : "—" },
     { label: "Revenue this month", value: metrics ? usd(metrics.revenueThisMonth) : "—" },
     { label: "Revenue this series", value: metrics ? usd(metrics.revenueThisSeries) : "—" },
     { label: "Active cities", value: metrics ? metrics.activeCities.toLocaleString() : "—" },
+    { label: "Locked-in cities", value: metrics ? `${metrics.lockedInCities.toLocaleString()} / ${metrics.activeCities.toLocaleString()}` : "—" },
     { label: "Table fill rate", value: metrics ? `${Math.round(metrics.tableFillRate * 100)}%` : "—" },
   ];
 
