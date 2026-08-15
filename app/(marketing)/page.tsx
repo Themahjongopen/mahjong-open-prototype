@@ -959,7 +959,12 @@ export default function HomePage() {
            cities / 7 rows — smaller cards, gaps, padding, and title). Photo aspect
            ratios kept unchanged across both. */
         .launch-card-photo { aspect-ratio: 8 / 5; }
-        .launch-card-body { padding: 14px 18px 16px; }
+        /* flex:1 so the green panel fills the rest of the card's flex column. Cards
+           in a row stretch to the tallest (the one with a tagline), so without this
+           the shorter cards left a white strip below their green; now that leftover
+           becomes extra green bottom-padding and every green block ends at the same
+           y, with the tagline living inside green space that already exists. */
+        .launch-card-body { padding: 14px 18px 16px; flex: 1; }
         .launch-card-title { font-size: 23px; }
         /* Long names (>= 20 chars — currently "Greater Cartersville" and "Greater
            Boston Metro") don't fit the ~227px text area of the 265px desktop card
