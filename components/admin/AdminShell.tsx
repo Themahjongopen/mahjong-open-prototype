@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
-import { LayoutDashboard, Building2, CalendarRange, Users, Table2, ClipboardCheck, Trophy, Megaphone, Link2, LogOut, ExternalLink, Menu, X } from "lucide-react";
+import { LayoutDashboard, Building2, CalendarRange, Users, Table2, ClipboardCheck, Trophy, Megaphone, Link2, DollarSign, LogOut, ExternalLink, Menu, X } from "lucide-react";
 
 const NAV_ITEMS = [
   { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
@@ -17,6 +17,7 @@ const NAV_ITEMS = [
   { label: "Scores", href: "/admin/scores", icon: ClipboardCheck },
   { label: "Standings", href: "/admin/standings", icon: Trophy },
   { label: "Commissioners", href: "/admin/commissioners", icon: Link2 },
+  { label: "Revenue", href: "/admin/revenue", icon: DollarSign },
   { label: "Announcements", href: "/admin/announcements", icon: Megaphone },
 ];
 

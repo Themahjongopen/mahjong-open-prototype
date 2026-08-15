@@ -39,15 +39,21 @@ type RegistrationRow = {
   // Every city this profile leads (migration 029). Same list on every row for
   // that profile; the page shows the badge only on rows whose city is in here.
   commissioner_city_ids?: string[];
+  // Who this registration's revenue credits to (migration 035). One entry for a
+  // single/direct attribution, several for a split. commissioner_profile_id null
+  // = unattributed. attribution_source is the shared source of the rows
+  // (link/dropdown/organic_split/backfill/manual) — drives the source filter.
+  attribution: Array<{ commissioner_profile_id: string | null; commissioner_name: string | null; weight: number }>;
+  attribution_source: string | null;
 };
 
 // Local-preview fallback used only when no service-role client is configured.
 // Reshaped to look like real registrations (name/email/phone/city/series/paid_status/date).
 const MOCK_REGISTRATIONS: RegistrationRow[] = [
-  { id: "reg-1", full_name: "Morgan Park", email: "morgan@example.com", phone: "(213) 555-0142", skill_level: "advanced", paid_status: "paid", created_at: "2026-06-28T18:30:00Z", city: "Los Angeles, CA", city_id: null, series: "Spring 2026", series_id: null, paid_city_count: 1, invited: true, invite_state: "active", invite_sent_at: "2026-06-28T19:00:00Z", reminder_sent_at: null },
-  { id: "reg-2", full_name: "Alex Kim", email: "alex@example.com", phone: "(310) 555-0199", skill_level: "intermediate", paid_status: "paid", created_at: "2026-06-27T14:05:00Z", city: "Los Angeles, CA", city_id: null, series: "Spring 2026", series_id: null, paid_city_count: 1, invited: true, invite_state: "invited", invite_sent_at: "2026-06-27T15:10:00Z", reminder_sent_at: null },
-  { id: "reg-3", full_name: "Sam Rivera", email: "sam@example.com", phone: null, skill_level: "beginner", paid_status: "pending", created_at: "2026-06-26T21:12:00Z", city: "San Francisco, CA", city_id: null, series: "Spring 2026", series_id: null, paid_city_count: 0, invited: false, invite_state: "none", invite_sent_at: null, reminder_sent_at: null },
-  { id: "reg-4", full_name: "Taylor Brooks", email: "taylor@example.com", phone: "(415) 555-0173", skill_level: "intermediate", paid_status: "refunded", created_at: "2026-06-24T09:47:00Z", city: "San Francisco, CA", city_id: null, series: "Spring 2026", series_id: null, paid_city_count: 0, invited: false, invite_state: "none", invite_sent_at: null, reminder_sent_at: null },
+  { id: "reg-1", full_name: "Morgan Park", email: "morgan@example.com", phone: "(213) 555-0142", skill_level: "advanced", paid_status: "paid", created_at: "2026-06-28T18:30:00Z", city: "Los Angeles, CA", city_id: null, series: "Spring 2026", series_id: null, paid_city_count: 1, invited: true, invite_state: "active", invite_sent_at: "2026-06-28T19:00:00Z", reminder_sent_at: null, attribution: [], attribution_source: null },
+  { id: "reg-2", full_name: "Alex Kim", email: "alex@example.com", phone: "(310) 555-0199", skill_level: "intermediate", paid_status: "paid", created_at: "2026-06-27T14:05:00Z", city: "Los Angeles, CA", city_id: null, series: "Spring 2026", series_id: null, paid_city_count: 1, invited: true, invite_state: "invited", invite_sent_at: "2026-06-27T15:10:00Z", reminder_sent_at: null, attribution: [], attribution_source: null },
+  { id: "reg-3", full_name: "Sam Rivera", email: "sam@example.com", phone: null, skill_level: "beginner", paid_status: "pending", created_at: "2026-06-26T21:12:00Z", city: "San Francisco, CA", city_id: null, series: "Spring 2026", series_id: null, paid_city_count: 0, invited: false, invite_state: "none", invite_sent_at: null, reminder_sent_at: null, attribution: [], attribution_source: null },
+  { id: "reg-4", full_name: "Taylor Brooks", email: "taylor@example.com", phone: "(415) 555-0173", skill_level: "intermediate", paid_status: "refunded", created_at: "2026-06-24T09:47:00Z", city: "San Francisco, CA", city_id: null, series: "Spring 2026", series_id: null, paid_city_count: 0, invited: false, invite_state: "none", invite_sent_at: null, reminder_sent_at: null, attribution: [], attribution_source: null },
 ];
 
 function formatCity(city: { name: string | null; state: string | null } | null | undefined): string | null {
@@ -73,7 +79,7 @@ export async function GET() {
       data = await fetchAllRows((from, to) =>
         supabase
           .from("registrations")
-          .select("id, full_name, email, phone, skill_level, paid_status, created_at, reminder_sent_at, profile_id, city_id, series_id, cities(name, state), series(name), profiles(role)")
+          .select("id, full_name, email, phone, skill_level, paid_status, created_at, reminder_sent_at, profile_id, city_id, series_id, cities(name, state), series(name), profiles(role), registration_attributions(commissioner_profile_id, weight, source, profiles(full_name))")
           .order("created_at", { ascending: false })
           .range(from, to)
       );
@@ -135,6 +141,20 @@ export async function GET() {
 
         const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
 
+        // Attribution set for this registration (migration 035). Rows share one
+        // source; expose it for the source filter, and the commissioner list for
+        // the attribution column + edit modal.
+        const attrRows = (row.registration_attributions ?? []) as any[];
+        const attribution = attrRows.map((ar) => {
+          const cp = Array.isArray(ar.profiles) ? ar.profiles[0] : ar.profiles;
+          return {
+            commissioner_profile_id: ar.commissioner_profile_id ?? null,
+            commissioner_name: cp?.full_name ?? null,
+            weight: Number(ar.weight ?? 0),
+          };
+        });
+        const attribution_source = attrRows[0]?.source ?? null;
+
         return {
           id: row.id,
           full_name: row.full_name,
@@ -152,6 +172,8 @@ export async function GET() {
           invite_state,
           invite_sent_at: authUser?.invite_sent_at ?? null,
           reminder_sent_at: row.reminder_sent_at ?? null,
+          attribution,
+          attribution_source,
           profile_id: row.profile_id ?? null,
           role: profile?.role ?? null,
           commissioner_city_ids: row.profile_id ? (commissionerCitiesByProfile.get(row.profile_id) ?? []) : [],

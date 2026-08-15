@@ -357,6 +357,44 @@ export interface Database {
           },
         ];
       };
+      attribution_audit: {
+        Row: {
+          id: string;
+          registration_id: string;
+          changed_by_profile_id: string;
+          previous: unknown;
+          next: unknown;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          registration_id: string;
+          changed_by_profile_id: string;
+          previous: unknown;
+          next: unknown;
+          created_at?: string;
+        };
+        Update: {
+          previous?: unknown;
+          next?: unknown;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "attribution_audit_registration_id_fkey";
+            columns: ["registration_id"];
+            isOneToOne: false;
+            referencedRelation: "registrations";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "attribution_audit_changed_by_profile_id_fkey";
+            columns: ["changed_by_profile_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       table_invites: {
         Row: {
           id: string;

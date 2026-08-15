@@ -38,11 +38,16 @@ type RegistrationRow = {
   // Every city this profile leads (migration 029). The "Commissioner" badge +
   // Remove show only on rows whose city_id is in this list.
   commissioner_city_ids?: string[];
+  // Revenue attribution (migration 035). Empty = no attribution row yet.
+  attribution: Array<{ commissioner_profile_id: string | null; commissioner_name: string | null; weight: number }>;
+  attribution_source: string | null;
 };
 
 type CityChoice = { city_id: string; label: string };
 
 type Filter = "all" | "paid" | "pending";
+type SourceFilter = "all" | "link" | "dropdown" | "organic_split" | "backfill" | "manual" | "none";
+type Commissioner = { profile_id: string; full_name: string };
 
 function formatDate(value: string) {
   const date = new Date(value);
@@ -98,6 +103,70 @@ export default function AdminRegistrationsPage() {
   const [editForm, setEditForm] = useState<{ full_name: string; email: string; phone: string }>({ full_name: "", email: "", phone: "" });
   const [editBusy, setEditBusy] = useState(false);
   const [editError, setEditError] = useState<string>("");
+
+  // Source filter (Shari pulls the organic_split rows to show commissioners).
+  const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all");
+
+  // Attribution reassignment modal.
+  const [attrRow, setAttrRow] = useState<RegistrationRow | null>(null);
+  const [attrOptions, setAttrOptions] = useState<Commissioner[]>([]);
+  const [attrEntries, setAttrEntries] = useState<Array<{ commissioner_profile_id: string | null; weight: string }>>([]);
+  const [attrBusy, setAttrBusy] = useState(false);
+  const [attrError, setAttrError] = useState<string>("");
+
+  async function openAttr(r: RegistrationRow) {
+    setAttrRow(r);
+    setAttrError("");
+    setAttrOptions([]);
+    // Seed from the current set, or one blank entry.
+    setAttrEntries(
+      r.attribution.length
+        ? r.attribution.map((a) => ({ commissioner_profile_id: a.commissioner_profile_id, weight: a.weight.toFixed(4) }))
+        : [{ commissioner_profile_id: null, weight: "1.0000" }]
+    );
+    if (r.city_id) {
+      const res = await fetch(`/api/commissioners?city_id=${encodeURIComponent(r.city_id)}`);
+      const payload = await res.json().catch(() => ({}));
+      setAttrOptions((payload.commissioners ?? []) as Commissioner[]);
+    }
+  }
+
+  function evenSplit() {
+    setAttrEntries((entries) => {
+      const n = entries.length;
+      if (n === 0) return entries;
+      const base = Math.floor((1 / n) * 10000) / 10000;
+      return entries.map((e, i) => ({ ...e, weight: (i === 0 ? 1 - base * (n - 1) : base).toFixed(4) }));
+    });
+  }
+
+  async function saveAttr() {
+    if (!attrRow) return;
+    const attributions = attrEntries.map((e) => ({ commissioner_profile_id: e.commissioner_profile_id, weight: Number(e.weight) }));
+    const sum = attributions.reduce((s, a) => s + (Number.isFinite(a.weight) ? a.weight : 0), 0);
+    if (Math.abs(sum - 1) > 0.001) {
+      setAttrError(`Weights must sum to 1.0 (they sum to ${sum.toFixed(4)}).`);
+      return;
+    }
+    setAttrBusy(true);
+    setAttrError("");
+    try {
+      const res = await fetch(`/api/admin/registrations/${attrRow.id}/attribution`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ attributions }),
+      });
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setAttrError(payload.error || "Could not save attribution.");
+        return;
+      }
+      setAttrRow(null);
+      await loadRows();
+    } finally {
+      setAttrBusy(false);
+    }
+  }
   // When promoting a player who has paid in more than one city, we ask which
   // city rather than guessing. This holds the pending promotion + its choices.
   const confirm = useConfirm();
@@ -374,13 +443,16 @@ export default function AdminRegistrationsPage() {
       if (seriesFilter !== "all" && r.series_id !== seriesFilter) return false;
       if (multiCityOnly && r.paid_city_count < 2) return false;
       if (invitedNoAccountOnly && !(r.paid_status === "paid" && r.invite_state === "invited")) return false;
+      if (sourceFilter !== "all") {
+        if (sourceFilter === "none" ? r.attribution_source !== null : r.attribution_source !== sourceFilter) return false;
+      }
       if (q) {
         const hay = `${r.full_name ?? ""} ${r.email} ${r.phone ?? ""}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
       return true;
     });
-  }, [visibleRows, filter, search, cityFilter, seriesFilter, multiCityOnly, invitedNoAccountOnly]);
+  }, [visibleRows, filter, search, cityFilter, seriesFilter, multiCityOnly, invitedNoAccountOnly, sourceFilter]);
 
   function toggleSelected(id: string) {
     setSelectedIds((prev) => {
@@ -751,6 +823,15 @@ export default function AdminRegistrationsPage() {
             <option key={s.id} value={s.id}>{s.label}</option>
           ))}
         </select>
+        <select aria-label="Filter by attribution source" className="input-mo" style={{ maxWidth: 240 }} value={sourceFilter} onChange={(e) => setSourceFilter(e.target.value as SourceFilter)}>
+          <option value="all">All attribution</option>
+          <option value="organic_split">Organic (no one specific)</option>
+          <option value="link">Referral link</option>
+          <option value="dropdown">Dropdown pick</option>
+          <option value="manual">Manually set</option>
+          <option value="backfill">Backfilled</option>
+          <option value="none">No attribution yet</option>
+        </select>
       </div>
 
       <div style={{ background: "#fff", border: "1px solid var(--hair-200)", borderRadius: "var(--radius-lg)", overflow: "hidden", boxShadow: "var(--shadow-xs)" }}>
@@ -764,7 +845,7 @@ export default function AdminRegistrationsPage() {
                 aria-label="Select all visible rows"
               />
             </p>
-            {["Name", "Email", "Phone", "City", "Series", "Skill", "Payment", "Registered", "Portal"].map((h) => (
+            {["Name", "Email", "Phone", "City", "Series", "Skill", "Payment", "Registered", "Portal", "Attribution"].map((h) => (
               <p key={h}>{h}</p>
             ))}
           </div>
@@ -1031,11 +1112,88 @@ export default function AdminRegistrationsPage() {
                     )
                   ) : null}
                 </div>
+                <div>
+                  <span className="admin-mobile-label">Attribution</span>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 4, alignItems: "flex-start" }}>
+                    {r.attribution.length === 0 ? (
+                      <span style={{ fontSize: 13, color: "var(--ink-400)" }}>None</span>
+                    ) : (
+                      <span style={{ fontSize: 12.5, color: "var(--ink-700)" }}>
+                        {r.attribution.map((a, i) => (
+                          <span key={i}>
+                            {i > 0 ? " · " : ""}
+                            {a.commissioner_name ?? "Unattributed"}
+                            {r.attribution.length > 1 ? ` ${Math.round(a.weight * 100)}%` : ""}
+                          </span>
+                        ))}
+                      </span>
+                    )}
+                    <button type="button" className="btn" style={{ fontSize: 11, padding: "3px 9px" }} onClick={() => openAttr(r)}>
+                      Edit
+                    </button>
+                  </div>
+                </div>
               </div>
             ))
           )}
         </div>
       </div>
+
+      {attrRow ? (
+        <div role="dialog" aria-modal="true" aria-label="Edit attribution" style={{ position: "fixed", inset: 0, zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", padding: 16, background: "rgba(20,30,33,0.45)" }} onClick={(e) => { if (e.target === e.currentTarget && !attrBusy) setAttrRow(null); }}>
+          <div style={{ background: "#fff", borderRadius: "var(--radius-lg)", boxShadow: "var(--shadow-lg)", width: "100%", maxWidth: 460, maxHeight: "85vh", overflowY: "auto", padding: 24 }}>
+            <h2 style={{ fontFamily: "var(--font-display)", fontSize: 20, color: "var(--ink-900)", margin: "0 0 4px" }}>Edit attribution</h2>
+            <p style={{ fontSize: 13, color: "var(--ink-500)", margin: "0 0 16px" }}>
+              {attrRow.full_name ?? attrRow.email} — {attrRow.city ?? "—"}. Set one commissioner at 100%, or split so weights sum to 100%.
+            </p>
+
+            {attrEntries.map((entry, idx) => {
+              const w = Number(entry.weight);
+              return (
+                <div key={idx} style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8 }}>
+                  <select
+                    className="input-mo"
+                    style={{ flex: 1 }}
+                    value={entry.commissioner_profile_id ?? ""}
+                    onChange={(e) => setAttrEntries((es) => es.map((x, i) => (i === idx ? { ...x, commissioner_profile_id: e.target.value || null } : x)))}
+                  >
+                    <option value="">Unattributed</option>
+                    {attrOptions.map((c) => (
+                      <option key={c.profile_id} value={c.profile_id}>{c.full_name}</option>
+                    ))}
+                  </select>
+                  <input
+                    type="number" min={0} max={1} step={0.0001}
+                    className="input-mo" style={{ width: 96, textAlign: "right" }}
+                    value={entry.weight}
+                    onChange={(e) => setAttrEntries((es) => es.map((x, i) => (i === idx ? { ...x, weight: e.target.value } : x)))}
+                    aria-label="Weight"
+                  />
+                  <span style={{ fontSize: 12, color: "var(--ink-400)", width: 40 }}>{Number.isFinite(w) ? `${Math.round(w * 100)}%` : ""}</span>
+                  {attrEntries.length > 1 ? (
+                    <button type="button" className="btn" style={{ fontSize: 12, padding: "6px 8px" }} onClick={() => setAttrEntries((es) => es.filter((_, i) => i !== idx))}>×</button>
+                  ) : null}
+                </div>
+              );
+            })}
+
+            <div style={{ display: "flex", gap: 8, margin: "10px 0 16px", flexWrap: "wrap" }}>
+              <button type="button" className="btn" style={{ fontSize: 12, padding: "6px 12px" }} onClick={() => setAttrEntries((es) => [...es, { commissioner_profile_id: null, weight: "0.0000" }])}>+ Add commissioner</button>
+              <button type="button" className="btn" style={{ fontSize: 12, padding: "6px 12px" }} onClick={evenSplit}>Even split</button>
+              <span style={{ fontSize: 13, color: "var(--ink-600)", alignSelf: "center" }}>
+                Sum: {(attrEntries.reduce((s, e) => s + (Number.isFinite(Number(e.weight)) ? Number(e.weight) : 0), 0)).toFixed(4)}
+              </span>
+            </div>
+
+            {attrError ? <p style={{ fontSize: 13, color: "var(--danger)", margin: "0 0 12px" }}>{attrError}</p> : null}
+
+            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+              <button type="button" className="btn btn-ghost" onClick={() => setAttrRow(null)} disabled={attrBusy} style={{ padding: "10px 16px" }}>Cancel</button>
+              <button type="button" className="btn btn-primary" onClick={saveAttr} disabled={attrBusy} style={{ padding: "10px 16px" }}>{attrBusy ? "Saving…" : "Save attribution"}</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
     </div>
   );
