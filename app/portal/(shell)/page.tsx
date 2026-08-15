@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CalendarDays, MapPin, Trophy, Plus } from "lucide-react";
+import { CalendarDays, MapPin, Trophy, Plus, Printer } from "lucide-react";
 import { getPortalUser } from "@/lib/portal/session";
 import { withAdminCity } from "@/lib/portal/adminCity";
 import { getNextTable } from "@/lib/portal/tables";
@@ -87,6 +87,13 @@ export default async function PortalDashboard() {
         <Link href="/portal/my-tables" className="btn btn-ghost" style={{ justifyContent: "center", fontSize: 14, borderRadius: "var(--radius-lg)", padding: "12px" }}>
           My tables
         </Link>
+        {/* Static two-up official scorecard (one print = two cards). Full-width
+            secondary row below the 2×2 so it doesn't reshuffle the grid or compete
+            with Create table. Opens in a new tab (friendlier than a download on
+            iOS); `download` is a desktop save fallback. */}
+        <a href="/scorecard.pdf" target="_blank" rel="noopener noreferrer" download className="btn btn-ghost" style={{ gridColumn: "1 / -1", justifyContent: "center", fontSize: 14, borderRadius: "var(--radius-lg)", padding: "12px" }}>
+          <Printer size={16} /> Print a scorecard
+        </a>
       </div>
 
       {canAddCity ? (
