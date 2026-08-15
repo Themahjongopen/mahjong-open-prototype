@@ -25,10 +25,15 @@ function formatTime(value: string | null): string | null {
 
 /**
  * "Your table is now full" notice — the mirror image of tableUnderfilledEmail,
- * sent to the other seated players when a join fills the 4th seat (fired once,
- * on that 3 → 4 transition only — see the caller). Branded via Resend +
- * buildBrandedEmail. Best-effort: the seat has already committed, so a send
- * failure must not block the join.
+ * sent when a join fills the 4th seat (fired once, on that 3 → 4 transition only
+ * — see the caller). Branded via Resend + buildBrandedEmail. Best-effort: the
+ * seat has already committed, so a send failure must not block the join.
+ *
+ * Two variants (opts.acting):
+ *   - acting = false (the other three already-seated players): "your table is
+ *     now full" — this happened to you.
+ *   - acting = true (the player who just took the 4th seat): "you completed this
+ *     table" — you did this. Same details + link, confirmation-toned copy.
  */
 export async function sendTableFilledEmail(
   recipient: { email: string; fullName?: string | null },
@@ -39,11 +44,13 @@ export async function sendTableFilledEmail(
     locationName: string;
     locationAddress: string | null;
     roundType: string | null;
-  }
+  },
+  opts: { acting?: boolean } = {}
 ): Promise<TableFilledResult> {
   const resendApiKey = process.env.RESEND_API_KEY;
   if (!resendApiKey) return { ok: false, error: "Email service is not configured." };
 
+  const acting = opts.acting === true;
   const firstName = (recipient.fullName ?? "").trim().split(/\s+/)[0] || "there";
   const dateLabel = formatDate(table.tableDate);
   const timeLabel = formatTime(table.tableTime);
@@ -59,9 +66,13 @@ export async function sendTableFilledEmail(
     .map((r) => `<p style="margin:0 0 8px 0;font-size:15px;line-height:1.6;color:#3a4a4f;">${r}</p>`)
     .join("");
 
+  const lead = acting
+    ? "You took the fourth seat &mdash; that&rsquo;s a full table, all set to play."
+    : "Good news &mdash; your Mahjong Open table just filled its fourth seat, so it&rsquo;s all set to play.";
+
   const innerHtml = `
     <p style="margin:0 0 12px 0;font-size:15px;line-height:1.65;color:#3a4a4f;">Hi ${firstName},</p>
-    <p style="margin:0 0 16px 0;font-size:15px;line-height:1.65;color:#3a4a4f;">Good news &mdash; your Mahjong Open table just filled its fourth seat, so it&rsquo;s all set to play.</p>
+    <p style="margin:0 0 16px 0;font-size:15px;line-height:1.65;color:#3a4a4f;">${lead}</p>
     ${detailsHtml}
     <table role="presentation" cellpadding="0" cellspacing="0" style="margin:18px 0;">
       <tr>
@@ -78,9 +89,9 @@ export async function sendTableFilledEmail(
     const { error } = await resend.emails.send({
       from: FROM,
       to: [recipient.email],
-      subject: "Your table is now full — see you there!",
+      subject: acting ? "You completed your table — see you there!" : "Your table is now full — see you there!",
       html: buildBrandedEmail({
-        title: "Your table is now full",
+        title: acting ? "You completed this table" : "Your table is now full",
         innerHtml,
         preheader: `4 of 4 seated — ${dateLabel}${timeLabel ? ` at ${timeLabel}` : ""}`,
       }),

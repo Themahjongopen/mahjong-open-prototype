@@ -62,17 +62,20 @@ export async function POST(_request: Request, context: { params: Promise<{ id: s
   // Fourth seat closes the table.
   if (active.length + 1 >= 4) {
     await admin.from("league_tables").update({ status: "full" }).eq("id", id);
-    // Tell the other 3 players the table just filled (the joiner isn't in
-    // `active` — they weren't seated when it was read). Gated on the
-    // email_table_filled pref (default on). Best-effort with per-recipient
-    // try/catch — the join has already committed and must not be blocked.
+    // Notify ALL FOUR now-seated players: the three already seated (`active`,
+    // read before the insert) PLUS the joiner (session.id) who just took the 4th
+    // seat. The joiner gets the "you completed this table" variant; the other
+    // three get the standard "your table is now full". Pref-gated equally for all
+    // — the joiner is NOT a special case on preferences. Deduped so nobody gets
+    // two. Best-effort with per-recipient try/catch — the join has already
+    // committed and must never be blocked or rolled back by a send.
     try {
-      const otherIds = active.map((s: any) => s.user_id).filter((uid: string) => uid && uid !== session.id);
-      if (otherIds.length) {
+      const uniqueIds = [...new Set([...active.map((s: any) => s.user_id).filter(Boolean), session.id])];
+      if (uniqueIds.length) {
         const { data: profiles } = await admin
           .from("profiles")
           .select("id, email, full_name, notification_preferences")
-          .in("id", otherIds);
+          .in("id", uniqueIds);
         for (const p of (profiles ?? []) as any[]) {
           if (!p.email) continue;
           if (resolvePrefs(p.notification_preferences).email_table_filled === false) continue; // opted out
@@ -86,7 +89,8 @@ export async function POST(_request: Request, context: { params: Promise<{ id: s
                 locationName: table.location_name,
                 locationAddress: table.location_address,
                 roundType: table.round_type,
-              }
+              },
+              { acting: p.id === session.id }
             );
             if (!res.ok) console.error("tableFilledEmail not sent", p.email, res.error);
           } catch (err) {
