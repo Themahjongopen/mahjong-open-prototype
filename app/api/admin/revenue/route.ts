@@ -90,10 +90,21 @@ export async function GET(request: Request) {
       .range(from, to)
   );
 
+  // Distinct PAID registrations that carry an attribution row, per city — so the
+  // page can warn when a city's attributed count is below its paid-player count
+  // (i.e. the pre-attribution backfill hasn't reached everyone). Without this,
+  // Memphis reads $80 against 33 paid players with nothing saying it's partial.
+  const cityAttributedPaid = new Map<string, Set<string>>();
+
   const buckets = new Map<string, Bucket>();
   for (const a of (attrRows ?? []) as any[]) {
     const reg = Array.isArray(a.registrations) ? a.registrations[0] : a.registrations;
     if (!reg || !reg.city_id) continue;
+    if (reg.paid_status === "paid") {
+      const s = cityAttributedPaid.get(reg.city_id) ?? new Set<string>();
+      s.add(reg.id);
+      cityAttributedPaid.set(reg.city_id, s);
+    }
     const prof = Array.isArray(a.profiles) ? a.profiles[0] : a.profiles;
     // amount = the registration's SUCCEEDED payment (what Stripe actually collected).
     const payments = (reg.payments ?? []) as Array<{ amount_cents: number | null; status: string | null }>;
@@ -139,7 +150,7 @@ export async function GET(request: Request) {
   for (const b of buckets.values()) {
     let g = cityGroups.get(b.city_id);
     if (!g) {
-      g = { city_id: b.city_id, city_name: b.city_name, paid_player_count: cityPaidPlayers.get(b.city_id)?.size ?? 0, rows: [] };
+      g = { city_id: b.city_id, city_name: b.city_name, paid_player_count: cityPaidPlayers.get(b.city_id)?.size ?? 0, attributed_paid_count: cityAttributedPaid.get(b.city_id)?.size ?? 0, rows: [] };
       cityGroups.set(b.city_id, g);
     }
     g.rows.push({

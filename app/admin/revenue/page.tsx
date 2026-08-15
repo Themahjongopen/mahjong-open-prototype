@@ -15,7 +15,7 @@ type Row = {
   refunded_players: number;
   total_cents: number;
 };
-type City = { city_id: string; city_name: string; paid_player_count: number; city_total_cents: number; rows: Row[] };
+type City = { city_id: string; city_name: string; paid_player_count: number; attributed_paid_count: number; city_total_cents: number; rows: Row[] };
 type Series = { id: string; name: string; starts_at: string | null };
 
 function usd(cents: number) {
@@ -100,6 +100,18 @@ export default function AdminRevenuePage() {
                 </div>
                 <span style={{ fontSize: 14, fontWeight: 700, color: "var(--ink-900)" }}>City total {usd(city.city_total_cents)}</span>
               </div>
+
+              {/* Incompleteness warning — attributed count below paid-player count
+                  means the pre-attribution backfill hasn't reached everyone, so
+                  this city's revenue is understated. Read it as partial, not real. */}
+              {city.attributed_paid_count < city.paid_player_count ? (
+                <div style={{ padding: "8px 16px", background: "var(--butter-50, #fdf6e3)", borderBottom: "1px solid var(--hair-200)", display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: "var(--butter-700, #9a7b1a)" }}>⚠ Incomplete</span>
+                  <span style={{ fontSize: 13, color: "var(--ink-700)" }}>
+                    {city.attributed_paid_count} of {city.paid_player_count} registrations attributed — revenue below is understated until the rest are attributed.
+                  </span>
+                </div>
+              ) : null}
 
               {city.rows.map((row, i) => {
                 const key = rowKey(city, row);
