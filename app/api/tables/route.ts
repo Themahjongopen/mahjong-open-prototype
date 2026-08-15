@@ -40,9 +40,10 @@ export async function POST(request: Request) {
   const locationAddress = body?.location_address?.toString().trim() || null;
   const roundType = body?.round_type?.toString().trim() || null;
   const notes = body?.notes?.toString().trim() || null;
-  // Step 1: area is OPTIONAL. Normalized so "NORTH SHELBY"/"north shelby" collapse
-  // to one canonical "North Shelby"; empty/whitespace stores as NULL. (The create
-  // form makes it required in Step 2 — this route stays lenient either way.)
+  // Normalized so "NORTH SHELBY"/"north shelby" collapse to one canonical
+  // "North Shelby"; empty/whitespace → null. REQUIRED on create (Step 2) — the
+  // null check below enforces it server-side, not just in the form. (The EDIT
+  // route deliberately stays lenient so pre-area tables can still be edited.)
   const area = normalizeArea(body?.area?.toString());
 
   if (!Number.isInteger(weekNumber) || weekNumber < 1 || weekNumber > 9) {
@@ -50,6 +51,9 @@ export async function POST(request: Request) {
   }
   if (!tableDate || !tableTime || !locationName) {
     return NextResponse.json({ error: "Please fill in the date, time, and location." }, { status: 400 });
+  }
+  if (!area) {
+    return NextResponse.json({ error: "Please choose a part of town for the table." }, { status: 400 });
   }
   if (roundType && !ROUND_TYPES.has(roundType)) {
     return NextResponse.json({ error: "Invalid round type." }, { status: 400 });

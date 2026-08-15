@@ -126,7 +126,7 @@ export default function CreateTableForm({ cityId, cityName, seriesStartDate, ser
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-    if (!form.week_number || !form.table_date || !form.table_time || !form.location_name || !form.round_type) {
+    if (!form.week_number || !form.table_date || !form.table_time || !form.location_name || !form.round_type || !form.area.trim()) {
       setError("Please fill in all required fields.");
       return;
     }
@@ -225,9 +225,9 @@ export default function CreateTableForm({ cityId, cityName, seriesStartDate, ser
         {field("Address or directions", false,
           <input className="input-mo" type="text" placeholder="Optional" value={form.location_address} onChange={(e) => setForm((f) => ({ ...f, location_address: e.target.value }))} />
         )}
-        {/* Part of town — Step 1: OPTIONAL (becomes required in Step 2). A combobox,
-            not a native <select>: it must both reuse existing areas and accept new. */}
-        {field("Part of town", false,
+        {/* Part of town — REQUIRED (Step 2). A combobox, not a native <select>: it
+            must both reuse existing areas and accept new ones. */}
+        {field("Part of town", true,
           <>
             <AreaCombobox cityId={cityId} value={form.area} onChange={(v) => setForm((f) => ({ ...f, area: v }))} placeholderFallback="e.g. North, Midtown, East" />
             <p style={{ fontSize: 12, color: "var(--ink-500)", margin: "2px 0 0" }}>
