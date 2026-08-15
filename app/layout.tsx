@@ -1,22 +1,38 @@
 import type { Metadata } from "next";
-import { Bodoni_Moda, Quicksand } from "next/font/google";
+import localFont from "next/font/local";
 import { Analytics } from "@vercel/analytics/react";
 import ConfirmProvider from "@/components/ConfirmProvider";
 import "./globals.css";
 
-const bodoniModa = Bodoni_Moda({
-  weight: ["400", "500", "600"],
-  style: ["normal", "italic"],
-  subsets: ["latin"],
+// Self-hosted from the vendored @fontsource woff2 (copied into ./fonts) rather
+// than next/font/google — Google's build-time CDN fetch of Bodoni Moda's static
+// instances intermittently 404s and fails the whole production build. Local
+// files remove that dependency entirely. Same latin subset + weights/styles as
+// before, same CSS-variable names, so globals.css and rendering are unchanged.
+const bodoniModa = localFont({
+  src: [
+    { path: "./fonts/bodoni-moda-latin-400-normal.woff2", weight: "400", style: "normal" },
+    { path: "./fonts/bodoni-moda-latin-400-italic.woff2", weight: "400", style: "italic" },
+    { path: "./fonts/bodoni-moda-latin-500-normal.woff2", weight: "500", style: "normal" },
+    { path: "./fonts/bodoni-moda-latin-500-italic.woff2", weight: "500", style: "italic" },
+    { path: "./fonts/bodoni-moda-latin-600-normal.woff2", weight: "600", style: "normal" },
+    { path: "./fonts/bodoni-moda-latin-600-italic.woff2", weight: "600", style: "italic" },
+  ],
   variable: "--font-display-loaded",
   display: "swap",
+  adjustFontFallback: "Times New Roman", // serif metric match for CLS (Bodoni is a serif)
 });
 
-const quicksand = Quicksand({
-  weight: ["400", "500", "600", "700"],
-  subsets: ["latin"],
+const quicksand = localFont({
+  src: [
+    { path: "./fonts/quicksand-latin-400-normal.woff2", weight: "400", style: "normal" },
+    { path: "./fonts/quicksand-latin-500-normal.woff2", weight: "500", style: "normal" },
+    { path: "./fonts/quicksand-latin-600-normal.woff2", weight: "600", style: "normal" },
+    { path: "./fonts/quicksand-latin-700-normal.woff2", weight: "700", style: "normal" },
+  ],
   variable: "--font-body-loaded",
   display: "swap",
+  // adjustFontFallback defaults to 'Arial' (sans) — correct for Quicksand.
 });
 
 // Search-engine visibility is OFF by default (pre-launch safe default).
