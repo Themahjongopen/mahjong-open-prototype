@@ -108,52 +108,84 @@ export default function HowItWorksPage() {
         </div>
       </section>
 
-      {/* Scorecard — illustrates the scoring just described. Pink-wash to keep the
-          white→pink→lime section rhythm (Scoring white, FAQ lime). Both the image
-          and the text link open the printable PDF in a new tab. */}
+      {/* Scorecard — illustrates the scoring just described. Pink-wash keeps the
+          white→pink→lime section rhythm (Scoring white, FAQ lime). Desktop: a
+          two-column split, text LEFT (so its eyebrow/heading stay on the same left
+          edge as every other section) and the card RIGHT, vertically centered.
+          Mobile: stacks, card centered. The card sits at a slight casual tilt and
+          straightens + lifts on hover (hover-capable devices only; transition
+          respects prefers-reduced-motion). Both the card and the text link open
+          the printable PDF in a new tab. */}
       <section style={{ padding: "72px 0", background: "var(--pink-wash)" }}>
         <div className="container-mo" style={{ maxWidth: 800 }}>
-          <p className="eyebrow" style={{ marginBottom: 16 }}>Score every game</p>
-          <h2 className="h2" style={{ marginBottom: 24 }}>The official scorecard</h2>
-          <p style={{ fontSize: 16, color: "var(--ink-700)", lineHeight: 1.65, marginBottom: 28 }}>
-            Every table keeps score on the same card — print it at home or grab one from your host.
-          </p>
-          <a
-            href="/scorecard.pdf"
-            target="_blank"
-            rel="noopener noreferrer"
-            download
-            aria-label="Open the printable Mahjong Open scorecard (PDF)"
-            style={{
-              display: "inline-block",
-              maxWidth: 340,
-              width: "100%",
-              borderRadius: "var(--radius-lg)",
-              overflow: "hidden",
-              border: "1px solid var(--hair-200)",
-              boxShadow: "var(--shadow-sm)",
-              cursor: "pointer",
-              transition: "box-shadow 160ms, transform 160ms",
-              lineHeight: 0,
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.boxShadow = "var(--shadow-lg)"; e.currentTarget.style.transform = "translateY(-2px)"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.boxShadow = "var(--shadow-sm)"; e.currentTarget.style.transform = "none"; }}
-          >
-            <Image
-              src="/scorecard-preview.png"
-              alt="The Mahjong Open official scorecard"
-              width={1200}
-              height={1650}
-              sizes="(max-width: 480px) 90vw, 340px"
-              style={{ display: "block", width: "100%", height: "auto" }}
-            />
-          </a>
-          <p style={{ marginTop: 20 }}>
-            <a href="/scorecard.pdf" target="_blank" rel="noopener noreferrer" download style={{ fontSize: 16, fontWeight: 600, color: "var(--pink-600)", textDecoration: "none" }}>
-              Print the scorecard →
-            </a>
-          </p>
+          <div className="scorecard-split">
+            <div className="scorecard-text">
+              <p className="eyebrow" style={{ marginBottom: 16 }}>Score every game</p>
+              <h2 className="h2" style={{ marginBottom: 24 }}>The official scorecard</h2>
+              <p style={{ fontSize: 16, color: "var(--ink-700)", lineHeight: 1.65, marginBottom: 28 }}>
+                Every table keeps score on the same card — print it at home or grab one from your host.
+              </p>
+              <p style={{ margin: 0 }}>
+                <a href="/scorecard.pdf" target="_blank" rel="noopener noreferrer" download style={{ fontSize: 16, fontWeight: 600, color: "var(--pink-600)", textDecoration: "none" }}>
+                  Print the scorecard →
+                </a>
+              </p>
+            </div>
+            <div className="scorecard-media">
+              <a
+                href="/scorecard.pdf"
+                target="_blank"
+                rel="noopener noreferrer"
+                download
+                aria-label="Open the printable Mahjong Open scorecard (PDF)"
+                className="scorecard-card"
+              >
+                <Image
+                  src="/scorecard-preview.png"
+                  alt="The Mahjong Open official scorecard"
+                  width={1200}
+                  height={1650}
+                  sizes="300px"
+                  style={{ display: "block", width: "100%", height: "auto" }}
+                />
+              </a>
+            </div>
+          </div>
         </div>
+        <style>{`
+          .scorecard-split { display: flex; align-items: center; gap: 48px; }
+          .scorecard-text { flex: 1; min-width: 0; }
+          .scorecard-media { flex-shrink: 0; display: flex; justify-content: center; }
+          .scorecard-card {
+            display: block;
+            width: 300px;
+            max-width: 100%;
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            border: 1px solid var(--hair-200);
+            box-shadow: var(--shadow-sm);
+            cursor: pointer;
+            line-height: 0;
+            /* Casual "set down on the table" tilt (transform, so it never affects
+               layout or triggers reflow). */
+            transform: rotate(-2.5deg);
+          }
+          /* Hover only on devices that truly hover — touch devices never get a
+             stuck hover state. Straighten + lift + deepen the shadow; transform
+             only, so surrounding layout can't shift. */
+          @media (hover: hover) {
+            .scorecard-card { transition: transform 250ms ease, box-shadow 250ms ease; }
+            .scorecard-card:hover { transform: rotate(0deg) translateY(-6px); box-shadow: var(--shadow-lg); }
+          }
+          /* Users who asked for reduced motion get the states, not the animation. */
+          @media (prefers-reduced-motion: reduce) {
+            .scorecard-card { transition: none; }
+          }
+          @media (max-width: 768px) {
+            .scorecard-split { flex-direction: column; align-items: stretch; gap: 32px; }
+            .scorecard-media { width: 100%; }
+          }
+        `}</style>
       </section>
 
       {/* FAQ */}
