@@ -1,32 +1,27 @@
 import { Resend } from "resend";
 import { buildBrandedEmail } from "@/lib/email/brandedEmail";
 import { SITE_URL } from "@/lib/site";
+import { formatTableTime } from "@/lib/format/time";
 
 const FROM = "The Mahjong Open <welcome@themahjongopen.com>";
 
 export type TableReminderResult = { ok: boolean; error?: string };
 
-// Plain date -> "Thursday, August 20" (midday UTC anchor avoids tz day-shift).
+// Plain date -> "Monday, Aug 17" (midday UTC anchor avoids tz day-shift).
 function formatDate(value: string): string {
   const date = new Date(`${value}T12:00:00Z`);
   if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
-}
-// "18:00" / "18:00:00" -> "6:00 PM"; passes through anything unexpected.
-function formatTime(value: string | null): string | null {
-  if (!value) return null;
-  const m = value.match(/^(\d{1,2}):(\d{2})/);
-  if (!m) return value;
-  let h = Number.parseInt(m[1], 10);
-  const ampm = h >= 12 ? "PM" : "AM";
-  h = h % 12 || 12;
-  return `${h}:${m[2]} ${ampm}`;
+  return date.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
 }
 
 /**
- * Day-before "your table is tomorrow" reminder, sent by the daily cron to each
- * seated player whose email_table_reminders pref is on. Branded via Resend +
- * buildBrandedEmail, same as scorePostedEmail / portalInvite.
+ * Table reminder sent by the daily cron to each seated player whose
+ * email_table_reminders pref is on. Branded via Resend + buildBrandedEmail.
+ *
+ * NO RELATIVE TIME anywhere ("tomorrow" etc.): the safety-net re-pickup can send
+ * this on the day OF the table, not only the day before, so relative wording
+ * would be wrong. Subject, title, and body all state the actual day + 12-hour
+ * time (via formatTableTime) so the message reads correctly whenever it lands.
  */
 export async function sendTableReminderEmail(
   recipient: { email: string; fullName?: string | null },
@@ -44,11 +39,12 @@ export async function sendTableReminderEmail(
 
   const firstName = (recipient.fullName ?? "").trim().split(/\s+/)[0] || "there";
   const dateLabel = formatDate(table.tableDate);
-  const timeLabel = formatTime(table.tableTime);
+  const timeLabel = formatTableTime(table.tableTime);
+  const whenText = `${dateLabel}${timeLabel ? ` at ${timeLabel}` : ""}`; // e.g. "Monday, Aug 17 at 6:00 PM"
   const url = `${SITE_URL}/portal/tables/${table.tableId}`;
 
   const detailRows = [
-    `<strong>When:</strong> ${dateLabel}${timeLabel ? ` at ${timeLabel}` : ""}`,
+    `<strong>When:</strong> ${whenText}`,
     `<strong>Where:</strong> ${table.locationName}${table.locationAddress ? ` — ${table.locationAddress}` : ""}`,
   ];
   if (table.roundType) detailRows.push(`<strong>Round:</strong> ${table.roundType}`);
@@ -58,7 +54,7 @@ export async function sendTableReminderEmail(
 
   const innerHtml = `
     <p style="margin:0 0 12px 0;font-size:15px;line-height:1.65;color:#3a4a4f;">Hi ${firstName},</p>
-    <p style="margin:0 0 16px 0;font-size:15px;line-height:1.65;color:#3a4a4f;">A friendly reminder — you have a Mahjong Open table tomorrow:</p>
+    <p style="margin:0 0 16px 0;font-size:15px;line-height:1.65;color:#3a4a4f;">A friendly reminder about your upcoming Mahjong Open table:</p>
     ${detailsHtml}
     <table role="presentation" cellpadding="0" cellspacing="0" style="margin:18px 0;">
       <tr>
@@ -75,11 +71,11 @@ export async function sendTableReminderEmail(
     const { error } = await resend.emails.send({
       from: FROM,
       to: [recipient.email],
-      subject: "Your Mahjong Open table is tomorrow",
+      subject: `Your Mahjong Open table — ${whenText}`,
       html: buildBrandedEmail({
-        title: "Your table is tomorrow",
+        title: "Your Mahjong Open table",
         innerHtml,
-        preheader: `${dateLabel}${timeLabel ? ` at ${timeLabel}` : ""} — ${table.locationName}`,
+        preheader: `${whenText} — ${table.locationName}`,
       }),
     });
     if (error) return { ok: false, error: "Could not send the reminder email." };
