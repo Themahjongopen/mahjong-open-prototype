@@ -6,6 +6,7 @@ import { zonedTimeToUtc } from "@/lib/format/zonedTime";
 import { seriesWeekForDate } from "@/lib/portal/seriesWeek";
 import { sendTableUpdatedEmail } from "@/lib/email/tableUpdatedEmail";
 import { sendTableHostChangedEmail } from "@/lib/email/tableHostChangedEmail";
+import { normalizeArea } from "@/lib/portal/area";
 
 const ROUND_TYPES = new Set(["social", "focused", "lightning"]);
 const DEFAULT_TIMEZONE = "America/Chicago";
@@ -149,6 +150,9 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     const locationAddress = body?.location_address?.toString().trim() || null;
     const roundType = body?.round_type?.toString().trim() || null;
     const notes = body?.notes?.toString().trim() || null;
+    // Same shared normalization as Create. Optional here too: a host may clear the
+    // area (→ NULL) or set it; hosts changing area post-creation is expected.
+    const area = normalizeArea(body?.area?.toString());
 
     // Mirror Create's required-field checks — an edit can't null out a required field.
     if (!tableDate || !tableTime || !locationName || !roundType) {
@@ -169,7 +173,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
 
     const { error: updateError } = await admin
       .from("league_tables")
-      .update({ table_date: tableDate, table_time: tableTime, location_name: locationName, location_address: locationAddress, round_type: roundType, notes })
+      .update({ table_date: tableDate, table_time: tableTime, location_name: locationName, location_address: locationAddress, area, round_type: roundType, notes })
       .eq("id", id);
     if (updateError) {
       return NextResponse.json({ error: "The table couldn't be updated. Please try again." }, { status: 500 });

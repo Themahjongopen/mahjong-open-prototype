@@ -29,6 +29,7 @@ export type LeagueTable = {
   timezone: string | null; // IANA name of the venue's local time (cities.timezone)
   location_name: string;
   location_address: string | null;
+  area: string | null; // free-text "part of town" (nullable; pre-area tables are null)
   skill_level: string | null;
   round_type: string | null;
   notes: string | null;

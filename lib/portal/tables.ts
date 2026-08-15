@@ -67,7 +67,7 @@ function today() {
 function tablesInCohortQuery(admin: any, member: PortalMember, openOnly: boolean) {
   let query = admin
     .from("league_tables")
-    .select("id, city_id, series_id, creator_id, week_number, table_date, table_time, location_name, location_address, skill_level, round_type, notes, status, table_seats(id, user_id, seat_number, canceled_at, profiles(full_name, avatar_url, skill_level))")
+    .select("id, city_id, series_id, creator_id, week_number, table_date, table_time, location_name, location_address, area, skill_level, round_type, notes, status, table_seats(id, user_id, seat_number, canceled_at, profiles(full_name, avatar_url, skill_level))")
     .eq("series_id", member.series_id)
     .eq("city_id", member.city_id);
   if (openOnly) query = query.eq("status", "open");
@@ -107,7 +107,7 @@ export async function getTableDetail(id: string, member: PortalMember): Promise<
 
   const { data } = await admin
     .from("league_tables")
-    .select("id, city_id, series_id, creator_id, week_number, table_date, table_time, location_name, location_address, skill_level, round_type, notes, status, cities(timezone), table_seats(id, user_id, seat_number, canceled_at, profiles(full_name, avatar_url, skill_level))")
+    .select("id, city_id, series_id, creator_id, week_number, table_date, table_time, location_name, location_address, area, skill_level, round_type, notes, status, cities(timezone), table_seats(id, user_id, seat_number, canceled_at, profiles(full_name, avatar_url, skill_level))")
     .eq("id", id)
     .maybeSingle();
 
@@ -129,7 +129,7 @@ export async function getMyTables(member: PortalMember): Promise<MyTableSeat[]> 
 
   const { data } = await admin
     .from("table_seats")
-    .select("seat_number, league_tables(id, city_id, series_id, creator_id, week_number, table_date, table_time, location_name, location_address, skill_level, round_type, notes, status, table_seats(id, user_id, seat_number, canceled_at))")
+    .select("seat_number, league_tables(id, city_id, series_id, creator_id, week_number, table_date, table_time, location_name, location_address, area, skill_level, round_type, notes, status, table_seats(id, user_id, seat_number, canceled_at))")
     .eq("user_id", member.id)
     .is("canceled_at", null);
 

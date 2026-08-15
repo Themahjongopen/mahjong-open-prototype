@@ -41,10 +41,19 @@ export default function TablesFilterList({ tables, currentUserId }: { tables: Le
   const [round, setRound] = useState<number | null>(null);
   const [days, setDays] = useState<Set<number>>(new Set());
   const [buckets, setBuckets] = useState<Set<TimeBucket>>(new Set());
+  const [areas, setAreas] = useState<Set<string>>(new Set());
 
   // Rounds actually present in the data, ascending — the dropdown options.
   const rounds = useMemo(
     () => Array.from(new Set(tables.map((t) => t.week_number))).sort((a, b) => a - b),
+    [tables],
+  );
+
+  // Areas actually present in the CURRENTLY LOADED tables (not a global list),
+  // sorted. If none, the Area control below doesn't render at all — cities that
+  // never use areas see no change.
+  const areaOptions = useMemo(
+    () => Array.from(new Set(tables.map((t) => t.area).filter((a): a is string => !!a))).sort((a, b) => a.localeCompare(b)),
     [tables],
   );
 
@@ -58,21 +67,29 @@ export default function TablesFilterList({ tables, currentUserId }: { tables: Le
       const b = timeOfDayBucket(t.table_time);
       if (b === null || !buckets.has(b)) return false;
     }
+    // Area-less tables show when NO area is selected; they're excluded only once a
+    // player explicitly picks an area (she's asking for a specific part of town).
+    if (areas.size > 0) {
+      if (!t.area || !areas.has(t.area)) return false;
+    }
     return true;
-  }), [tables, round, days, buckets]);
+  }), [tables, round, days, buckets, areas]);
 
   const byWeek = useMemo(() => filtered.reduce<Record<number, LeagueTable[]>>((acc, t) => {
     (acc[t.week_number] ??= []).push(t);
     return acc;
   }, {}), [filtered]);
 
-  const anyActive = round !== null || days.size > 0 || buckets.size > 0;
-  function clearAll() { setRound(null); setDays(new Set()); setBuckets(new Set()); }
+  const anyActive = round !== null || days.size > 0 || buckets.size > 0 || areas.size > 0;
+  function clearAll() { setRound(null); setDays(new Set()); setBuckets(new Set()); setAreas(new Set()); }
   function toggleDay(i: number) {
     setDays((prev) => { const next = new Set(prev); next.has(i) ? next.delete(i) : next.add(i); return next; });
   }
   function toggleBucket(v: TimeBucket) {
     setBuckets((prev) => { const next = new Set(prev); next.has(v) ? next.delete(v) : next.add(v); return next; });
+  }
+  function toggleArea(v: string) {
+    setAreas((prev) => { const next = new Set(prev); next.has(v) ? next.delete(v) : next.add(v); return next; });
   }
 
   return (
@@ -117,6 +134,22 @@ export default function TablesFilterList({ tables, currentUserId }: { tables: Le
             ))}
           </div>
         </div>
+
+        {/* Area — only rendered when at least one loaded table has an area, so
+            cities that never use areas see no new control. */}
+        {areaOptions.length > 0 && (
+          <div>
+            <p style={legendStyle}>Part of town</p>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              {areaOptions.map((a) => (
+                <button key={a} type="button" onClick={() => toggleArea(a)}
+                  aria-pressed={areas.has(a)} style={areas.has(a) ? chipActive : chipBase}>
+                  {a}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Count + clear */}

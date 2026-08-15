@@ -7,6 +7,7 @@ import { useToast } from "@/components/portal/PortalShellClient";
 import { useConfirm } from "@/components/ConfirmProvider";
 import Avatar from "@/components/portal/Avatar";
 import InvitePlayersModal from "@/components/portal/InvitePlayersModal";
+import AreaCombobox from "@/components/portal/AreaCombobox";
 import { scoringSeats, type LeagueTable, type SeatRow } from "@/lib/portal/seats";
 import type { TableSubmission } from "@/lib/portal/scores";
 import { formatTableTime } from "@/lib/format/time";
@@ -33,6 +34,7 @@ type EditForm = {
   table_time: string;
   location_name: string;
   location_address: string;
+  area: string;
   round_type: string;
   notes: string;
 };
@@ -60,6 +62,7 @@ export default function TableDetailClient({
     table_time: (table.table_time ?? "").slice(0, 5), // <input type=time> wants HH:MM
     location_name: table.location_name,
     location_address: table.location_address ?? "",
+    area: table.area ?? "",
     round_type: table.round_type ?? "",
     notes: table.notes ?? "",
   });
@@ -303,6 +306,9 @@ export default function TableDetailClient({
         {field("Address or directions", false,
           <input className="input-mo" type="text" placeholder="Optional" value={editForm.location_address} onChange={(e) => setEditForm((f) => ({ ...f, location_address: e.target.value }))} />
         )}
+        {field("Part of town", false,
+          <AreaCombobox cityId={table.city_id} value={editForm.area} onChange={(v) => setEditForm((f) => ({ ...f, area: v }))} placeholderFallback="e.g. North, Midtown, East" />
+        )}
         {field("Round type", true,
           <select className="input-mo" value={editForm.round_type} onChange={(e) => setEditForm((f) => ({ ...f, round_type: e.target.value }))}>
             <option value="">Select type</option>
@@ -355,6 +361,7 @@ export default function TableDetailClient({
             <div>
               <p>{table.location_name}</p>
               {table.location_address && <p style={{ color: "var(--ink-500)", fontSize: 13 }}>{table.location_address}</p>}
+              {table.area && <p style={{ color: "var(--ink-500)", fontSize: 13 }}>Part of town: {table.area}</p>}
             </div>
           </div>
           {table.notes && (

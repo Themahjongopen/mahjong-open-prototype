@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/server";
 import { getSeriesStartDate, getSeriesEndDate } from "@/lib/portal/tables";
 import { seriesWeekForDate } from "@/lib/portal/seriesWeek";
 import { resolvePrefs } from "@/lib/portal/notificationPrefs";
+import { normalizeArea } from "@/lib/portal/area";
 import { sendNewTableEmail } from "@/lib/email/newTableEmail";
 
 const ROUND_TYPES = new Set(["social", "focused", "lightning"]);
@@ -39,6 +40,10 @@ export async function POST(request: Request) {
   const locationAddress = body?.location_address?.toString().trim() || null;
   const roundType = body?.round_type?.toString().trim() || null;
   const notes = body?.notes?.toString().trim() || null;
+  // Step 1: area is OPTIONAL. Normalized so "NORTH SHELBY"/"north shelby" collapse
+  // to one canonical "North Shelby"; empty/whitespace stores as NULL. (The create
+  // form makes it required in Step 2 — this route stays lenient either way.)
+  const area = normalizeArea(body?.area?.toString());
 
   if (!Number.isInteger(weekNumber) || weekNumber < 1 || weekNumber > 9) {
     return NextResponse.json({ error: "Please choose a valid week." }, { status: 400 });
@@ -81,6 +86,7 @@ export async function POST(request: Request) {
       table_time: tableTime,
       location_name: locationName,
       location_address: locationAddress,
+      area,
       round_type: roundType,
       notes,
       status: "open",

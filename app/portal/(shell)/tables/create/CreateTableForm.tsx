@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Info } from "lucide-react";
 import { enumerateSeriesRounds } from "@/lib/portal/seriesWeek";
+import AreaCombobox from "@/components/portal/AreaCombobox";
 
 const ROUND_TYPE_INFO: { name: string; desc: string }[] = [
   { name: "Social", desc: "Light conversation, casual play" },
@@ -91,7 +92,7 @@ function localTodayString(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-export default function CreateTableForm({ cityName, seriesStartDate, seriesEndDate }: { cityName: string | null; seriesStartDate: string | null; seriesEndDate: string | null }) {
+export default function CreateTableForm({ cityId, cityName, seriesStartDate, seriesEndDate }: { cityId: string | null; cityName: string | null; seriesStartDate: string | null; seriesEndDate: string | null }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -101,6 +102,7 @@ export default function CreateTableForm({ cityName, seriesStartDate, seriesEndDa
     table_time: "",
     location_name: "",
     location_address: "",
+    area: "",
     round_type: "",
     notes: "",
   });
@@ -222,6 +224,16 @@ export default function CreateTableForm({ cityName, seriesStartDate, seriesEndDa
         )}
         {field("Address or directions", false,
           <input className="input-mo" type="text" placeholder="Optional" value={form.location_address} onChange={(e) => setForm((f) => ({ ...f, location_address: e.target.value }))} />
+        )}
+        {/* Part of town — Step 1: OPTIONAL (becomes required in Step 2). A combobox,
+            not a native <select>: it must both reuse existing areas and accept new. */}
+        {field("Part of town", false,
+          <>
+            <AreaCombobox cityId={cityId} value={form.area} onChange={(v) => setForm((f) => ({ ...f, area: v }))} placeholderFallback="e.g. North, Midtown, East" />
+            <p style={{ fontSize: 12, color: "var(--ink-500)", margin: "2px 0 0" }}>
+              What part of town? Players use this to find tables near them.
+            </p>
+          </>
         )}
         {field("Round type", true,
           <select className="input-mo" value={form.round_type} onChange={(e) => setForm((f) => ({ ...f, round_type: e.target.value }))}>

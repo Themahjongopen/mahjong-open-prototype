@@ -84,6 +84,11 @@ export default function OpenTableCard({ table, currentUserId }: { table: LeagueT
               {table.location_name}
               {table.location_address ? `, ${table.location_address}` : ""}
             </span>
+            {/* Area near the location so the Area filter's effect is legible on the
+                card. Pre-area tables have no area and simply show nothing here. */}
+            {table.area ? (
+              <span className="badge badge-lime" style={{ fontSize: 11 }}>{table.area}</span>
+            ) : null}
           </div>
         </div>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
