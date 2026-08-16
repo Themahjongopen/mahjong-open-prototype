@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
 import { getPortalUser } from "@/lib/portal/session";
 import { fetchAllRows } from "@/lib/supabase/paginate";
+import { zonedTimeToUtc } from "@/lib/format/zonedTime";
 
 // Live operations metrics for the admin dashboard tiles.
 export type AdminMetrics = {
@@ -36,6 +37,23 @@ const EMPTY_METRICS: AdminMetrics = {
 // open or full — not once it's completed or canceled.
 const ACTIVE_TABLE_STATUSES = ["open", "full"];
 const SEATS_PER_TABLE = 4;
+
+// The org-wide timezone for the "today" / "this month" revenue boundaries. This
+// is an admin-facing operational number, not a per-city scheduling time, so a
+// single fixed zone is correct — America/Chicago is the site's default/fallback
+// city timezone (see app/api/admin/cities/route.ts's DEFAULT_TIMEZONE).
+const METRICS_TIMEZONE = "America/Chicago";
+const pad = (n: number) => String(n).padStart(2, "0");
+
+// Today's Y/M/D as seen in the given timezone (not the server's own clock).
+function todayInTimeZone(timeZone: string): { year: number; month: number; day: number } {
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat("en-US", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" })
+      .formatToParts(new Date())
+      .map((p) => [p.type, p.value])
+  );
+  return { year: Number(parts.year), month: Number(parts.month), day: Number(parts.day) };
+}
 
 export async function GET() {
   const session = await getPortalUser();
@@ -185,13 +203,15 @@ export async function GET() {
 
   // Revenue this month + today — succeeded payments created within the current
   // calendar month. "Today" is derived from the SAME result set (today is always
-  // inside the current month) rather than a second query. Server-local
-  // calendar-day boundaries, same convention as the month tile (on Vercel the
-  // server clock is UTC, so this is a UTC day — consistent across both tiles).
-  const now = new Date();
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-  const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  // inside the current month) rather than a second query. Central-time
+  // calendar-day/month boundaries (America/Chicago), computed via zonedTimeToUtc
+  // so they're correct regardless of the server's own clock timezone (UTC on
+  // Vercel) — otherwise "today" would roll over at 7PM Central, not midnight.
+  const { year, month, day } = todayInTimeZone(METRICS_TIMEZONE);
+  const dayStart = zonedTimeToUtc(`${year}-${pad(month)}-${pad(day)}`, "00:00:00", METRICS_TIMEZONE);
+  const monthStart = zonedTimeToUtc(`${year}-${pad(month)}-01`, "00:00:00", METRICS_TIMEZONE);
+  const nextMonth = month === 12 ? { y: year + 1, m: 1 } : { y: year, m: month + 1 };
+  const monthEnd = zonedTimeToUtc(`${nextMonth.y}-${pad(nextMonth.m)}-01`, "00:00:00", METRICS_TIMEZONE);
   const monthPayments = await fetchAllRows<{ amount_cents: number | null; created_at: string }>((from, to) =>
     supabase
       .from("payments")
