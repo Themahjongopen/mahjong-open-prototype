@@ -2,8 +2,6 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
-import { SITE_URL } from "@/lib/site";
 import AuthLogo from "@/components/portal/AuthLogo";
 
 const cardStyle: React.CSSProperties = {
@@ -24,11 +22,17 @@ export default function ResetPasswordPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    const supabase = createClient();
-    // Always show the same confirmation regardless of whether the email exists.
-    await supabase.auth.resetPasswordForEmail(email.trim(), {
-      redirectTo: `${SITE_URL}/portal/update-password`,
-    });
+    // App-owned reset flow: this route mints the recovery token server-side and
+    // emails our branded link pointing at /portal/auth/confirm (which only
+    // consumes the token on a real click) — instead of Supabase's default
+    // recovery email, whose link gets burned by email scanners before the player
+    // clicks. The route always returns ok, and we show the same confirmation
+    // regardless of outcome so account existence never leaks.
+    await fetch("/api/portal/forgot-password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: email.trim() }),
+    }).catch(() => {});
     setSent(true);
     setLoading(false);
   }
