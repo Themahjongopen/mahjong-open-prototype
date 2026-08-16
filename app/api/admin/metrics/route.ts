@@ -167,17 +167,29 @@ export async function GET() {
   const lockedInCities = Array.from(cityCountMap.values()).filter((c) => c.isActive && c.paid >= 20).length;
 
   // Table fill rate — filled (non-canceled) seats across all active tables.
+  // Both counts filter on league_tables.status via a join rather than collecting
+  // every active table ID into an .in() list — with enough tables that list can
+  // blow past Supabase's request URL limit and fail, and (see below) that failure
+  // was previously swallowed and silently reported as 0%.
   let tableFillRate = 0;
-  const { data: activeTables } = await supabase
+  const { count: activeTableCount, error: activeTableCountError } = await supabase
     .from("league_tables")
-    .select("id")
+    .select("id", { count: "exact", head: true })
     .in("status", ACTIVE_TABLE_STATUSES);
-  const activeTableIds: string[] = (activeTables ?? []).map((t: any) => t.id);
-  if (activeTableIds.length > 0) {
-    const filledSeats = await countExact("table_seats", (q) =>
-      q.is("canceled_at", null).in("table_id", activeTableIds)
-    );
-    tableFillRate = filledSeats / (activeTableIds.length * SEATS_PER_TABLE);
+  if (activeTableCountError) {
+    console.error("[admin metrics] active table count failed", activeTableCountError);
+  }
+
+  if ((activeTableCount ?? 0) > 0) {
+    const { count: filledSeats, error: filledSeatsError } = await supabase
+      .from("table_seats")
+      .select("id, league_tables!inner(status)", { count: "exact", head: true })
+      .is("canceled_at", null)
+      .in("league_tables.status", ACTIVE_TABLE_STATUSES);
+    if (filledSeatsError) {
+      console.error("[admin metrics] filled seat count failed", filledSeatsError);
+    }
+    tableFillRate = (filledSeats ?? 0) / ((activeTableCount ?? 0) * SEATS_PER_TABLE);
   }
 
   // Revenue this series — SUCCEEDED payments only (exclude pending/failed/refunded)
