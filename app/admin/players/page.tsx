@@ -71,6 +71,42 @@ function csvField(value: string | null): string {
   return text;
 }
 
+// ── Change-city modal types (preview payload from /change-city) ──────────────
+type CCSeat = { seat_id: string; table_id: string; location_name: string; table_date: string; table_time: string | null };
+type CCHosting = { id: string; location_name: string; table_date: string; table_time: string | null };
+type CCAttr = { commissioner_profile_id: string | null; commissioner_name: string | null; weight: number; source: string | null };
+type CCDest = { id: string; name: string; state: string | null; is_active: boolean };
+type ChangeCityPreview = {
+  registration: { id: string; full_name: string | null; city_id: string | null; current_city_name: string | null; series_id: string | null; profile_id: string | null; paid_status: string };
+  hostingTables: CCHosting[];
+  cancelableSeats: CCSeat[];
+  currentAttribution: CCAttr[];
+  destinations: CCDest[];
+};
+
+// A table date + time, e.g. "Mon, Aug 24 · 6:00 PM" — for the change-city modal's
+// seat/hosting lists. Midday anchor avoids a UTC day-shift on the date-only value.
+function fmtTableDateTime(d: string, t: string | null) {
+  const date = new Date(`${d}T12:00:00`);
+  const ds = Number.isNaN(date.getTime()) ? d : date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+  if (!t) return ds;
+  const m = t.match(/^(\d{1,2}):(\d{2})/);
+  if (!m) return `${ds} · ${t}`;
+  let h = parseInt(m[1], 10);
+  const ap = h >= 12 ? "PM" : "AM";
+  h = h % 12 || 12;
+  return `${ds} · ${h}:${m[2]} ${ap}`;
+}
+
+// One attribution row rendered "Name 50%" (or "Unattributed"); percent only shown
+// on a split. Shared by the modal's "current" and "would become" lists.
+function attrLabel(list: CCAttr[]): string {
+  if (!list.length) return "Unattributed";
+  return list
+    .map((a) => `${a.commissioner_name ?? "Unattributed"}${list.length > 1 ? ` ${Math.round(a.weight * 100)}%` : ""}`)
+    .join(" · ");
+}
+
 export default function AdminRegistrationsPage() {
   const [rows, setRows] = useState<RegistrationRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -113,6 +149,72 @@ export default function AdminRegistrationsPage() {
   const [attrEntries, setAttrEntries] = useState<Array<{ commissioner_profile_id: string | null; weight: string }>>([]);
   const [attrBusy, setAttrBusy] = useState(false);
   const [attrError, setAttrError] = useState<string>("");
+
+  // Change-city modal.
+  const [ccRow, setCcRow] = useState<RegistrationRow | null>(null);
+  const [ccData, setCcData] = useState<ChangeCityPreview | null>(null);
+  const [ccLoading, setCcLoading] = useState(false);
+  const [ccDestId, setCcDestId] = useState<string>("");
+  const [ccProjected, setCcProjected] = useState<CCAttr[] | null>(null);
+  const [ccProjLoading, setCcProjLoading] = useState(false);
+  const [ccCancelSeats, setCcCancelSeats] = useState(true);
+  const [ccBusy, setCcBusy] = useState(false);
+  const [ccError, setCcError] = useState<string>("");
+
+  async function openChangeCity(r: RegistrationRow) {
+    setCcRow(r);
+    setCcData(null);
+    setCcError("");
+    setCcDestId("");
+    setCcProjected(null);
+    setCcCancelSeats(true);
+    setCcLoading(true);
+    const res = await fetch(`/api/admin/registrations/${r.id}/change-city`, { credentials: "include" });
+    const payload = await res.json().catch(() => ({}));
+    if (res.ok) setCcData(payload as ChangeCityPreview);
+    else setCcError(payload.error || "Could not load the move preview.");
+    setCcLoading(false);
+  }
+
+  // Fetch the destination's projected attribution ("what it would become").
+  async function pickChangeCityDest(destId: string) {
+    setCcDestId(destId);
+    setCcProjected(null);
+    if (!destId || !ccRow) return;
+    setCcProjLoading(true);
+    const res = await fetch(`/api/admin/registrations/${ccRow.id}/change-city?dest_city_id=${encodeURIComponent(destId)}`, { credentials: "include" });
+    const payload = await res.json().catch(() => ({}));
+    if (res.ok) setCcProjected((payload.projectedAttribution ?? []) as CCAttr[]);
+    setCcProjLoading(false);
+  }
+
+  async function confirmChangeCity() {
+    if (!ccRow || !ccData || !ccDestId) return;
+    setCcBusy(true);
+    setCcError("");
+    const cancelSeatIds = ccCancelSeats ? ccData.cancelableSeats.map((s) => s.seat_id) : [];
+    try {
+      const res = await fetch(`/api/admin/registrations/${ccRow.id}/change-city`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ destCityId: ccDestId, cancelSeatIds }),
+      });
+      const payload = await res.json().catch(() => ({}));
+      if (res.ok) {
+        const destName = ccData.destinations.find((d) => d.id === ccDestId)?.name ?? "the new city";
+        const seatNote = payload.canceledSeatCount ? ` · ${payload.canceledSeatCount} seat${payload.canceledSeatCount === 1 ? "" : "s"} canceled` : "";
+        const attrNote = payload.attributionOk === false ? " (attribution rewrite failed — check it)" : "";
+        setMessage(`Moved ${ccRow.full_name ?? ccRow.email} to ${destName}${seatNote}.${attrNote}`);
+        setCcRow(null);
+        await loadRows();
+      } else {
+        setCcError(payload.error || "Could not move the registration.");
+      }
+    } finally {
+      setCcBusy(false);
+    }
+  }
 
   async function openAttr(r: RegistrationRow) {
     setAttrRow(r);
@@ -933,7 +1035,14 @@ export default function AdminRegistrationsPage() {
                 </div>
                 <div>
                   <span className="admin-mobile-label">City</span>
-                  <p style={{ fontSize: 13, color: "var(--ink-700)" }}>{r.city ?? "—"}</p>
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 4 }}>
+                    <p style={{ fontSize: 13, color: "var(--ink-700)" }}>{r.city ?? "—"}</p>
+                    {r.city_id ? (
+                      <button type="button" className="btn" style={{ fontSize: 11, padding: "3px 9px" }} onClick={() => openChangeCity(r)}>
+                        Change city
+                      </button>
+                    ) : null}
+                  </div>
                 </div>
                 <div>
                   <span className="admin-mobile-label">Series</span>
@@ -1191,6 +1300,99 @@ export default function AdminRegistrationsPage() {
               <button type="button" className="btn btn-ghost" onClick={() => setAttrRow(null)} disabled={attrBusy} style={{ padding: "10px 16px" }}>Cancel</button>
               <button type="button" className="btn btn-primary" onClick={saveAttr} disabled={attrBusy} style={{ padding: "10px 16px" }}>{attrBusy ? "Saving…" : "Save attribution"}</button>
             </div>
+          </div>
+        </div>
+      ) : null}
+
+      {ccRow ? (
+        <div role="dialog" aria-modal="true" aria-label="Change city" style={{ position: "fixed", inset: 0, zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", padding: 16, background: "rgba(20,30,33,0.45)" }} onClick={(e) => { if (e.target === e.currentTarget && !ccBusy) setCcRow(null); }}>
+          <div style={{ background: "#fff", borderRadius: "var(--radius-lg)", boxShadow: "var(--shadow-lg)", width: "100%", maxWidth: 520, maxHeight: "88vh", overflowY: "auto", padding: 24 }}>
+            <h2 style={{ fontFamily: "var(--font-display)", fontSize: 20, color: "var(--ink-900)", margin: "0 0 4px" }}>Change city</h2>
+            <p style={{ fontSize: 13, color: "var(--ink-500)", margin: "0 0 16px" }}>
+              {ccRow.full_name ?? ccRow.email}
+              {ccData?.registration.current_city_name ? <> — currently in <strong>{ccData.registration.current_city_name}</strong></> : null}
+            </p>
+
+            {ccLoading ? (
+              <p style={{ fontSize: 14, color: "var(--ink-500)" }}>Loading impact…</p>
+            ) : !ccData ? (
+              <p style={{ fontSize: 14, color: "var(--danger)" }}>{ccError || "Could not load the move preview."}</p>
+            ) : ccData.hostingTables.length > 0 ? (
+              // BLOCKED — hosting an upcoming table. Name them, refuse the move.
+              <>
+                <div style={{ background: "#fdecee", border: "1px solid var(--danger)", borderRadius: "var(--radius-md)", padding: "12px 14px", marginBottom: 16 }}>
+                  <p style={{ fontSize: 14, fontWeight: 600, color: "var(--danger)", margin: "0 0 6px" }}>
+                    Can&rsquo;t move — she&rsquo;s hosting {ccData.hostingTables.length} upcoming table{ccData.hostingTables.length === 1 ? "" : "s"} here.
+                  </p>
+                  <p style={{ fontSize: 13, color: "var(--ink-700)", margin: "0 0 8px" }}>
+                    Moving her would strand the other players. Hand off hosting on each of these first (open the table → <em>Hand off hosting</em>), then come back.
+                  </p>
+                  <ul style={{ margin: 0, paddingLeft: 18 }}>
+                    {ccData.hostingTables.map((t) => (
+                      <li key={t.id} style={{ fontSize: 13, color: "var(--ink-800)", marginBottom: 2 }}>
+                        {t.location_name} <span style={{ color: "var(--ink-500)" }}>— {fmtTableDateTime(t.table_date, t.table_time)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                  <button type="button" className="btn" onClick={() => setCcRow(null)} style={{ padding: "10px 16px" }}>Close</button>
+                </div>
+              </>
+            ) : (
+              <>
+                {/* Destination — includes deactivated (closed) cities. */}
+                <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "var(--ink-800)", marginBottom: 6 }}>Move to</label>
+                <select className="input-mo" style={{ width: "100%", marginBottom: 16 }} value={ccDestId} onChange={(e) => pickChangeCityDest(e.target.value)} aria-label="Destination city">
+                  <option value="">Choose a city…</option>
+                  {ccData.destinations.map((d) => (
+                    <option key={d.id} value={d.id}>{d.name}{d.state ? `, ${d.state}` : ""}{d.is_active ? "" : " (closed)"}</option>
+                  ))}
+                </select>
+
+                {/* Non-hosting seats — warn + a single checkbox (default on) to cancel them. */}
+                {ccData.cancelableSeats.length > 0 ? (
+                  <div style={{ background: "var(--butter-50, #fdf6e3)", border: "1px solid var(--hair-200)", borderRadius: "var(--radius-md)", padding: "12px 14px", marginBottom: 16 }}>
+                    <p style={{ fontSize: 13, color: "var(--ink-800)", margin: "0 0 8px" }}>
+                      She holds {ccData.cancelableSeats.length} upcoming seat{ccData.cancelableSeats.length === 1 ? "" : "s"} in her current city:
+                    </p>
+                    <ul style={{ margin: "0 0 10px", paddingLeft: 18 }}>
+                      {ccData.cancelableSeats.map((s) => (
+                        <li key={s.seat_id} style={{ fontSize: 13, color: "var(--ink-800)", marginBottom: 2 }}>
+                          {s.location_name} <span style={{ color: "var(--ink-500)" }}>— {fmtTableDateTime(s.table_date, s.table_time)}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    <label style={{ display: "flex", alignItems: "flex-start", gap: 8, fontSize: 13, color: "var(--ink-800)" }}>
+                      <input type="checkbox" checked={ccCancelSeats} onChange={(e) => setCcCancelSeats(e.target.checked)} style={{ marginTop: 2 }} />
+                      <span>Cancel {ccData.cancelableSeats.length === 1 ? "this seat" : "these seats"} as part of the move <span style={{ color: "var(--ink-500)" }}>(recommended — otherwise she stays seated in a city she&rsquo;s left)</span></span>
+                    </label>
+                  </div>
+                ) : null}
+
+                {/* Attribution: who's credited now, and what it would become. */}
+                <div style={{ border: "1px solid var(--hair-200)", borderRadius: "var(--radius-md)", padding: "12px 14px", marginBottom: 16 }}>
+                  <p style={{ fontSize: 12.5, color: "var(--ink-500)", margin: "0 0 4px" }}>Attribution now</p>
+                  <p style={{ fontSize: 14, color: "var(--ink-900)", margin: "0 0 10px" }}>{attrLabel(ccData.currentAttribution)}</p>
+                  <p style={{ fontSize: 12.5, color: "var(--ink-500)", margin: "0 0 4px" }}>Would become {ccData.destinations.find((d) => d.id === ccDestId)?.name ? `in ${ccData.destinations.find((d) => d.id === ccDestId)!.name}` : "in the destination"}</p>
+                  <p style={{ fontSize: 14, color: "var(--ink-900)", margin: 0 }}>
+                    {!ccDestId ? <span style={{ color: "var(--ink-400)" }}>Choose a city above</span>
+                      : ccProjLoading ? <span style={{ color: "var(--ink-400)" }}>Calculating…</span>
+                      : ccProjected ? attrLabel(ccProjected)
+                      : <span style={{ color: "var(--ink-400)" }}>—</span>}
+                  </p>
+                </div>
+
+                {ccError ? <p style={{ fontSize: 13, color: "var(--danger)", margin: "0 0 12px" }}>{ccError}</p> : null}
+
+                <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+                  <button type="button" className="btn btn-ghost" onClick={() => setCcRow(null)} disabled={ccBusy} style={{ padding: "10px 16px" }}>Cancel</button>
+                  <button type="button" className="btn btn-primary" onClick={confirmChangeCity} disabled={ccBusy || !ccDestId} style={{ padding: "10px 16px" }}>
+                    {ccBusy ? "Moving…" : "Move to this city"}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       ) : null}
