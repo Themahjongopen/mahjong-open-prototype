@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getPortalUser } from "@/lib/portal/session";
 import { createAdminClient } from "@/lib/supabase/server";
 import { computeAttributionRows } from "@/lib/registration/attribution";
+import { sendTableUnderfilledEmail } from "@/lib/email/tableUnderfilledEmail";
 
 export const runtime = "nodejs";
 
@@ -226,6 +227,56 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
         // A full table that just lost a seat is open again.
         const { error: reopenErr } = await admin.from("league_tables").update({ status: "open" }).in("id", tableIds).eq("status", "full");
         if (reopenErr) console.error("change-city: reopen full tables failed", id, reopenErr);
+
+        // Underfilled notifications — identical to the self-serve seat cancel
+        // (app/api/tables/[id]/seats/cancel): for each affected table that just
+        // dropped 4 → 3 active players, tell the REMAINING players a seat opened
+        // so someone can fill it. From their side the outcome is the same as any
+        // other cancellation. Fire ONLY on the exact 4→3 transition (activeAfter
+        // === 3) so a table already short of four isn't re-spammed. Best-effort,
+        // fully wrapped — the move is already committed and must not be blocked
+        // by a send; sent UNCONDITIONALLY (not preference-gated), same as there.
+        try {
+          const { data: affected } = await admin
+            .from("league_tables")
+            .select("id, table_date, table_time, location_name, location_address, round_type, table_seats(user_id, canceled_at)")
+            .in("id", tableIds);
+          for (const t of (affected ?? []) as any[]) {
+            const activeAfter = (t.table_seats ?? []).filter((s: any) => !s.canceled_at).length;
+            if (activeAfter !== 3) continue;
+            const remainingIds = [
+              ...new Set(
+                (t.table_seats ?? [])
+                  .filter((s: any) => !s.canceled_at && s.user_id && s.user_id !== reg.profile_id)
+                  .map((s: any) => s.user_id)
+              ),
+            ] as string[];
+            if (!remainingIds.length) continue;
+            const { data: profiles } = await admin.from("profiles").select("id, email, full_name").in("id", remainingIds);
+            for (const p of (profiles ?? []) as any[]) {
+              if (!p.email) continue;
+              try {
+                const res = await sendTableUnderfilledEmail(
+                  { email: p.email, fullName: p.full_name },
+                  {
+                    tableId: t.id,
+                    tableDate: t.table_date,
+                    tableTime: t.table_time,
+                    locationName: t.location_name,
+                    locationAddress: t.location_address,
+                    roundType: t.round_type,
+                    activeCount: activeAfter,
+                  }
+                );
+                if (!res.ok) console.error("change-city underfilled email not sent", p.email, res.error);
+              } catch (err) {
+                console.error("change-city underfilled email send failed", p.email, err);
+              }
+            }
+          }
+        } catch (err) {
+          console.error("change-city underfilled batch failed", err);
+        }
       }
     }
   }
