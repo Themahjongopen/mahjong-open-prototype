@@ -78,6 +78,11 @@ const WHY_LOVE = [
 // accommodates it automatically — no layout changes needed. `description` is an
 // optional tagline rendered under the name; omit it and the card shows nothing.
 type LaunchCity = { name: string; state: string; photo: string; description?: string };
+
+// Toggle the "See live launch status" map section on/off without deleting the
+// section or its data — flip back to true to bring it back.
+const SHOW_LAUNCH_MAP = false;
+
 const LAUNCH_CITIES: LaunchCity[] = [
   { name: "Madison", state: "Mississippi", photo: "/brand-photo-2.jpg" },
   { name: "Gulf Coast", state: "Mississippi", photo: "/brand-photo-3.jpg" },
@@ -579,17 +584,19 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section style={{ padding: "72px 0", background: "var(--pink-wash)" }}>
-        <div className="container-mo">
-          <div style={{ textAlign: "center", marginBottom: 40 }}>
-            <h2 className="h2">See live launch status</h2>
-            <p className="body-lg" style={{ marginTop: 16, maxWidth: 540, marginInline: "auto" }}>
-              Every city needs 20 players to run. Hover a pin to see which cities are ready to go.
-            </p>
+      {SHOW_LAUNCH_MAP && (
+        <section style={{ padding: "72px 0", background: "var(--pink-wash)" }}>
+          <div className="container-mo">
+            <div style={{ textAlign: "center", marginBottom: 40 }}>
+              <h2 className="h2">See live launch status</h2>
+              <p className="body-lg" style={{ marginTop: 16, maxWidth: 540, marginInline: "auto" }}>
+                Every city needs 20 players to run. Hover a pin to see which cities are ready to go.
+              </p>
+            </div>
+            <LaunchCitiesMap />
           </div>
-          <LaunchCitiesMap />
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* Stacking scroll group: each panel pins and the next slides in front */}
       <div className="stack-wrap">
