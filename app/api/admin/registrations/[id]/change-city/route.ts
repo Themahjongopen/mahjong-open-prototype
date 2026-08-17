@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { getPortalUser } from "@/lib/portal/session";
 import { createAdminClient } from "@/lib/supabase/server";
 import { computeAttributionRows } from "@/lib/registration/attribution";
-import { sendTableUnderfilledEmail } from "@/lib/email/tableUnderfilledEmail";
+import { loadUpcomingSeats } from "@/lib/portal/upcomingSeats";
+import { cancelSeatsAndNotify } from "@/lib/portal/cancelSeatsAndNotify";
 
 export const runtime = "nodejs";
 
@@ -20,47 +21,8 @@ export const runtime = "nodejs";
 //        projected destination attribution.
 // POST → perform the move. Re-checks the hosting block server-side (authoritative).
 
-const UPCOMING_STATUSES = ["open", "full"];
-
-// Today's date (YYYY-MM-DD) as seen in Central time — table_date is a DATE, and a
-// UTC-evening "today" would otherwise drop the current day's tables an hour early.
-function todayInCentral(): string {
-  const parts = Object.fromEntries(
-    new Intl.DateTimeFormat("en-US", { timeZone: "America/Chicago", year: "numeric", month: "2-digit", day: "2-digit" })
-      .formatToParts(new Date())
-      .map((p) => [p.type, p.value])
-  );
-  return `${parts.year}-${parts.month}-${parts.day}`;
-}
-
 function one<T>(v: T | T[] | null | undefined): T | null {
   return Array.isArray(v) ? (v[0] ?? null) : (v ?? null);
-}
-
-// The player's upcoming seats in a given city, split into tables she HOSTS
-// (creator) vs. seats she merely holds. profileId null → no seats.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function loadUpcomingSeats(admin: any, profileId: string | null, cityId: string) {
-  if (!profileId) return { hostingTables: [], cancelableSeats: [] };
-  const { data: seatRows } = await admin
-    .from("table_seats")
-    .select("id, seat_number, canceled_at, league_tables!inner(id, creator_id, city_id, status, table_date, table_time, location_name)")
-    .eq("user_id", profileId)
-    .is("canceled_at", null)
-    .eq("league_tables.city_id", cityId)
-    .in("league_tables.status", UPCOMING_STATUSES)
-    .gte("league_tables.table_date", todayInCentral());
-
-  const hostingTables: any[] = [];
-  const cancelableSeats: any[] = [];
-  for (const s of (seatRows ?? []) as any[]) {
-    const t = one<any>(s.league_tables);
-    if (!t) continue;
-    const info = { seat_id: s.id, table_id: t.id, location_name: t.location_name, table_date: t.table_date, table_time: t.table_time };
-    if (t.creator_id === profileId) hostingTables.push({ id: t.id, location_name: t.location_name, table_date: t.table_date, table_time: t.table_time });
-    else cancelableSeats.push(info);
-  }
-  return { hostingTables, cancelableSeats };
 }
 
 // Attach commissioner display names to a set of computed/stored attribution rows.
@@ -209,77 +171,10 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   }
   if (!attributionOk) console.error("change-city: registration moved but attribution rewrite failed", id);
 
-  // 3) Cancel the chosen non-hosting seats; reopen any table that drops out of 'full'.
-  let canceledSeatCount = 0;
-  if (seatIdsToCancel.length) {
-    const { data: canceled, error: seatErr } = await admin
-      .from("table_seats")
-      .update({ canceled_at: new Date().toISOString() })
-      .in("id", seatIdsToCancel)
-      .is("canceled_at", null)
-      .select("id, table_id");
-    if (seatErr) {
-      console.error("change-city: seat cancellation failed", id, seatErr);
-    } else {
-      canceledSeatCount = (canceled ?? []).length;
-      const tableIds = [...new Set((canceled ?? []).map((s: any) => s.table_id))];
-      if (tableIds.length) {
-        // A full table that just lost a seat is open again.
-        const { error: reopenErr } = await admin.from("league_tables").update({ status: "open" }).in("id", tableIds).eq("status", "full");
-        if (reopenErr) console.error("change-city: reopen full tables failed", id, reopenErr);
-
-        // Underfilled notifications — identical to the self-serve seat cancel
-        // (app/api/tables/[id]/seats/cancel): for each affected table that just
-        // dropped 4 → 3 active players, tell the REMAINING players a seat opened
-        // so someone can fill it. From their side the outcome is the same as any
-        // other cancellation. Fire ONLY on the exact 4→3 transition (activeAfter
-        // === 3) so a table already short of four isn't re-spammed. Best-effort,
-        // fully wrapped — the move is already committed and must not be blocked
-        // by a send; sent UNCONDITIONALLY (not preference-gated), same as there.
-        try {
-          const { data: affected } = await admin
-            .from("league_tables")
-            .select("id, table_date, table_time, location_name, location_address, round_type, table_seats(user_id, canceled_at)")
-            .in("id", tableIds);
-          for (const t of (affected ?? []) as any[]) {
-            const activeAfter = (t.table_seats ?? []).filter((s: any) => !s.canceled_at).length;
-            if (activeAfter !== 3) continue;
-            const remainingIds = [
-              ...new Set(
-                (t.table_seats ?? [])
-                  .filter((s: any) => !s.canceled_at && s.user_id && s.user_id !== reg.profile_id)
-                  .map((s: any) => s.user_id)
-              ),
-            ] as string[];
-            if (!remainingIds.length) continue;
-            const { data: profiles } = await admin.from("profiles").select("id, email, full_name").in("id", remainingIds);
-            for (const p of (profiles ?? []) as any[]) {
-              if (!p.email) continue;
-              try {
-                const res = await sendTableUnderfilledEmail(
-                  { email: p.email, fullName: p.full_name },
-                  {
-                    tableId: t.id,
-                    tableDate: t.table_date,
-                    tableTime: t.table_time,
-                    locationName: t.location_name,
-                    locationAddress: t.location_address,
-                    roundType: t.round_type,
-                    activeCount: activeAfter,
-                  }
-                );
-                if (!res.ok) console.error("change-city underfilled email not sent", p.email, res.error);
-              } catch (err) {
-                console.error("change-city underfilled email send failed", p.email, err);
-              }
-            }
-          }
-        } catch (err) {
-          console.error("change-city underfilled batch failed", err);
-        }
-      }
-    }
-  }
+  // 3) Cancel the chosen non-hosting seats; reopen any table that drops out of
+  // 'full' and notify the remaining players on a 4→3 drop. Shared with the
+  // self-serve cancel and refund (lib/portal/cancelSeatsAndNotify).
+  const { canceledCount: canceledSeatCount } = await cancelSeatsAndNotify(admin, seatIdsToCancel, reg.profile_id);
 
   // 4) Audit — full prior + new attribution sets, who changed it (same as reassignment).
   const { error: auditErr } = await admin.from("attribution_audit").insert({

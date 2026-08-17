@@ -368,6 +368,14 @@ export default function AdminRegistrationsPage() {
       const payload = await res.json().catch(() => ({}));
       if (res.ok) {
         await loadRows(); // refetch so the badge + counts reflect the new status
+      } else if (res.status === 409 && Array.isArray(payload.hostingTables) && payload.hostingTables.length) {
+        // Hosting block — name the specific table(s) so the admin knows exactly
+        // what to hand off before retrying (reuses hostingTables' fields).
+        const list = payload.hostingTables
+          .map((t: { location_name: string; table_date: string; table_time: string | null }) => `${t.location_name} (${fmtTableDateTime(t.table_date, t.table_time)})`)
+          .join("; ");
+        const noun = payload.hostingTables.length === 1 ? "an upcoming table" : "upcoming tables";
+        setRefundMsg((m) => ({ ...m, [row.id]: `This player is hosting ${noun} — ${list}. Hand off hosting first, then refund her.` }));
       } else {
         setRefundMsg((m) => ({ ...m, [row.id]: payload.error ?? "Could not mark this registration refunded." }));
       }

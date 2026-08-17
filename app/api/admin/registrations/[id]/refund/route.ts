@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { isAdminRequest } from "@/lib/admin/auth";
 import { createAdminClient } from "@/lib/supabase/server";
+import { loadUpcomingSeats } from "@/lib/portal/upcomingSeats";
+import { cancelSeatsAndNotify } from "@/lib/portal/cancelSeatsAndNotify";
 
 export const runtime = "nodejs";
 
@@ -29,7 +31,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
 
   const { data: reg } = await supabase
     .from("registrations")
-    .select("id, paid_status")
+    .select("id, paid_status, profile_id, city_id")
     .eq("id", id)
     .maybeSingle();
 
@@ -38,6 +40,18 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   }
   if (reg.paid_status !== "paid") {
     return NextResponse.json({ error: "Only a paid registration can be marked refunded." }, { status: 400 });
+  }
+
+  // Block if she hosts an upcoming table in this city — refunding her would strand
+  // the other players (the Teresa Duncan Sullivan incident: a refund left a live
+  // host until another player noticed tonight). Hard block, same shape as
+  // change-city; the admin hands off hosting (existing feature) then retries.
+  const { hostingTables, cancelableSeats } = await loadUpcomingSeats(supabase, reg.profile_id, reg.city_id);
+  if (hostingTables.length > 0) {
+    return NextResponse.json(
+      { error: "This player is hosting an upcoming table. Hand off hosting first, then refund her.", hostingTables },
+      { status: 409 }
+    );
   }
 
   const { error } = await supabase
@@ -61,6 +75,14 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     .eq("status", "succeeded");
   if (payError) {
     console.error("refund: registration marked refunded but payment status flip failed", id, payError);
+  }
+
+  // Clear her upcoming NON-hosting seats in this city — a refund unambiguously
+  // means she's out, so unlike change-city there's no checkbox. Reopens any table
+  // that drops out of 'full' and notifies the remaining players on a 4→3 drop.
+  // Best-effort (the refund itself is already applied).
+  if (cancelableSeats.length) {
+    await cancelSeatsAndNotify(supabase, cancelableSeats.map((s) => s.seat_id), reg.profile_id);
   }
 
   return NextResponse.json({ ok: true });
