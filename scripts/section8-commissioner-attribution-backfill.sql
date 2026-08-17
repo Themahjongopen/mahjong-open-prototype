@@ -61,7 +61,11 @@ WHERE r.paid_status = 'paid'
 
 -- B) Every OTHER city that has exactly one active commissioner -> that commissioner.
 WITH sole AS (
-  SELECT city_id, min(profile_id) AS profile_id
+  -- HAVING count(*) = 1 already guarantees exactly one row per city, so the
+  -- aggregate only exists to satisfy GROUP BY. Use (array_agg(profile_id))[1],
+  -- NOT min(profile_id): Postgres has no min() for uuid
+  -- (ERROR 42883: function min(uuid) does not exist), which made this un-runnable.
+  SELECT city_id, (array_agg(profile_id))[1] AS profile_id
   FROM public.commissioner_referral_codes
   WHERE is_active
   GROUP BY city_id
@@ -90,7 +94,11 @@ SELECT c.name, c.state,
      WHERE r.city_id = c.id AND r.paid_status = 'paid'
        AND NOT EXISTS (SELECT 1 FROM public.registration_attributions ra WHERE ra.registration_id = r.id)) AS unattributed_paid
 FROM public.cities c
-WHERE (SELECT count(*) FROM public.commissioner_referral_codes crc WHERE crc.city_id = c.id AND crc.is_active) <> 1
+-- Active cities only: the demo twins (Charleston / Madison / Gulf Coast all have
+-- an is_active = false demo copy) have no commissioner and carry unattributed demo
+-- registrations, so without this they surfaced as 9 fake zero-commissioner problems.
+WHERE c.is_active
+  AND (SELECT count(*) FROM public.commissioner_referral_codes crc WHERE crc.city_id = c.id AND crc.is_active) <> 1
   AND (SELECT count(*) FROM public.registrations r WHERE r.city_id = c.id AND r.paid_status = 'paid'
          AND NOT EXISTS (SELECT 1 FROM public.registration_attributions ra WHERE ra.registration_id = r.id)) > 0
 ORDER BY c.name;
