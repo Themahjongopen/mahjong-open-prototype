@@ -1,16 +1,129 @@
-import { getAdminTables } from "@/lib/admin/tables";
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
 import { formatTableTime } from "@/lib/format/time";
 import AdminCancelTableButton from "@/components/admin/AdminCancelTableButton";
 
 const STATUS_BADGE: Record<string, string> = { open: "badge-lime", full: "badge-peri", completed: "badge-mute", canceled: "badge-mute" };
 
-export default async function AdminTablesPage() {
-  const rows = await getAdminTables();
+// Fixed status options — no need to derive from the data. Keys match STATUS_BADGE.
+const STATUS_OPTIONS: { value: string; label: string }[] = [
+  { value: "all", label: "All statuses" },
+  { value: "open", label: "Open" },
+  { value: "full", label: "Full" },
+  { value: "completed", label: "Completed" },
+  { value: "canceled", label: "Canceled" },
+];
+
+type TableRow = {
+  id: string;
+  week_number: number;
+  table_date: string;
+  table_time: string | null;
+  location_name: string;
+  status: string;
+  city_id: string | null;
+  city_name: string | null;
+  series_id: string | null;
+  series_name: string | null;
+  creator_name: string | null;
+  active_seats: number;
+};
+
+export default function AdminTablesPage() {
+  const [rows, setRows] = useState<TableRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  // Each filter holds an id / status / week ("all" = no filter).
+  const [cityFilter, setCityFilter] = useState<string>("all");
+  const [seriesFilter, setSeriesFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [weekFilter, setWeekFilter] = useState<string>("all");
+
+  async function load() {
+    setLoading(true);
+    const res = await fetch("/api/admin/tables", { credentials: "include" });
+    const payload = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setError(payload.error || "Tables could not be loaded.");
+      setLoading(false);
+      return;
+    }
+    setRows(Array.isArray(payload.tables) ? payload.tables : []);
+    setError(null);
+    setLoading(false);
+  }
+
+  useEffect(() => {
+    void load();
+  }, []);
+
+  // Distinct (city_id, label) pairs present in the loaded rows, sorted alphabetically.
+  const cityOptions = useMemo(() => {
+    const byId = new Map<string, string>();
+    for (const r of rows) if (r.city_id) byId.set(r.city_id, r.city_name ?? r.city_id);
+    return Array.from(byId, ([id, label]) => ({ id, label })).sort((a, b) => a.label.localeCompare(b.label));
+  }, [rows]);
+
+  // Distinct (series_id, label) pairs present in the loaded rows, sorted alphabetically.
+  const seriesOptions = useMemo(() => {
+    const byId = new Map<string, string>();
+    for (const r of rows) if (r.series_id) byId.set(r.series_id, r.series_name ?? r.series_id);
+    return Array.from(byId, ([id, label]) => ({ id, label })).sort((a, b) => a.label.localeCompare(b.label));
+  }, [rows]);
+
+  // Distinct week numbers present, sorted numerically.
+  const weekOptions = useMemo(() => {
+    const weeks = new Set<number>();
+    for (const r of rows) if (typeof r.week_number === "number") weeks.add(r.week_number);
+    return Array.from(weeks).sort((a, b) => a - b);
+  }, [rows]);
+
+  // All filters combine with AND: a row must match every active one to show.
+  const filteredRows = useMemo(() => {
+    return rows.filter((r) => {
+      if (cityFilter !== "all" && r.city_id !== cityFilter) return false;
+      if (seriesFilter !== "all" && r.series_id !== seriesFilter) return false;
+      if (statusFilter !== "all" && r.status !== statusFilter) return false;
+      if (weekFilter !== "all" && String(r.week_number) !== weekFilter) return false;
+      return true;
+    });
+  }, [rows, cityFilter, seriesFilter, statusFilter, weekFilter]);
 
   return (
     <div style={{ maxWidth: 1100 }}>
       <h1 style={{ fontFamily: "var(--font-display)", fontSize: 26, color: "var(--ink-900)", marginBottom: 8 }}>All Tables</h1>
-      <p style={{ fontSize: 15, color: "var(--ink-500)", marginBottom: 32 }}>{rows.length} table{rows.length !== 1 ? "s" : ""}</p>
+      <p style={{ fontSize: 15, color: "var(--ink-500)", marginBottom: 20 }}>
+        {filteredRows.length} table{filteredRows.length !== 1 ? "s" : ""}
+        {loading && rows.length > 0 ? <span style={{ marginLeft: 8, fontSize: 12, color: "var(--mute-400)" }}>Refreshing…</span> : null}
+      </p>
+
+      {/* Week / status / city / series filters */}
+      <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 16 }}>
+        <select aria-label="Filter by week" className="input-mo" style={{ maxWidth: 200 }} value={weekFilter} onChange={(e) => setWeekFilter(e.target.value)}>
+          <option value="all">All weeks</option>
+          {weekOptions.map((w) => (
+            <option key={w} value={String(w)}>Week {w}</option>
+          ))}
+        </select>
+        <select aria-label="Filter by status" className="input-mo" style={{ maxWidth: 200 }} value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+          {STATUS_OPTIONS.map((s) => (
+            <option key={s.value} value={s.value}>{s.label}</option>
+          ))}
+        </select>
+        <select aria-label="Filter by city" className="input-mo" style={{ maxWidth: 260 }} value={cityFilter} onChange={(e) => setCityFilter(e.target.value)}>
+          <option value="all">All cities</option>
+          {cityOptions.map((c) => (
+            <option key={c.id} value={c.id}>{c.label}</option>
+          ))}
+        </select>
+        <select aria-label="Filter by series" className="input-mo" style={{ maxWidth: 260 }} value={seriesFilter} onChange={(e) => setSeriesFilter(e.target.value)}>
+          <option value="all">All series</option>
+          {seriesOptions.map((s) => (
+            <option key={s.id} value={s.id}>{s.label}</option>
+          ))}
+        </select>
+      </div>
 
       <div style={{ background: "#fff", border: "1px solid var(--hair-200)", borderRadius: "var(--radius-lg)", overflow: "hidden", boxShadow: "var(--shadow-xs)" }}>
         <div className="admin-tables-table">
@@ -19,10 +132,16 @@ export default async function AdminTablesPage() {
               <p key={h}>{h}</p>
             ))}
           </div>
-          {rows.length === 0 ? (
-            <div style={{ padding: 20, color: "var(--ink-500)", fontSize: 14 }}>No tables have been created yet.</div>
+          {error ? (
+            <div style={{ padding: 20, color: "var(--danger)", fontSize: 14 }}>{error}</div>
+          ) : loading && rows.length === 0 ? (
+            <div style={{ padding: 20, color: "var(--ink-500)", fontSize: 14 }}>Loading tables…</div>
+          ) : filteredRows.length === 0 ? (
+            <div style={{ padding: 20, color: "var(--ink-500)", fontSize: 14 }}>
+              {rows.length === 0 ? "No tables have been created yet." : "No tables match this filter."}
+            </div>
           ) : (
-            rows.map((t) => (
+            filteredRows.map((t) => (
               <div key={t.id} className="admin-tables-row">
                 <p style={{ fontSize: 13, fontWeight: 600, color: "var(--ink-500)" }}>W{t.week_number}</p>
                 <div>
@@ -56,6 +175,7 @@ export default async function AdminTablesPage() {
                     status={t.status}
                     locationName={t.location_name}
                     dateLabel={new Date(`${t.table_date}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                    onCanceled={() => void load()}
                   />
                 </div>
               </div>

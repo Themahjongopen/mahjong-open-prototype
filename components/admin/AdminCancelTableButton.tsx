@@ -17,11 +17,15 @@ export default function AdminCancelTableButton({
   status,
   locationName,
   dateLabel,
+  onCanceled,
 }: {
   tableId: string;
   status: string;
   locationName: string;
   dateLabel: string;
+  // Called after a successful cancel so a client-fetched list can refetch its
+  // own state. Falls back to router.refresh() when omitted (server-rendered use).
+  onCanceled?: () => void;
 }) {
   const router = useRouter();
   const confirm = useConfirm();
@@ -53,7 +57,8 @@ export default function AdminCancelTableButton({
         setError(payload.error || "Could not cancel the table.");
         return;
       }
-      router.refresh();
+      if (onCanceled) onCanceled();
+      else router.refresh();
     } finally {
       setBusy(false);
     }
