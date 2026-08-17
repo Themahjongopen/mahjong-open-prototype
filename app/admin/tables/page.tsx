@@ -1,5 +1,6 @@
 import { getAdminTables } from "@/lib/admin/tables";
 import { formatTableTime } from "@/lib/format/time";
+import AdminCancelTableButton from "@/components/admin/AdminCancelTableButton";
 
 const STATUS_BADGE: Record<string, string> = { open: "badge-lime", full: "badge-peri", completed: "badge-mute", canceled: "badge-mute" };
 
@@ -14,7 +15,7 @@ export default async function AdminTablesPage() {
       <div style={{ background: "#fff", border: "1px solid var(--hair-200)", borderRadius: "var(--radius-lg)", overflow: "hidden", boxShadow: "var(--shadow-xs)" }}>
         <div className="admin-tables-table">
           <div className="admin-tables-table-header">
-            {["Wk", "Table", "City · Series", "Host", "Status", "Seats"].map((h) => (
+            {["Wk", "Table", "City · Series", "Host", "Status", "Seats", "Actions"].map((h) => (
               <p key={h}>{h}</p>
             ))}
           </div>
@@ -47,6 +48,15 @@ export default async function AdminTablesPage() {
                 <div>
                   <span className="admin-mobile-label">Seats</span>
                   <p style={{ fontSize: 13, color: "var(--ink-700)" }}>{t.active_seats}/4</p>
+                </div>
+                <div>
+                  <span className="admin-mobile-label">Actions</span>
+                  <AdminCancelTableButton
+                    tableId={t.id}
+                    status={t.status}
+                    locationName={t.location_name}
+                    dateLabel={new Date(`${t.table_date}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                  />
                 </div>
               </div>
             ))

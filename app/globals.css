@@ -428,7 +428,7 @@ body.admin-drawer-open {
 }
 
 .admin-tables-table {
-  grid-template-columns: 60px 1.5fr 1fr 1fr 80px 60px;
+  grid-template-columns: 60px 1.5fr 1fr 1fr 80px 60px 96px;
 }
 
 /* Read-only commissioner roster — a 5-column variant of the admin players grid

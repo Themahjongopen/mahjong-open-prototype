@@ -51,7 +51,7 @@ Tap Create from the Open Tables screen. You'll need:
 
 You're automatically seated in seat 1 as the table's host. Hosting means you're responsible for two more things once the round happens — see below.
 
-**Canceling a table you created:** open it and tap Cancel this table. This cancels it for everyone and can't be undone.
+**Canceling a table you created:** open it and tap Cancel this table. This cancels it for everyone and can't be undone. Everyone else seated at the table gets an email letting them know it was canceled and that their seat has been released — this goes out even to players who've turned other notifications off, the same as the "table updated" notice.
 
 ## Part of town
 

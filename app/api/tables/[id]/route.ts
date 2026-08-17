@@ -6,6 +6,7 @@ import { zonedTimeToUtc } from "@/lib/format/zonedTime";
 import { seriesWeekForDate } from "@/lib/portal/seriesWeek";
 import { sendTableUpdatedEmail } from "@/lib/email/tableUpdatedEmail";
 import { sendTableHostChangedEmail } from "@/lib/email/tableHostChangedEmail";
+import { sendTableCanceledEmail } from "@/lib/email/tableCanceledEmail";
 import { normalizeArea } from "@/lib/portal/area";
 
 const ROUND_TYPES = new Set(["social", "focused", "lightning"]);
@@ -220,6 +221,50 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     if (table.status === "canceled") return NextResponse.json({ ok: true });
     const { error } = await admin.from("league_tables").update({ status: "canceled" }).eq("id", id);
     if (error) return NextResponse.json({ error: "The table couldn't be cancelled. Please try again." }, { status: 500 });
+
+    // Notify each OTHER actively-seated player their table was canceled — same
+    // for a host cancelling their own table and an admin cancelling from the
+    // console (e.g. closing a city that didn't hit its minimum). Sent
+    // UNCONDITIONALLY (not preference-gated), like the table-updated / host-changed
+    // notices: a cancelled table is transactional. Best-effort, fully wrapped —
+    // the cancellation is already committed and a send must never block or undo it.
+    try {
+      const city = Array.isArray(table.cities) ? table.cities[0] : table.cities;
+      const seatedUserIds = [
+        ...new Set(
+          (table.table_seats ?? [])
+            .filter((s: any) => !s.canceled_at && s.user_id && s.user_id !== session.id)
+            .map((s: any) => s.user_id)
+        ),
+      ] as string[];
+      if (seatedUserIds.length) {
+        const { data: profiles } = await admin
+          .from("profiles")
+          .select("id, email, full_name")
+          .in("id", seatedUserIds);
+        for (const p of (profiles ?? []) as any[]) {
+          if (!p.email) continue;
+          try {
+            const res = await sendTableCanceledEmail(
+              { email: p.email, fullName: p.full_name },
+              {
+                tableDate: table.table_date,
+                tableTime: table.table_time,
+                locationName: table.location_name,
+                cityName: city?.name ?? null,
+                roundType: table.round_type,
+              }
+            );
+            if (!res.ok) console.error("tableCanceledEmail not sent", p.email, res.error);
+          } catch (err) {
+            console.error("tableCanceledEmail send failed", p.email, err);
+          }
+        }
+      }
+    } catch (err) {
+      console.error("tableCanceledEmail batch failed", err);
+    }
+
     return NextResponse.json({ ok: true });
   }
 
