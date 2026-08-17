@@ -134,7 +134,7 @@ export default function TableDetailClient({
       withinCutoff
         ? {
             title: "Leave within 24 hours?",
-            message: "If no one takes your seat before game time, the host may mark it a no-show (−25).",
+            message: "This is within 24 hours of the table, so it counts as a no-show (−25 points) unless another player takes your spot before the table plays. Let your table know so someone can fill in.",
             confirmLabel: "Leave anyway",
             danger: true,
           }
@@ -403,8 +403,8 @@ export default function TableDetailClient({
                 </div>
               )}
               <div style={{ flex: 1 }}>
-                <p style={{ fontSize: 14, fontWeight: seat ? 500 : 400, color: seat ? "var(--ink-900)" : isLateCancel ? "var(--danger)" : "var(--ink-500)" }}>
-                  {seat ? (seat.profiles?.full_name ?? "Player") : isLateCancel ? "Canceled (late) — counts as a no-show" : "Open spot"}
+                <p style={{ fontSize: 14, fontWeight: seat ? 500 : 400, color: seat ? "var(--ink-900)" : "var(--ink-500)" }}>
+                  {seat ? (seat.profiles?.full_name ?? "Player") : isLateCancel ? "Seat open — a late cancellation. Join to take it." : "Open spot"}
                   {seat?.profiles?.skill_level && (
                     <span className={`badge ${SKILL_COLORS[seat.profiles.skill_level] ?? "badge-mute"}`} style={{ fontSize: 10, marginLeft: 6 }}>
                       {seat.profiles.skill_level}
@@ -433,7 +433,7 @@ export default function TableDetailClient({
         )}
         {canLeave && withinCutoff && (
           <div style={{ fontSize: 13, color: "var(--ink-500)", textAlign: "center", padding: "0 8px" }}>
-            Within 24 hours of game time — if no one takes your seat, the host may record a no-show.
+            Within 24 hours of game time — it counts as a no-show (−25) unless another player takes your spot first. Let your table know so someone can fill in.
           </div>
         )}
 
