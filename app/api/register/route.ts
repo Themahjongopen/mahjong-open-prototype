@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createAdminClient } from "@/lib/supabase/server";
-import { canonicalReferralCode } from "@/lib/referral/aliases";
+import { writeAttribution } from "@/lib/registration/attribution";
 
 export async function POST(request: Request) {
   try {
@@ -184,6 +184,11 @@ export async function POST(request: Request) {
         registration_id: registrationId,
         series_id,
         email,
+        // Carried so the payment webhook can honor the same attribution choice if
+        // it ever has to attribute at payment time (creation-time attribution
+        // normally already did it). Stripe copies metadata onto recovery sessions.
+        referral_code: referral_code ?? "",
+        heard_about: heard_about ?? "",
       },
       payment_intent_data: {
         metadata: {
@@ -259,96 +264,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ url: session.url });
   } catch {
     return NextResponse.json({ error: "Invalid registration payload." }, { status: 400 });
-  }
-}
-
-// Write registration_attributions for a just-created registration. Never throws
-// (self-contained try/catch) so the caller's charge path is never affected.
-// Idempotent per registration: clears any prior attribution for this row first,
-// so a pending re-registration reflects the latest choice rather than stacking
-// duplicates. (Paid rows return 409 before ever reaching here, so a Phase-2
-// 'backfill' row on a paid registration is never touched.)
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function writeAttribution(
-  supabase: any,
-  opts: { registrationId: string; cityId: string; referralCode?: string | null; heardAbout?: string | null }
-) {
-  try {
-    const { registrationId, cityId, referralCode, heardAbout } = opts;
-
-    // Active commissioners in this city = those holding an ACTIVE referral code.
-    const { data: codeRows } = await supabase
-      .from("commissioner_referral_codes")
-      .select("profile_id, is_active")
-      .eq("city_id", cityId)
-      .eq("is_active", true);
-    const active = (codeRows ?? []) as Array<{ profile_id: string }>;
-
-    const rows: Array<{ commissioner_profile_id: string | null; weight: number; source: string }> = [];
-
-    // 1) Referral link — must be active AND for THIS city (a switched city drops it).
-    let handled = false;
-    if (referralCode) {
-      // Canonicalize so a pre-rename (aliased) code still attributes to its city.
-      const { data: rc } = await supabase
-        .from("commissioner_referral_codes")
-        .select("profile_id, city_id, is_active")
-        .eq("code", canonicalReferralCode(referralCode))
-        .maybeSingle();
-      if (rc && rc.is_active && rc.city_id === cityId) {
-        rows.push({ commissioner_profile_id: rc.profile_id, weight: 1.0, source: "link" });
-        handled = true;
-      }
-    }
-
-    // 2) Dropdown (split city).
-    if (!handled && heardAbout) {
-      if (heardAbout === "organic") {
-        if (active.length === 0) {
-          rows.push({ commissioner_profile_id: null, weight: 1.0, source: "organic_split" });
-        } else {
-          // Weight FROZEN at write time — 1/N to 4 places, one row per commissioner.
-          const w = Math.round((1 / active.length) * 10000) / 10000;
-          for (const c of active) rows.push({ commissioner_profile_id: c.profile_id, weight: w, source: "organic_split" });
-        }
-        handled = true;
-      } else if (active.some((c) => c.profile_id === heardAbout)) {
-        rows.push({ commissioner_profile_id: heardAbout, weight: 1.0, source: "dropdown" });
-        handled = true;
-      }
-    }
-
-    // 3) No code, no (valid) dropdown — non-split city, or a fall-through above.
-    //    1 active commissioner  → credited at 1.0 ('link').
-    //    N ≥ 2 active           → split EVENLY, 1/N per commissioner ('organic_split'),
-    //                             the same frozen-weight shape the split-flagged path
-    //                             produces — so a non-split multi-commissioner city
-    //                             (Greater Tuscaloosa, Golden Triangle, Dallas County)
-    //                             credits both/all commissioners instead of a NULL row.
-    //                             This is NOT split_commission: those pairs work
-    //                             together and don't get the "How did you hear about
-    //                             us?" dropdown; that flag stays reserved for cities
-    //                             (e.g. Memphis) that want to be asked individually.
-    //    0 active               → one honest unattributed NULL 'organic_split' row
-    //                             (genuine zero-commissioner cities — Pensacola, 30A).
-    if (!handled) {
-      if (active.length === 1) {
-        rows.push({ commissioner_profile_id: active[0].profile_id, weight: 1.0, source: "link" });
-      } else if (active.length >= 2) {
-        const w = Math.round((1 / active.length) * 10000) / 10000; // frozen at write time
-        for (const c of active) rows.push({ commissioner_profile_id: c.profile_id, weight: w, source: "organic_split" });
-      } else {
-        rows.push({ commissioner_profile_id: null, weight: 1.0, source: "organic_split" });
-      }
-    }
-
-    // Idempotent replace.
-    await supabase.from("registration_attributions").delete().eq("registration_id", registrationId);
-    await supabase.from("registration_attributions").insert(
-      rows.map((r) => ({ registration_id: registrationId, ...r }))
-    );
-  } catch (err) {
-    console.error("writeAttribution error (swallowed)", err);
   }
 }
 

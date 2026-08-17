@@ -4,6 +4,7 @@ import Stripe from "stripe";
 import { buildBrandedEmail } from "@/lib/email/brandedEmail";
 import { sendRegistrationReminderEmail } from "@/lib/email/registrationReminderEmail";
 import { sendPortalInvite } from "@/lib/email/portalInvite";
+import { ensureAttributionOnPaid } from "@/lib/registration/attribution";
 import { createAdminClient, listAuthUsersByEmail } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
@@ -192,6 +193,27 @@ export async function POST(request: Request) {
         ...(paidCents !== null ? { amount_cents: paidCents } : {}),
       })
       .eq("registration_id", registrationData.id);
+
+    // Attribution safety net: a registration created before the live attribution
+    // code shipped was never attributed at signup, and can pay AFTER the one-time
+    // backfill ran — nothing else would attribute it. Do it here, at payment time.
+    // INSERT-ONLY + idempotent: if it already has an attribution row (the normal
+    // case for anything created after the live code shipped), this does nothing —
+    // safe on Stripe's webhook retries. FULLY ISOLATED: wrapped here AND
+    // self-swallowing inside, mirroring /api/register's treatment of
+    // writeAttribution, so a failure can never fail the webhook or disrupt payment
+    // reconciliation (a webhook that errors gets retried by Stripe). Runs only on
+    // the delivery that actually flipped pending -> paid (guarded above).
+    try {
+      await ensureAttributionOnPaid(supabase, {
+        registrationId: registrationData.id,
+        cityId: registrationData.city_id,
+        referralCode: session.metadata?.referral_code || null,
+        heardAbout: session.metadata?.heard_about || null,
+      });
+    } catch (attributionError) {
+      console.error("[stripe-webhook] attribution on paid failed (registration unaffected)", attributionError);
+    }
 
     const resendApiKey = process.env.RESEND_API_KEY;
 
