@@ -18,7 +18,7 @@ const STEPS = [
 const FAQS = [
   { q: "Do I have to play every week?", a: "No — there's no attendance requirement. Play as many of the 8 weeks as you'd like. Points only come from weeks you play. The series concludes with your best 7 weeks of points." },
   { q: "Can I play more than one table per week?", a: "Yes — play as many games as you like each week. Claim seats at open tables or host your own; there's no weekly limit." },
-  { q: "What if a player cancels?", a: "You can cancel your seat up to 24 hours before your table time. Late cancellations and no-shows are recorded as −25 points, and the three players who do show up receive 25 points each for that game. Can't make it inside the 24-hour window? You can also send a replacement player to take your seat instead." },
+  { q: "What if a player cancels?", a: "You can cancel your seat any time up to 24 hours before your table. Inside that window, a cancellation only counts as a no-show (−25 points) if your spot goes unfilled — so let your table know and someone can usually step in to take it. If no one does, the no-show is −25 and the three players who showed up each get +25 for that round." },
   { q: "Who submits the score?", a: "Only the table creator submits scores after the game. They're live in all four players' portals and the standings immediately — scoring runs on the honor system." },
   { q: "What mahjong rules do you use?", a: "The Mahjong Open uses American mahjong rules (NMJL card). All skill levels are welcome." },
   { q: "Can I join mid-series?", a: "Yes — registration stays open for the first two weeks of each series. After that, it closes until the next series." },
