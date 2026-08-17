@@ -89,43 +89,28 @@ const LAUNCH_CITIES: LaunchCity[] = [
   { name: "Franklin", state: "Tennessee", photo: "/brand-photo-8.jpg" },
   { name: "Greater Tuscaloosa", state: "Alabama", photo: "/brand-photo-9.jpg" },
   { name: "Charleston", state: "South Carolina", photo: "/brand-photo-10.jpg" },
-  { name: "Pensacola", state: "Florida", photo: "/brand-photo-11.jpg" },
-  { name: "Mobile", state: "Alabama", photo: "/brand-photo-12.jpg" },
   { name: "Baldwin County", state: "Alabama", photo: "/brand-photo-13.jpg" },
-  { name: "30A", state: "Florida", photo: "/brand-photo-14.jpg" },
   { name: "Greenbrier Region", state: "West Virginia", photo: "/brand-photo-15.jpg" },
-  { name: "Appleton", state: "Wisconsin", photo: "/brand-photo-16.jpg" },
-  { name: "Matthews", state: "North Carolina", photo: "/brand-photo-17.jpg" },
   { name: "Greenville/Pickens", state: "South Carolina", photo: "/brand-photo-18.jpg" },
   { name: "Central Arkansas", state: "Arkansas", photo: "/brand-photo-19.jpg" },
   { name: "Vicksburg", state: "Mississippi", photo: "/brand-photo-20.jpg" },
-  { name: "Greater Cartersville", state: "Georgia", photo: "/brand-photo-21.jpg" },
   { name: "Southwest Georgia", state: "Georgia", photo: "/brand-photo-22.jpg" },
   { name: "Dallas County", state: "Texas", photo: "/brand-photo-23.jpg" },
   { name: "Denton County", state: "Texas", photo: "/brand-photo-24.jpg" },
   { name: "South Tarrant Co.", state: "Texas", photo: "/brand-photo-25.jpg" },
   { name: "Memphis", state: "Tennessee", photo: "/brand-photo-26.jpg" },
   { name: "Enterprise", state: "Alabama", photo: "/brand-photo-27.jpg" },
-  { name: "Cypress", state: "Texas", photo: "/brand-photo-28.jpg" },
   { name: "Fort Wayne", state: "Indiana", photo: "/brand-photo-29.jpg" },
   { name: "North Tarrant Co.", state: "Texas", photo: "/brand-photo-30.jpg" },
   { name: "Lubbock County", state: "Texas", photo: "/brand-photo-31.jpg" },
   { name: "Greater Boston Metro", state: "Massachusetts", photo: "/brand-photo-32.jpg" },
   { name: "San Antonio", state: "Texas", photo: "/brand-photo-33.jpg" },
-  { name: "Greater Clanton", state: "Alabama", photo: "/brand-photo-34.jpg" },
   { name: "Collin County", state: "Texas", photo: "/brand-photo-35.jpg" },
   { name: "Northwest", state: "Mississippi", photo: "/brand-photo-36.jpg" },
-  { name: "Southwest", state: "Florida", photo: "/brand-photo-37.jpg" },
   { name: "Philadelphia", state: "Mississippi", photo: "/brand-photo-38.jpg" },
   { name: "Raleigh", state: "North Carolina", photo: "/brand-photo-39.jpg" },
-  { name: "New Orleans", state: "Louisiana", photo: "/brand-photo-40.jpg" },
   { name: "Grand Rapids", state: "Michigan", photo: "/brand-photo-41.jpg" },
-  { name: "Yuma", state: "Arizona", photo: "/brand-photo-42.jpg" },
   { name: "Oklahoma City", state: "Oklahoma", photo: "/brand-photo-43.jpg" },
-  // Winston‑Salem uses a non-breaking hyphen (U+2011) so it never splits across
-  // lines; text-wrap:balance then breaks the phrase only at spaces. No trailing
-  // period — no other card text has one.
-  { name: "The Triad", state: "North Carolina", photo: "/brand-photo-44.jpg", description: "Greensboro, High Point & Winston‑Salem" },
   { name: "Midland", state: "Texas", photo: "/brand-photo-45.jpg" },
   { name: "Tallahassee", state: "Florida", photo: "/brand-photo-11.jpg" },
   { name: "Kingwood", state: "Texas", photo: "/brand-photo-28.jpg" },
@@ -561,7 +546,10 @@ export default function HomePage() {
             <p className="eyebrow" style={{ display: "inline-flex", alignItems: "center", gap: 7, marginBottom: 14 }}>
               <Sparkles size={14} /> Now launching
             </p>
-            <h2 className="h2">Series One starts in{" "}<em className="serif-italic">forty-eight cities</em></h2>
+            {/* Spelled-out count must match LAUNCH_CITIES.length (currently 36). A
+                third hardcoded spot alongside the card array + the map pins — update
+                all three together when the launch-city list changes. */}
+            <h2 className="h2">Series One starts in{" "}<em className="serif-italic">thirty-six cities</em></h2>
             <p className="body-lg" style={{ marginTop: 16, maxWidth: 540, marginInline: "auto" }}>
               Our inaugural 8-week series kicks off this August. Be one of the first to take a seat at the table in your city.
             </p>

@@ -73,46 +73,16 @@ export const CITY_PINS: LaunchCityPin[] = [
     "y": 114.9
   },
   {
-    "name": "Pensacola",
-    "state": "FL",
-    "x": 171.1,
-    "y": 166.7
-  },
-  {
-    "name": "Mobile",
-    "state": "AL",
-    "x": 153.4,
-    "y": 156.9
-  },
-  {
     "name": "Baldwin County",
     "state": "AL",
     "x": 158.2,
     "y": 168.3
   },
   {
-    "name": "30A",
-    "state": "FL",
-    "x": 187.2,
-    "y": 167.7
-  },
-  {
     "name": "Greenbrier Region",
     "state": "WV",
-    "x": 287.0,
+    "x": 287,
     "y": 4.4
-  },
-  {
-    "name": "Appleton",
-    "state": "WI",
-    "x": 148.8,
-    "y": -137.8
-  },
-  {
-    "name": "Matthews",
-    "state": "NC",
-    "x": 280.1,
-    "y": 61.0
   },
   {
     "name": "Greenville/Pickens",
@@ -133,12 +103,6 @@ export const CITY_PINS: LaunchCityPin[] = [
     "y": 124.2
   },
   {
-    "name": "Greater Cartersville",
-    "state": "GA",
-    "x": 211.5,
-    "y": 84.4
-  },
-  {
     "name": "Southwest Georgia",
     "state": "GA",
     "x": 222.7,
@@ -147,13 +111,13 @@ export const CITY_PINS: LaunchCityPin[] = [
   {
     "name": "Dallas County",
     "state": "TX",
-    "x": 9.0,
-    "y": 117.0
+    "x": 9,
+    "y": 117
   },
   {
     "name": "Denton County",
     "state": "TX",
-    "x": -5.0,
+    "x": -5,
     "y": 99.6
   },
   {
@@ -173,12 +137,6 @@ export const CITY_PINS: LaunchCityPin[] = [
     "state": "AL",
     "x": 193.2,
     "y": 147.1
-  },
-  {
-    "name": "Cypress",
-    "state": "TX",
-    "x": 22.6,
-    "y": 176.7
   },
   {
     "name": "Fort Wayne",
@@ -211,12 +169,6 @@ export const CITY_PINS: LaunchCityPin[] = [
     "y": 188.7
   },
   {
-    "name": "Greater Clanton",
-    "state": "AL",
-    "x": 179.8,
-    "y": 113.5
-  },
-  {
     "name": "Collin County",
     "state": "TX",
     "x": 8.5,
@@ -227,12 +179,6 @@ export const CITY_PINS: LaunchCityPin[] = [
     "state": "MS",
     "x": 121.9,
     "y": 70.5
-  },
-  {
-    "name": "Southwest",
-    "state": "FL",
-    "x": 262.3,
-    "y": 249.9
   },
   {
     "name": "Philadelphia",
@@ -247,39 +193,21 @@ export const CITY_PINS: LaunchCityPin[] = [
     "y": 48.8
   },
   {
-    "name": "New Orleans",
-    "state": "LA",
-    "x": 120.1,
-    "y": 177.1
-  },
-  {
     "name": "Grand Rapids",
     "state": "MI",
     "x": 196.5,
     "y": -109.2
   },
   {
-    "name": "Yuma",
-    "state": "AZ",
-    "x": -305.6,
-    "y": 116.8
-  },
-  {
     "name": "Oklahoma City",
     "state": "OK",
-    "x": -9.0,
+    "x": -9,
     "y": 55.7
-  },
-  {
-    "name": "The Triad",
-    "state": "NC",
-    "x": 298.3,
-    "y": 42.4
   },
   {
     "name": "Midland",
     "state": "TX",
-    "x": -88.0,
+    "x": -88,
     "y": 132.1
   },
   {
