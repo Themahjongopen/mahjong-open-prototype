@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { formatTableTime } from "@/lib/format/time";
 import AdminCancelTableButton from "@/components/admin/AdminCancelTableButton";
+import AdminRemovePlayerButton from "@/components/admin/AdminRemovePlayerButton";
 
 const STATUS_BADGE: Record<string, string> = { open: "badge-lime", full: "badge-peri", completed: "badge-mute", canceled: "badge-mute" };
 
@@ -28,6 +29,7 @@ type TableRow = {
   series_name: string | null;
   creator_name: string | null;
   active_seats: number;
+  players: { seat_id: string; user_id: string; full_name: string | null; is_host: boolean }[];
 };
 
 export default function AdminTablesPage() {
@@ -39,6 +41,7 @@ export default function AdminTablesPage() {
   const [seriesFilter, setSeriesFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [weekFilter, setWeekFilter] = useState<string>("all");
+  const [playerSearch, setPlayerSearch] = useState("");
 
   async function load() {
     setLoading(true);
@@ -86,9 +89,15 @@ export default function AdminTablesPage() {
       if (seriesFilter !== "all" && r.series_id !== seriesFilter) return false;
       if (statusFilter !== "all" && r.status !== statusFilter) return false;
       if (weekFilter !== "all" && String(r.week_number) !== weekFilter) return false;
+      // players (Part A) includes the host's own seat, so this one clause finds a
+      // table whether the searched player is hosting it or a guest at it.
+      if (playerSearch.trim()) {
+        const q = playerSearch.trim().toLowerCase();
+        if (!r.players.some((p) => (p.full_name ?? "").toLowerCase().includes(q))) return false;
+      }
       return true;
     });
-  }, [rows, cityFilter, seriesFilter, statusFilter, weekFilter]);
+  }, [rows, cityFilter, seriesFilter, statusFilter, weekFilter, playerSearch]);
 
   return (
     <div style={{ maxWidth: 1100 }}>
@@ -123,6 +132,15 @@ export default function AdminTablesPage() {
             <option key={s.id} value={s.id}>{s.label}</option>
           ))}
         </select>
+        <input
+          type="search"
+          className="input-mo"
+          style={{ maxWidth: 240 }}
+          placeholder="Search by player name"
+          aria-label="Search by player name"
+          value={playerSearch}
+          onChange={(e) => setPlayerSearch(e.target.value)}
+        />
       </div>
 
       <div style={{ background: "#fff", border: "1px solid var(--hair-200)", borderRadius: "var(--radius-lg)", overflow: "hidden", boxShadow: "var(--shadow-xs)" }}>
@@ -159,6 +177,21 @@ export default function AdminTablesPage() {
                 <div>
                   <span className="admin-mobile-label">Host</span>
                   <p style={{ fontSize: 13, color: "var(--ink-700)" }}>{t.creator_name ?? "—"}</p>
+                  {/* Other actively-seated players (host excluded — shown above).
+                      Each guest gets an inline Remove control on open/full tables. */}
+                  {t.players.filter((p) => !p.is_host).map((p) => (
+                    <div key={p.seat_id} style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4, fontSize: 12, color: "var(--ink-500)" }}>
+                      <span>{p.full_name ?? "—"}</span>
+                      {(t.status === "open" || t.status === "full") && (
+                        <AdminRemovePlayerButton
+                          tableId={t.id}
+                          seatId={p.seat_id}
+                          playerName={p.full_name ?? "this player"}
+                          onRemoved={() => void load()}
+                        />
+                      )}
+                    </div>
+                  ))}
                 </div>
                 <div>
                   <span className="admin-mobile-label">Status</span>

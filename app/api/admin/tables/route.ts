@@ -29,7 +29,7 @@ export async function GET() {
   const rows = await fetchAllRows((from: number, to: number) =>
     admin
       .from("league_tables")
-      .select("id, week_number, table_date, table_time, location_name, status, cities(id, name), series(id, name), profiles(full_name), table_seats(canceled_at)")
+      .select("id, week_number, table_date, table_time, location_name, status, creator_id, cities(id, name), series(id, name), profiles(full_name), table_seats(id, seat_number, user_id, canceled_at, profiles(full_name))")
       .order("table_date", { ascending: false })
       .order("id", { ascending: true })
       .range(from, to)
@@ -51,6 +51,18 @@ export async function GET() {
       series_name: series?.name ?? null,
       creator_name: one<any>(t.profiles)?.full_name ?? null,
       active_seats: ((t.table_seats ?? []) as any[]).filter((s) => !s.canceled_at).length,
+      // Active (non-canceled) seat holders, host-first by seat_number, each flagged
+      // if they're the table's creator — feeds the row's seated-player sub-list,
+      // the player-name search, and the per-player Remove action.
+      players: ((t.table_seats ?? []) as any[])
+        .filter((s) => !s.canceled_at)
+        .sort((a, b) => a.seat_number - b.seat_number)
+        .map((s) => ({
+          seat_id: s.id,
+          user_id: s.user_id,
+          full_name: one<any>(s.profiles)?.full_name ?? null,
+          is_host: s.user_id === t.creator_id,
+        })),
     };
   });
 
