@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getPortalUser } from "@/lib/portal/session";
-import { getEligibleScoreTables } from "@/lib/portal/scores";
+import { getEligibleScoreTables, getTableForScoring } from "@/lib/portal/scores";
 import ScoreEntryForm from "@/components/portal/ScoreEntryForm";
 
 export default async function ScoresPage({ searchParams }: { searchParams: Promise<{ table_id?: string }> }) {
@@ -8,6 +8,26 @@ export default async function ScoresPage({ searchParams }: { searchParams: Promi
   const session = await getPortalUser();
   const member = session && session.status === "active" ? session : null;
   if (!member) return null;
+
+  // A specific table_id link (e.g. an admin scoring a table they don't host):
+  // resolve it directly, since getEligibleScoreTables below is creator-scoped and
+  // would never surface it. getTableForScoring applies the same creator-or-admin +
+  // completed + not-yet-scored check the API enforces.
+  if (table_id) {
+    const table = await getTableForScoring(table_id, member);
+    if (table) {
+      return (
+        <div style={{ padding: "20px 16px", maxWidth: 480, margin: "0 auto" }}>
+          <p style={{ fontFamily: "var(--font-display)", fontSize: 22, color: "var(--ink-900)", marginBottom: 20 }}>
+            Enter round scores
+          </p>
+          <ScoreEntryForm tables={[table]} initialTableId={table.id} />
+        </div>
+      );
+    }
+    // Falls through to the normal list below if it didn't resolve (not completed /
+    // already scored / not this admin's-or-theirs) — same messaging as today.
+  }
 
   const tables = await getEligibleScoreTables(member);
   const initialTableId = table_id && tables.some((t) => t.id === table_id) ? table_id : tables[0]?.id ?? "";

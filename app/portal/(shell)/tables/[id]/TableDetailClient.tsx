@@ -82,11 +82,14 @@ export default function TableDetailClient({
   const canJoin = !myActiveSeat && seatsFilled < 4 && table.status === "open" && !isCreator;
   const canLeave = !!myActiveSeat && !isCreator && (table.status === "open" || table.status === "full");
   const canCancelTable = isCreator && (table.status === "open" || table.status === "full");
-  const canMarkPlayed = isCreator && scoringFilled >= 4 && (table.status === "open" || table.status === "full");
-  const canSubmitScores = isCreator && table.status === "completed" && !submission;
+  // Admin is an alternate to the host for mark-played and score entry — the API
+  // (POST /api/scores and the PATCH "complete" action) already authorizes
+  // session.isAdmin, so these buttons must not stay creator-only.
+  const isHostOrAdmin = isCreator || isAdmin;
+  const canMarkPlayed = isHostOrAdmin && scoringFilled >= 4 && (table.status === "open" || table.status === "full");
+  const canSubmitScores = isHostOrAdmin && table.status === "completed" && !submission;
   // Editing is a creator/admin action, only on an open/upcoming table. The 24h
   // block below is enforced server-side; this is just the matching client hint.
-  const isHostOrAdmin = isCreator || isAdmin;
   const canManageEdit = isHostOrAdmin && (table.status === "open" || table.status === "full");
   const canDeleteTable = isHostOrAdmin && table.status === "canceled";
   // Invite is open to ANY player actively seated here (creator or joined), only
