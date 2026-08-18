@@ -1,5 +1,5 @@
 import { getAdminSubmissions } from "@/lib/admin/scores";
-import ScoreCorrectionCard from "@/components/admin/ScoreCorrectionCard";
+import ScoreCorrectionsFilterList from "@/components/admin/ScoreCorrectionsFilterList";
 
 export default async function AdminScoresPage() {
   const submissions = await getAdminSubmissions();
@@ -16,11 +16,7 @@ export default async function AdminScoresPage() {
           No rounds have been scored yet.
         </div>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {submissions.map((s) => (
-            <ScoreCorrectionCard key={s.id} submission={s} />
-          ))}
-        </div>
+        <ScoreCorrectionsFilterList submissions={submissions} />
       )}
     </div>
   );

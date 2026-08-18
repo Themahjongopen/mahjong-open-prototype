@@ -20,6 +20,7 @@ export type AdminScoreSubmission = {
   created_at: string;
   week_number: number | null;
   table_date: string | null;
+  table_time: string | null;
   location_name: string | null;
   city_name: string | null;
   series_name: string | null;
@@ -37,7 +38,7 @@ export async function getAdminSubmissions(): Promise<AdminScoreSubmission[]> {
   const { data } = await admin
     .from("score_submissions")
     .select(
-      "id, status, created_at, league_tables(week_number, table_date, location_name, cities(name), series(name)), score_submission_players(id, user_id, round_score, is_no_show, is_no_show_bonus, profiles(full_name))"
+      "id, status, created_at, league_tables(week_number, table_date, table_time, location_name, cities(name), series(name)), score_submission_players(id, user_id, round_score, is_no_show, is_no_show_bonus, profiles(full_name))"
     )
     .order("created_at", { ascending: false });
 
@@ -62,6 +63,7 @@ export async function getAdminSubmissions(): Promise<AdminScoreSubmission[]> {
       created_at: s.created_at,
       week_number: table?.week_number ?? null,
       table_date: table?.table_date ?? null,
+      table_time: table?.table_time ?? null,
       location_name: table?.location_name ?? null,
       city_name: city?.name ?? null,
       series_name: series?.name ?? null,
