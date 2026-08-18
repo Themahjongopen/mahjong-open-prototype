@@ -51,6 +51,18 @@ function toSeats(table: { table_date: string; table_time: string | null; table_s
   ].sort((a, b) => a.seat_number - b.seat_number);
 }
 
+// Does this table already have a score submission? score_submissions.table_id is
+// UNIQUE (migration 006), so PostgREST embeds `score_submissions` as a to-ONE
+// relation — a single object (or null), NOT an array. The old checks used
+// `.length`, which is undefined on an object → always falsy → every already-scored
+// table was silently treated as unscored (so it never dropped off the Scores tab,
+// and the API's duplicate-submit guard was bypassed). Handle both shapes so this
+// is correct regardless of how PostgREST resolves the relationship.
+export function hasSubmission(t: { score_submissions?: unknown }): boolean {
+  const s = t.score_submissions;
+  return Array.isArray(s) ? s.length > 0 : s != null;
+}
+
 // Completed tables the host created that don't yet have a score submission.
 export async function getEligibleScoreTables(member: PortalMember): Promise<ScoreableTable[]> {
   const admin: any = createAdminClient();
@@ -64,7 +76,7 @@ export async function getEligibleScoreTables(member: PortalMember): Promise<Scor
     .order("table_date", { ascending: false });
 
   return ((data ?? []) as any[])
-    .filter((t) => !(t.score_submissions?.length))
+    .filter((t) => !hasSubmission(t))
     .map((t) => ({ id: t.id, week_number: t.week_number, table_date: t.table_date, location_name: t.location_name, seats: toSeats(t) }));
 }
 
@@ -78,7 +90,7 @@ export async function getTableForScoring(id: string, member: PortalMember): Prom
   if (!t) return null;
   if (t.creator_id !== member.id && !member.isAdmin) return null;
   if (t.status !== "completed") return null;
-  if (t.score_submissions?.length) return null;
+  if (hasSubmission(t)) return null;
 
   return { id: t.id, week_number: t.week_number, table_date: t.table_date, location_name: t.location_name, seats: toSeats(t) };
 }

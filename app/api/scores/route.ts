@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/server";
 import { resolvePrefs } from "@/lib/portal/notificationPrefs";
 import { sendScorePostedEmail } from "@/lib/email/scorePostedEmail";
 import { scoringSeats } from "@/lib/portal/tables";
+import { hasSubmission } from "@/lib/portal/scores";
 
 const NO_SHOW_STAY_BONUS = 25;
 
@@ -48,7 +49,7 @@ export async function POST(request: Request) {
   if (table.status !== "completed") {
     return NextResponse.json({ error: "Mark the table as played before submitting scores." }, { status: 409 });
   }
-  if (table.score_submissions?.length) {
+  if (hasSubmission(table)) {
     return NextResponse.json({ error: "Scores have already been submitted for this table." }, { status: 409 });
   }
 
