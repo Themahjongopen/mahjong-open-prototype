@@ -37,6 +37,11 @@ export async function GET() {
     return NextResponse.json({ error: "Could not load players." }, { status: 500 });
   }
 
+  // City name for the export filename / PDF title (the roster page has no other
+  // source for it — the city label lives in the layout's session, not here).
+  const { data: city } = await supabase.from("cities").select("name").eq("id", cityId).maybeSingle();
+  const cityName: string | null = city?.name ?? null;
+
   // Supabase embeds a to-one relation as either an object or a single-element
   // array; normalize to one object (or null), same as the admin players route.
   const players = ((data ?? []) as any[]).map((r) => ({
@@ -49,5 +54,5 @@ export async function GET() {
     profiles: (Array.isArray(r.profiles) ? r.profiles[0] : r.profiles) ?? null,
   }));
 
-  return NextResponse.json({ players });
+  return NextResponse.json({ players, cityName });
 }

@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import { csvField } from "@/lib/format/csv";
 
 const PAID_BADGE: Record<string, string> = { paid: "badge-lime", pending: "badge-butter" };
 // Same skill → badge-color map used on OpenTableCard / TableDetailClient. NOTE:
@@ -30,8 +33,18 @@ function formatDate(value: string) {
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
+// Export columns match the on-screen table's own columns.
+const EXPORT_HEADERS = ["Name", "Hometown", "Email", "Phone", "Level", "Payment status", "Registered date"];
+
+// <city-name>-players-<YYYY-MM-DD>.<ext>, city slugified for a clean filename.
+function exportFilename(cityName: string | null, ext: string) {
+  const slug = (cityName ?? "city").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "city";
+  return `${slug}-players-${new Date().toISOString().slice(0, 10)}.${ext}`;
+}
+
 export default function CommissionerPlayersPage() {
   const [rows, setRows] = useState<Row[]>([]);
+  const [cityName, setCityName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<Filter>("all");
   const [levelFilter, setLevelFilter] = useState<Level>("all");
@@ -41,7 +54,10 @@ export default function CommissionerPlayersPage() {
     (async () => {
       const res = await fetch("/api/commissioner/players", { credentials: "include" });
       const payload = await res.json().catch(() => ({}));
-      if (res.ok) setRows(payload.players ?? []);
+      if (res.ok) {
+        setRows(payload.players ?? []);
+        setCityName(payload.cityName ?? null);
+      }
       setLoading(false);
     })();
   }, []);
@@ -58,6 +74,53 @@ export default function CommissionerPlayersPage() {
 
   const paidCount = rows.filter((r) => r.paid_status === "paid").length;
   const pendingCount = rows.filter((r) => r.paid_status === "pending").length;
+
+  // One matrix (matching EXPORT_HEADERS) drives both CSV and PDF, so they never
+  // drift. Built from filteredRows — exports exactly what's on screen.
+  const exportMatrix = () =>
+    filteredRows.map((r) => [
+      r.full_name ?? "",
+      r.profiles?.hometown ?? "",
+      r.email,
+      r.phone ?? "",
+      r.profiles?.skill_level ?? "",
+      r.paid_status,
+      formatDate(r.created_at),
+    ]);
+
+  function handleExportCsv() {
+    const lines = [EXPORT_HEADERS.join(",")];
+    for (const row of exportMatrix()) lines.push(row.map((c) => csvField(c)).join(","));
+    const blob = new Blob([lines.join("\r\n")], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = exportFilename(cityName, "csv");
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    URL.revokeObjectURL(url);
+  }
+
+  function handleExportPdf() {
+    // Landscape — seven columns with wide email/hometown fields read better wide.
+    const doc = new jsPDF({ orientation: "landscape" });
+    const title = cityName ? `${cityName} players` : "Players";
+    const today = new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+    doc.setFontSize(14);
+    doc.text(title, 14, 16);
+    doc.setFontSize(10);
+    doc.setTextColor(120);
+    doc.text(today, 14, 22);
+    autoTable(doc, {
+      head: [EXPORT_HEADERS],
+      body: exportMatrix(),
+      startY: 27,
+      styles: { fontSize: 8, cellPadding: 2 },
+      headStyles: { fillColor: [236, 70, 110] }, // --pink-500
+    });
+    doc.save(exportFilename(cityName, "pdf"));
+  }
 
   return (
     <div>
@@ -89,6 +152,12 @@ export default function CommissionerPlayersPage() {
           <option value="intermediate">Intermediate</option>
           <option value="advanced">Advanced</option>
         </select>
+        <button type="button" className="btn" onClick={handleExportCsv} disabled={filteredRows.length === 0} style={{ fontSize: 13 }}>
+          Export CSV
+        </button>
+        <button type="button" className="btn" onClick={handleExportPdf} disabled={filteredRows.length === 0} style={{ fontSize: 13 }}>
+          Download PDF
+        </button>
       </div>
 
       <input

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useConfirm } from "@/components/ConfirmProvider";
+import { csvField } from "@/lib/format/csv";
 
 const PAID_BADGE: Record<string, string> = { paid: "badge-lime", pending: "badge-butter", refunded: "badge-mute" };
 
@@ -62,14 +63,6 @@ function formatDateTime(value: string) {
   return date.toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 }
 
-// Wrap a CSV field in quotes when it contains a comma, quote, or newline; escape embedded quotes.
-function csvField(value: string | null): string {
-  const text = value ?? "";
-  if (/[",\n\r]/.test(text)) {
-    return `"${text.replace(/"/g, '""')}"`;
-  }
-  return text;
-}
 
 // ── Change-city modal types (preview payload from /change-city) ──────────────
 type CCSeat = { seat_id: string; table_id: string; location_name: string; table_date: string; table_time: string | null };
