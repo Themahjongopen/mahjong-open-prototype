@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { MapPin, Clock, Users } from "lucide-react";
 // activeSeats + the LeagueTable type come from the pure ./seats module (not
 // ./tables) so this client component doesn't pull server-only code into the bundle.
 import { activeSeats, type LeagueTable } from "@/lib/portal/seats";
 import { useToast } from "@/components/portal/PortalShellClient";
+import { useConfirm } from "@/components/ConfirmProvider";
 import { formatTableTime } from "@/lib/format/time";
 
 const SKILL_COLORS: Record<string, string> = {
@@ -30,7 +31,14 @@ const STATUS_COLORS: Record<string, string> = {
 export default function OpenTableCard({ table, currentUserId }: { table: LeagueTable; currentUserId: string | null }) {
   const router = useRouter();
   const { showToast } = useToast();
+  const confirm = useConfirm();
   const [joining, setJoining] = useState(false);
+  // Synchronous reentrancy guard: flips before the confirm await, so a replayed
+  // tap arriving while the confirm modal is open is dropped rather than queuing a
+  // second modal or a second join. `joining` (disabled) alone can't stop a replay
+  // that lands before React re-renders. (Kate Gundling: a queued tap replaying
+  // after a hung render seated her at a table she never chose.)
+  const inFlight = useRef(false);
 
   const active = activeSeats(table.table_seats);
   const filled = active.length;
@@ -41,8 +49,21 @@ export default function OpenTableCard({ table, currentUserId }: { table: LeagueT
 
   async function handleJoin(e: React.MouseEvent) {
     e.stopPropagation(); // don't also trigger the card's navigate
-    setJoining(true);
+    if (inFlight.current) return;
+    inFlight.current = true;
     try {
+      // Confirm BEFORE any network request — restating the specific table so an
+      // accidental/replayed tap on an unfamiliar date is caught, and reminding an
+      // intentional joiner of the 24h no-show commitment (matches the leave modal).
+      const dateLabel = new Date(`${table.table_date}T12:00:00`).toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
+      const whenLabel = table.table_time ? `${dateLabel} at ${formatTableTime(table.table_time)}` : dateLabel;
+      const ok = await confirm({
+        title: "Join this table?",
+        message: `${whenLabel} — ${table.location_name}${table.location_address ? `, ${table.location_address}` : ""}.\n\nLeaving within 24 hours of the table counts as a no-show (−25 points) unless another player takes your seat.`,
+        confirmLabel: "Take a seat",
+      });
+      if (!ok) return;
+      setJoining(true);
       const res = await fetch(`/api/tables/${table.id}/seats`, { method: "POST" });
       const payload = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -52,6 +73,7 @@ export default function OpenTableCard({ table, currentUserId }: { table: LeagueT
       showToast("Seat claimed!");
       router.refresh();
     } finally {
+      inFlight.current = false;
       setJoining(false);
     }
   }

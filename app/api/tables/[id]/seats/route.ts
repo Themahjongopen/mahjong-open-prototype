@@ -19,7 +19,7 @@ export async function POST(_request: Request, context: { params: Promise<{ id: s
 
   const { data: table } = await admin
     .from("league_tables")
-    .select("id, series_id, status, table_date, table_time, location_name, location_address, round_type, table_seats(seat_number, user_id, canceled_at)")
+    .select("id, series_id, status, table_date, table_time, location_name, location_address, round_type, table_seats(id, seat_number, user_id, canceled_at)")
     .eq("id", id)
     .maybeSingle();
 
@@ -34,8 +34,13 @@ export async function POST(_request: Request, context: { params: Promise<{ id: s
   }
 
   const active = (table.table_seats ?? []).filter((s: any) => !s.canceled_at);
-  if (active.some((s: any) => s.user_id === session.id)) {
-    return NextResponse.json({ error: "You're already seated at this table." }, { status: 409 });
+  // Idempotent: if this player already holds an active seat here, return it
+  // instead of erroring or inserting a second row. Hardens the join against a
+  // replayed tap or a racing double-POST (the Kate Gundling incident) — the
+  // second request must not create a second seat or spuriously report "full".
+  const existingSeat = active.find((s: any) => s.user_id === session.id);
+  if (existingSeat) {
+    return NextResponse.json({ ok: true, seat_number: existingSeat.seat_number, seatId: existingSeat.id });
   }
   if (active.length >= 4) {
     return NextResponse.json({ error: "This table is full." }, { status: 409 });
@@ -52,8 +57,23 @@ export async function POST(_request: Request, context: { params: Promise<{ id: s
     .insert({ table_id: id, user_id: session.id, seat_number: seatNumber });
 
   if (insertError) {
-    // Unique-violation = someone grabbed the seat between our read and write.
+    // Unique-violation = a race between our read and write. Two cases:
+    //   * uq_table_seats_active_user — a concurrent request from THIS user already
+    //     seated them (a replayed/double tap). Return that seat, idempotent (200),
+    //     not an error — the DB partial-unique index is the real guarantee here.
+    //   * uq_table_seats_active_seat — a DIFFERENT player grabbed the seat number
+    //     first; tell this player to retry.
     if (insertError.code === "23505") {
+      const { data: mine } = await admin
+        .from("table_seats")
+        .select("id, seat_number")
+        .eq("table_id", id)
+        .eq("user_id", session.id)
+        .is("canceled_at", null)
+        .maybeSingle();
+      if (mine) {
+        return NextResponse.json({ ok: true, seat_number: mine.seat_number, seatId: mine.id });
+      }
       return NextResponse.json({ error: "That spot was just taken — try again." }, { status: 409 });
     }
     return NextResponse.json({ error: "You couldn't be seated. Please try again." }, { status: 500 });

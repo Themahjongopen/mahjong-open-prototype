@@ -28,11 +28,11 @@ From there you can:
 
 ## Finding and joining a table
 
-Tap Schedule in the bottom nav (or the calendar icon) to see Open Tables for your city, grouped by round number.
+Tap Schedule in the bottom nav (or the calendar icon) to see Open Tables for your city, grouped by week number.
 
 Each table card shows the date, time, and how many seats are filled. Tap into a table to see the full details — location, notes, and who's seated.
 
-**To join:** open a table with an open seat and tap Join this table. You'll take the next open seat.
+**To join:** open a table with an open seat and tap Join this table (or Join straight from the list). You'll be asked to confirm — the pop-up shows the date, time, and place, and reminds you that leaving within 24 hours counts as a no-show. Tap **Take a seat** to confirm; you'll take the next open seat.
 
 **To leave your seat:** open the table and tap Cancel my spot. If it's within 24 hours of game time, you'll see a warning first — if no one takes your seat before the round, the host can record you as a no-show, which carries a scoring penalty.
 

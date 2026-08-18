@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CalendarDays, MapPin, Clock } from "lucide-react";
 import { useToast } from "@/components/portal/PortalShellClient";
@@ -54,6 +54,7 @@ export default function TableDetailClient({
   const confirm = useConfirm();
   const router = useRouter();
   const [loading, setLoading] = useState<Action>(null);
+  const joinInFlight = useRef(false);
   const [editing, setEditing] = useState(false);
   const [inviting, setInviting] = useState(false);
   const [pickingHost, setPickingHost] = useState(false);
@@ -163,8 +164,26 @@ export default function TableDetailClient({
     }
   }
 
-  function handleJoin() {
-    run("join", `/api/tables/${table.id}/seats`, { method: "POST" }, "Seat claimed!");
+  // Confirm before joining (Part A) + a synchronous reentrancy guard (Part B):
+  // the ref flips before the confirm await, so a replayed tap arriving while the
+  // modal is open is dropped rather than queuing a second join. `loading` alone
+  // can't stop a replay that lands before React re-renders.
+  async function handleJoin() {
+    if (joinInFlight.current) return;
+    joinInFlight.current = true;
+    try {
+      const dateLabel = new Date(`${table.table_date}T12:00:00`).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+      const whenLabel = table.table_time ? `${dateLabel} at ${formatTableTime(table.table_time)}` : dateLabel;
+      const ok = await confirm({
+        title: "Join this table?",
+        message: `${whenLabel} — ${table.location_name}${table.location_address ? `, ${table.location_address}` : ""}.\n\nLeaving within 24 hours of the table counts as a no-show (−25 points) unless another player takes your seat.`,
+        confirmLabel: "Take a seat",
+      });
+      if (!ok) return;
+      await run("join", `/api/tables/${table.id}/seats`, { method: "POST" }, "Seat claimed!");
+    } finally {
+      joinInFlight.current = false;
+    }
   }
 
   async function handleLeave() {
