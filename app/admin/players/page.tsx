@@ -45,7 +45,7 @@ type RegistrationRow = {
 
 type CityChoice = { city_id: string; label: string };
 
-type Filter = "all" | "paid" | "pending";
+type Filter = "all" | "paid" | "pending" | "refunded";
 type SourceFilter = "all" | "link" | "dropdown" | "organic_split" | "backfill" | "manual" | "none";
 type Commissioner = { profile_id: string; full_name: string };
 
@@ -804,6 +804,7 @@ export default function AdminRegistrationsPage() {
     { key: "all", label: "All" },
     { key: "paid", label: "Paid" },
     { key: "pending", label: "Pending" },
+    { key: "refunded", label: "Refunded" },
   ];
 
   return (
