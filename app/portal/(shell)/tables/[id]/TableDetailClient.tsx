@@ -67,12 +67,47 @@ export default function TableDetailClient({
     notes: table.notes ?? "",
   });
   const [editError, setEditError] = useState("");
+  // Host self-correction of the posted scores (parallels the admin Score
+  // Corrections card, but host-only and time-boxed).
+  const [scoreEditing, setScoreEditing] = useState(false);
+  const [scoreValues, setScoreValues] = useState<Record<string, string>>(
+    submission ? Object.fromEntries(submission.players.map((p) => [p.id, String(p.round_score)])) : {}
+  );
+  const [scoreSaving, setScoreSaving] = useState(false);
+  const [scoreError, setScoreError] = useState<string | null>(null);
+
+  async function saveScores() {
+    if (!submission) return;
+    setScoreSaving(true);
+    setScoreError(null);
+    try {
+      const res = await fetch(`/api/scores/${submission.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ players: submission.players.map((p) => ({ id: p.id, round_score: Number.parseInt(scoreValues[p.id] || "0", 10) || 0 })) }),
+      });
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setScoreError(payload.error || "Could not save scores.");
+        return;
+      }
+      setScoreEditing(false);
+      router.refresh();
+    } finally {
+      setScoreSaving(false);
+    }
+  }
 
   const active = table.table_seats.filter((s) => !s.canceled_at);
   const { lateCancellations } = scoringSeats(table);
   const lateCancelSeatNumbers = new Set(lateCancellations.map((s) => s.seat_number));
   const myActiveSeat = active.find((s) => s.user_id === currentUserId);
   const isCreator = table.creator_id === currentUserId;
+  // Host may self-correct scores only within 24h of submitting, and never on a
+  // voided submission. Past the window the card just stays read-only (no error).
+  const canEditScores =
+    isCreator && !!submission && submission.status !== "voided" &&
+    Date.now() - new Date(submission.created_at).getTime() <= 24 * 60 * 60 * 1000;
   const seatsFilled = active.length;
   // Seats that count toward the 4 needed to play: real people seated + any seat
   // whose most recent occupant cancelled within 24h and was never re-claimed
@@ -493,13 +528,48 @@ export default function TableDetailClient({
               <span className="badge badge-lime">Posted</span>
             </div>
             {submission.players.map((p, i) => (
-              <div key={p.user_id} style={{ padding: "10px 16px", borderBottom: i < submission.players.length - 1 ? "1px solid var(--hair-200)" : "none", display: "flex", justifyContent: "space-between", fontSize: 14 }}>
-                <span style={{ color: "var(--ink-800)" }}>{p.full_name ?? "Player"}</span>
-                <span style={{ color: p.is_no_show ? "var(--danger)" : "var(--ink-900)", fontWeight: 600 }}>
-                  {p.is_no_show ? "No-show" : p.is_no_show_bonus ? "+25 (stayed)" : p.round_score}
+              <div key={p.user_id} style={{ padding: "10px 16px", borderBottom: i < submission.players.length - 1 ? "1px solid var(--hair-200)" : "none", display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 14 }}>
+                <span style={{ color: "var(--ink-800)" }}>
+                  {p.full_name ?? "Player"}
+                  {p.is_no_show ? <span style={{ fontSize: 12, color: "var(--danger)", marginLeft: 8 }}>no-show</span> : null}
+                  {p.is_no_show_bonus ? <span style={{ fontSize: 12, color: "var(--ink-500)", marginLeft: 8 }}>+25 stayed</span> : null}
                 </span>
+                {scoreEditing ? (
+                  <input
+                    className="input-mo"
+                    type="number"
+                    min={0}
+                    value={scoreValues[p.id] ?? ""}
+                    onChange={(e) => setScoreValues((s) => ({ ...s, [p.id]: e.target.value }))}
+                    style={{ width: 90 }}
+                    aria-label={`Score for ${p.full_name ?? "player"}`}
+                  />
+                ) : (
+                  <span style={{ color: p.is_no_show ? "var(--danger)" : "var(--ink-900)", fontWeight: 600 }}>
+                    {p.is_no_show ? "No-show" : p.is_no_show_bonus ? "+25 (stayed)" : p.round_score}
+                  </span>
+                )}
               </div>
             ))}
+            {scoreError ? <p style={{ fontSize: 13, color: "var(--danger)", padding: "10px 16px 0" }}>{scoreError}</p> : null}
+            {canEditScores && (
+              <div style={{ display: "flex", gap: 8, padding: "12px 16px", flexWrap: "wrap" }}>
+                {scoreEditing ? (
+                  <>
+                    <button className="btn btn-primary" onClick={saveScores} disabled={scoreSaving} style={{ fontSize: 13, padding: "6px 14px" }}>
+                      {scoreSaving ? "Saving…" : "Save scores"}
+                    </button>
+                    <button className="btn btn-ghost" onClick={() => { setScoreEditing(false); setScoreError(null); setScoreValues(Object.fromEntries(submission.players.map((p) => [p.id, String(p.round_score)]))); }} style={{ fontSize: 13, padding: "6px 14px" }}>
+                      Cancel
+                    </button>
+                  </>
+                ) : (
+                  <button className="btn btn-ghost" onClick={() => { setScoreValues(Object.fromEntries(submission.players.map((p) => [p.id, String(p.round_score)]))); setScoreError(null); setScoreEditing(true); }} style={{ fontSize: 13, padding: "6px 14px" }}>
+                    Edit scores
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         )}
 

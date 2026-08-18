@@ -16,13 +16,16 @@ export type ScoreableTable = {
 };
 
 export type SubmittedPlayer = {
+  id: string; // score_submission_players.id — the host correction PATCH targets this
   user_id: string;
   full_name: string | null;
   round_score: number;
   is_no_show: boolean;
   is_no_show_bonus: boolean;
 };
-export type TableSubmission = { id: string; status: string; players: SubmittedPlayer[] };
+// created_at drives the host's 24h self-correction window; status gates it (a
+// voided submission isn't host-editable).
+export type TableSubmission = { id: string; status: string; created_at: string; players: SubmittedPlayer[] };
 
 const TABLE_SELECT =
   "id, creator_id, week_number, table_date, table_time, location_name, status, series_id, cities(timezone), table_seats(user_id, seat_number, canceled_at, profiles(full_name)), score_submissions(id)";
@@ -102,17 +105,18 @@ export async function getSubmissionForTable(id: string): Promise<TableSubmission
 
   const { data } = await admin
     .from("score_submissions")
-    .select("id, status, score_submission_players(user_id, round_score, is_no_show, is_no_show_bonus, profiles(full_name))")
+    .select("id, status, created_at, score_submission_players(id, user_id, round_score, is_no_show, is_no_show_bonus, profiles(full_name))")
     .eq("table_id", id)
     .maybeSingle();
 
   if (!data) return null;
   const players = ((data.score_submission_players ?? []) as any[]).map((p) => ({
+    id: p.id,
     user_id: p.user_id,
     full_name: p.profiles?.full_name ?? null,
     round_score: p.round_score,
     is_no_show: p.is_no_show,
     is_no_show_bonus: p.is_no_show_bonus,
   }));
-  return { id: data.id, status: data.status, players };
+  return { id: data.id, status: data.status, created_at: data.created_at, players };
 }
