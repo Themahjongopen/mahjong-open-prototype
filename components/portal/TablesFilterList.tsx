@@ -33,18 +33,18 @@ const legendStyle: React.CSSProperties = {
   color: "var(--ink-500)", marginBottom: 8,
 };
 
-// Client-side filtering of the already-fetched table list (round / day-of-week /
+// Client-side filtering of the already-fetched table list (week / day-of-week /
 // time-of-day). Server decides Open vs All (what's fetched); these three filters
 // narrow that list instantly, no round-trip. All filters combine with AND; Day
-// and Time are multi-select (OR within each set), Round is single-select.
+// and Time are multi-select (OR within each set), Week is single-select.
 export default function TablesFilterList({ tables, currentUserId }: { tables: LeagueTable[]; currentUserId: string | null }) {
-  const [round, setRound] = useState<number | null>(null);
+  const [week, setWeek] = useState<number | null>(null);
   const [days, setDays] = useState<Set<number>>(new Set());
   const [buckets, setBuckets] = useState<Set<TimeBucket>>(new Set());
   const [areas, setAreas] = useState<Set<string>>(new Set());
 
-  // Rounds actually present in the data, ascending — the dropdown options.
-  const rounds = useMemo(
+  // Weeks actually present in the data, ascending — the dropdown options.
+  const weeks = useMemo(
     () => Array.from(new Set(tables.map((t) => t.week_number))).sort((a, b) => a - b),
     [tables],
   );
@@ -58,7 +58,7 @@ export default function TablesFilterList({ tables, currentUserId }: { tables: Le
   );
 
   const filtered = useMemo(() => tables.filter((t) => {
-    if (round !== null && t.week_number !== round) return false;
+    if (week !== null && t.week_number !== week) return false;
     if (days.size > 0) {
       const wd = tableWeekdayIndex(t.table_date);
       if (wd === null || !days.has(wd)) return false;
@@ -73,15 +73,15 @@ export default function TablesFilterList({ tables, currentUserId }: { tables: Le
       if (!t.area || !areas.has(t.area)) return false;
     }
     return true;
-  }), [tables, round, days, buckets, areas]);
+  }), [tables, week, days, buckets, areas]);
 
   const byWeek = useMemo(() => filtered.reduce<Record<number, LeagueTable[]>>((acc, t) => {
     (acc[t.week_number] ??= []).push(t);
     return acc;
   }, {}), [filtered]);
 
-  const anyActive = round !== null || days.size > 0 || buckets.size > 0 || areas.size > 0;
-  function clearAll() { setRound(null); setDays(new Set()); setBuckets(new Set()); setAreas(new Set()); }
+  const anyActive = week !== null || days.size > 0 || buckets.size > 0 || areas.size > 0;
+  function clearAll() { setWeek(null); setDays(new Set()); setBuckets(new Set()); setAreas(new Set()); }
   function toggleDay(i: number) {
     setDays((prev) => { const next = new Set(prev); next.has(i) ? next.delete(i) : next.add(i); return next; });
   }
@@ -97,17 +97,17 @@ export default function TablesFilterList({ tables, currentUserId }: { tables: Le
       {/* Filter controls */}
       <div style={{ marginBottom: 20, display: "flex", flexDirection: "column", gap: 16 }}>
         <div>
-          <p style={legendStyle}>Round</p>
+          <p style={legendStyle}>Week</p>
           <select
-            value={round === null ? "" : String(round)}
-            onChange={(e) => setRound(e.target.value === "" ? null : Number(e.target.value))}
+            value={week === null ? "" : String(week)}
+            onChange={(e) => setWeek(e.target.value === "" ? null : Number(e.target.value))}
             style={{
               width: "100%", padding: "8px 12px", fontSize: 14, color: "var(--ink-800)",
               border: "1px solid var(--hair-300)", borderRadius: "var(--radius-md)", background: "#fff",
             }}
           >
-            <option value="">All Rounds</option>
-            {rounds.map((r) => <option key={r} value={r}>Round {r}</option>)}
+            <option value="">All Weeks</option>
+            {weeks.map((w) => <option key={w} value={w}>Week {w}</option>)}
           </select>
         </div>
 
@@ -177,7 +177,7 @@ export default function TablesFilterList({ tables, currentUserId }: { tables: Le
         Object.entries(byWeek).map(([week, weekTables]) => (
           <div key={week} style={{ marginBottom: 32 }}>
             <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--lime-600)", marginBottom: 12 }}>
-              Round {week}
+              Week {week}
             </p>
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               {weekTables.map((table) => (

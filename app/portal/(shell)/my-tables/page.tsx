@@ -38,7 +38,7 @@ export default async function MyTablesPage() {
         }}>
           <div style={{ flex: 1 }}>
             <div style={{ display: "flex", gap: 8, marginBottom: 6, flexWrap: "wrap" }}>
-              <span className="badge badge-mute">Round {table.week_number}</span>
+              <span className="badge badge-mute">Week {table.week_number}</span>
               <span className={`badge ${STATUS_COLORS[table.status] ?? "badge-mute"}`}>{table.status}</span>
               {table.creator_id === member?.id && <span className="badge badge-butter">Creator</span>}
             </div>

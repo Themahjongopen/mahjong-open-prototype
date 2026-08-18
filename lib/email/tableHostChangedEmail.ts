@@ -55,7 +55,7 @@ export async function sendTableHostChangedEmail(
   const detailRows = [
     `<strong>When:</strong> ${dateLabel}${timeLabel ? ` at ${timeLabel}` : ""}`,
     `<strong>Where:</strong> ${table.locationName}${table.cityName ? ` — ${table.cityName}` : ""}`,
-    `<strong>Round:</strong> Round ${table.weekNumber}${table.roundType ? ` · ${table.roundType}` : ""}`,
+    `<strong>Week:</strong> Week ${table.weekNumber}${table.roundType ? ` · ${table.roundType}` : ""}`,
   ];
   const detailsHtml = detailRows
     .map((r) => `<p style="margin:0 0 8px 0;font-size:15px;line-height:1.6;color:#3a4a4f;">${r}</p>`)

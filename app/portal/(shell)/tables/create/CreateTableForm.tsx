@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Info } from "lucide-react";
-import { enumerateSeriesRounds } from "@/lib/portal/seriesWeek";
+import { enumerateSeriesWeeks } from "@/lib/portal/seriesWeek";
 import AreaCombobox from "@/components/portal/AreaCombobox";
 
 const ROUND_TYPE_INFO: { name: string; desc: string }[] = [
@@ -107,21 +107,21 @@ export default function CreateTableForm({ cityId, cityName, seriesStartDate, ser
     notes: "",
   });
 
-  const seriesRounds = useMemo(() => enumerateSeriesRounds(seriesStartDate, seriesEndDate), [seriesStartDate, seriesEndDate]);
-  const hasDynamicDates = seriesRounds.length > 0;
+  const seriesWeeks = useMemo(() => enumerateSeriesWeeks(seriesStartDate, seriesEndDate), [seriesStartDate, seriesEndDate]);
+  const hasDynamicDates = seriesWeeks.length > 0;
 
-  // Today-forward floor, applied on top of the pure per-round enumeration.
-  // Rounds left with zero visible dates (fully in the past) are dropped
+  // Today-forward floor, applied on top of the pure per-week enumeration.
+  // Weeks left with zero visible dates (fully in the past) are dropped
   // entirely rather than rendered as an empty optgroup. The label still shows
-  // each round's full canonical range (dates[0]/dates[dates.length - 1] from the
-  // unfiltered round), so a host mid-round still sees which round they're in
+  // each week's full canonical range (dates[0]/dates[dates.length - 1] from the
+  // unfiltered week), so a host mid-week still sees which week they're in
   // even if only its tail end remains selectable.
-  const visibleRounds = useMemo(() => {
+  const visibleWeeks = useMemo(() => {
     const today = localTodayString();
-    return seriesRounds
-      .map((r) => ({ round: r.round, rangeStart: r.dates[0], rangeEnd: r.dates[r.dates.length - 1], dates: r.dates.filter((d) => d >= today) }))
+    return seriesWeeks
+      .map((r) => ({ week: r.week, rangeStart: r.dates[0], rangeEnd: r.dates[r.dates.length - 1], dates: r.dates.filter((d) => d >= today) }))
       .filter((r) => r.dates.length > 0);
-  }, [seriesRounds]);
+  }, [seriesWeeks]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -185,13 +185,13 @@ export default function CreateTableForm({ cityId, cityName, seriesStartDate, ser
               className="input-mo"
               value={form.table_date}
               onChange={(e) => {
-                const round = visibleRounds.find((r) => r.dates.includes(e.target.value))?.round;
-                setForm((f) => ({ ...f, table_date: e.target.value, week_number: round ? String(round) : "" }));
+                const week = visibleWeeks.find((r) => r.dates.includes(e.target.value))?.week;
+                setForm((f) => ({ ...f, table_date: e.target.value, week_number: week ? String(week) : "" }));
               }}
             >
               <option value="">Select a date</option>
-              {visibleRounds.map((r) => (
-                <optgroup key={r.round} label={`Round ${r.round} (${formatDateOption(r.rangeStart)} – ${formatDateOption(r.rangeEnd)})`}>
+              {visibleWeeks.map((r) => (
+                <optgroup key={r.week} label={`Week ${r.week} (${formatDateOption(r.rangeStart)} – ${formatDateOption(r.rangeEnd)})`}>
                   {r.dates.map((d) => (
                     <option key={d} value={d}>{formatDateOption(d)}</option>
                   ))}
@@ -202,11 +202,11 @@ export default function CreateTableForm({ cityId, cityName, seriesStartDate, ser
             <input className="input-mo" type="date" min={seriesStartDate ?? undefined} max={seriesEndDate ?? undefined} value={form.table_date} onChange={(e) => setForm((f) => ({ ...f, table_date: e.target.value }))} />
           )
         )}
-        {field("Round (week 1–8)", true,
+        {field("Week (1–8)", true,
           <>
             <select className="input-mo" value={form.week_number} onChange={(e) => setForm((f) => ({ ...f, week_number: e.target.value }))}>
-              <option value="">Select round</option>
-              {[1, 2, 3, 4, 5, 6, 7, 8].map((w) => <option key={w} value={w}>Round {w}</option>)}
+              <option value="">Select week</option>
+              {[1, 2, 3, 4, 5, 6, 7, 8].map((w) => <option key={w} value={w}>Week {w}</option>)}
             </select>
             <p style={{ fontSize: 12, color: "var(--ink-500)", margin: "2px 0 0" }}>Auto-filled from the date above — change it if this isn&rsquo;t right.</p>
           </>

@@ -290,7 +290,7 @@ export default function TableDetailClient({
         <div>
           <p style={{ fontFamily: "var(--font-display)", fontSize: 22, color: "var(--ink-900)" }}>Edit table</p>
           <p style={{ fontSize: 13, color: "var(--ink-500)", marginTop: 4 }}>
-            Round {table.week_number} — the round isn&rsquo;t editable here. Seated players will be emailed about the change.
+            Week {table.week_number} — the week isn&rsquo;t editable here. Seated players will be emailed about the change.
           </p>
         </div>
         {field("Date", true,
@@ -342,7 +342,7 @@ export default function TableDetailClient({
     <>
       <div style={{ marginBottom: 20 }}>
         <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
-          <span className="badge badge-mute">Round {table.week_number}</span>
+          <span className="badge badge-mute">Week {table.week_number}</span>
           <span className={`badge ${STATUS_COLORS[table.status] ?? "badge-mute"}`}>{table.status}</span>
           {table.round_type && (
             <span className="badge badge-peri" style={{ textTransform: "capitalize" }}>{table.round_type}</span>

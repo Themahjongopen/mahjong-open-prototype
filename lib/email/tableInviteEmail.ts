@@ -64,7 +64,7 @@ export async function sendTableInviteEmail(
   const detailRows = [
     `<strong>When:</strong> ${dateLabel}${timeLabel ? ` at ${timeLabel}` : ""}`,
     `<strong>Where:</strong> ${invite.locationName}${invite.cityName ? ` — ${invite.cityName}` : ""}`,
-    `<strong>Round:</strong> Round ${invite.weekNumber}${invite.roundType ? ` · ${invite.roundType}` : ""}`,
+    `<strong>Week:</strong> Week ${invite.weekNumber}${invite.roundType ? ` · ${invite.roundType}` : ""}`,
     `<strong>Seats:</strong> ${seatLabel} right now`,
   ];
   const detailsHtml = detailRows

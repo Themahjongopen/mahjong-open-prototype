@@ -83,7 +83,7 @@ export default function ScoreEntryForm({ tables, initialTableId }: { tables: Sco
         <select className="input-mo" value={selectedId} onChange={(e) => changeTable(e.target.value)}>
           {tables.map((t) => (
             <option key={t.id} value={t.id}>
-              Round {t.week_number} — {new Date(`${t.table_date}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" })} · {t.location_name}
+              Week {t.week_number} — {new Date(`${t.table_date}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" })} · {t.location_name}
             </option>
           ))}
         </select>

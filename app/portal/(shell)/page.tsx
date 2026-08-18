@@ -48,7 +48,7 @@ export default async function PortalDashboard() {
             }}
           >
             <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "rgba(234,242,242,0.7)", marginBottom: 12 }}>
-              Round {nextTable.week_number} · Your next table
+              Week {nextTable.week_number} · Your next table
             </p>
             <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>

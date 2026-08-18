@@ -47,7 +47,7 @@ export async function sendTableReminderEmail(
     `<strong>When:</strong> ${whenText}`,
     `<strong>Where:</strong> ${table.locationName}${table.locationAddress ? ` — ${table.locationAddress}` : ""}`,
   ];
-  if (table.roundType) detailRows.push(`<strong>Round:</strong> ${table.roundType}`);
+  if (table.roundType) detailRows.push(`<strong>Round type:</strong> ${table.roundType}`);
   const detailsHtml = detailRows
     .map((r) => `<p style="margin:0 0 8px 0;font-size:15px;line-height:1.6;color:#3a4a4f;">${r}</p>`)
     .join("");

@@ -69,7 +69,7 @@ export default function ScoreCorrectionCard({ submission }: { submission: AdminS
       <div style={{ padding: "14px 18px", borderBottom: "1px solid var(--hair-200)", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
         <div>
           <p style={{ fontSize: 14, fontWeight: 600, color: "var(--ink-900)", margin: 0 }}>
-            Round {submission.week_number ?? "?"} · {submission.location_name ?? "Table"}
+            Week {submission.week_number ?? "?"} · {submission.location_name ?? "Table"}
           </p>
           <p style={{ fontSize: 12, color: "var(--ink-500)", margin: "2px 0 0" }}>
             {[dateLabel, submission.city_name, submission.series_name].filter(Boolean).join(" · ")}
