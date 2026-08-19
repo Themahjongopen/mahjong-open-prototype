@@ -77,7 +77,7 @@ export default function AdminSeriesPage() {
 
     if (!response.ok) {
       const payload = await response.json().catch(() => ({}));
-      setError(payload.error || "Series could not be loaded.");
+      setError(payload.error || "League could not be loaded.");
       return;
     }
 
@@ -105,13 +105,13 @@ export default function AdminSeriesPage() {
     const payload = await response.json().catch(() => ({}));
 
     if (!response.ok) {
-      setError(payload.error || "Series could not be created.");
+      setError(payload.error || "League could not be created.");
       setLoading(false);
       return;
     }
 
     setForm(emptyForm);
-    setFeedback("Series added.");
+    setFeedback("League added.");
     await loadSeries();
     setLoading(false);
   }
@@ -135,13 +135,13 @@ export default function AdminSeriesPage() {
     const payload = await response.json().catch(() => ({}));
 
     if (!response.ok) {
-      setError(payload.error || "Series could not be updated.");
+      setError(payload.error || "League could not be updated.");
       setLoading(false);
       return;
     }
 
     setEditingId(null);
-    setFeedback("Series updated.");
+    setFeedback("League updated.");
     await loadSeries();
     setLoading(false);
   }
@@ -160,12 +160,12 @@ export default function AdminSeriesPage() {
     const payload = await response.json().catch(() => ({}));
 
     if (!response.ok) {
-      setError(payload.error || "Series status could not be updated.");
+      setError(payload.error || "League status could not be updated.");
       setLoading(false);
       return;
     }
 
-    setFeedback(item.is_active ? "Series deactivated." : "Series activated.");
+    setFeedback(item.is_active ? "League deactivated." : "League activated.");
     await loadSeries();
     setLoading(false);
   }
@@ -189,7 +189,7 @@ export default function AdminSeriesPage() {
       return;
     }
 
-    setFeedback(item.auto_invite_enabled ? "Auto-invite turned off." : "Auto-invite turned on — new paid registrants for this series will be invited automatically.");
+    setFeedback(item.auto_invite_enabled ? "Auto-invite turned off." : "Auto-invite turned on — new paid registrants for this league will be invited automatically.");
     await loadSeries();
     setLoading(false);
   }
@@ -197,8 +197,8 @@ export default function AdminSeriesPage() {
   async function handleDelete(seriesId: string) {
     const item = series.find((s) => s.id === seriesId);
     const confirmed = await confirm({
-      title: "Delete series?",
-      message: item ? `Delete ${item.name}? This can't be undone.` : "Delete this series? This can't be undone.",
+      title: "Delete league?",
+      message: item ? `Delete ${item.name}? This can't be undone.` : "Delete this league? This can't be undone.",
       confirmLabel: "Delete",
       danger: true,
     });
@@ -220,12 +220,12 @@ export default function AdminSeriesPage() {
     const payload = await response.json().catch(() => ({}));
 
     if (!response.ok) {
-      setError(payload.error || "Series could not be deleted.");
+      setError(payload.error || "League could not be deleted.");
       setLoading(false);
       return;
     }
 
-    setFeedback("Series deleted.");
+    setFeedback("League deleted.");
     await loadSeries();
     setLoading(false);
   }
@@ -242,10 +242,10 @@ export default function AdminSeriesPage() {
     return (
       <>
         <div style={fieldWrap}>
-          <label style={fieldLabel}>Series name</label>
+          <label style={fieldLabel}>League name</label>
           <input
             className="input-mo"
-            placeholder="The Mahjong Open — 2026 — Series One"
+            placeholder="Fall League 2026"
             value={values.name}
             onChange={(e) => onChange({ name: e.target.value })}
             required
@@ -286,17 +286,17 @@ export default function AdminSeriesPage() {
 
   return (
     <div style={{ maxWidth: 800 }}>
-      <h1 style={{ fontFamily: "var(--font-display)", fontSize: 26, color: "var(--ink-900)", marginBottom: 32 }}>Series</h1>
+      <h1 style={{ fontFamily: "var(--font-display)", fontSize: 26, color: "var(--ink-900)", marginBottom: 32 }}>Leagues</h1>
 
       {feedback ? <div style={{ background: "#f2f7f1", border: "1px solid #dcebdc", padding: "12px 14px", borderRadius: 10, marginBottom: 20, color: "var(--ink-800)" }}>{feedback}</div> : null}
       {error ? <div style={{ background: "#fff5f7", border: "1px solid #f4cbd6", padding: "12px 14px", borderRadius: 10, marginBottom: 20, color: "var(--pink-700)" }}>{error}</div> : null}
 
       <div style={{ background: "#fff", border: "1px solid var(--hair-200)", borderRadius: "var(--radius-lg)", padding: 24, marginBottom: 32, boxShadow: "var(--shadow-sm)" }}>
-        <h2 style={{ fontFamily: "var(--font-display)", fontSize: 18, color: "var(--ink-900)", marginBottom: 20 }}>Create series</h2>
+        <h2 style={{ fontFamily: "var(--font-display)", fontSize: 18, color: "var(--ink-900)", marginBottom: 20 }}>Create league</h2>
         <form onSubmit={handleCreate} className="admin-season-form" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {renderFields(form, (patch) => setForm((f) => ({ ...f, ...patch })))}
           <button className="btn btn-primary" type="submit" disabled={loading} style={{ alignSelf: "flex-start" }}>
-            {loading ? "Creating…" : "Create series"}
+            {loading ? "Creating…" : "Create league"}
           </button>
         </form>
       </div>
@@ -306,7 +306,7 @@ export default function AdminSeriesPage() {
           <div key={item.id} className="admin-cities-row" style={{ borderBottom: i < series.length - 1 ? "1px solid var(--hair-200)" : "none" }}>
             <div className="admin-cities-meta">
               <div>
-                <span className="admin-mobile-label">Series</span>
+                <span className="admin-mobile-label">League</span>
                 <p style={{ fontSize: 15, fontWeight: 600, color: "var(--ink-900)", margin: 0 }}>{item.name}</p>
                 <p style={{ fontSize: 12, color: "var(--ink-500)", margin: "4px 0 0" }}>
                   {formatDate(item.starts_at)} – {formatDate(item.ends_at)} · {item.total_weeks} weeks · {priceLabel(item.price_cents)}
@@ -320,7 +320,7 @@ export default function AdminSeriesPage() {
                 </button>
                 <span
                   className={`badge ${item.auto_invite_enabled ? "badge-lime" : "badge-mute"}`}
-                  title="When on, new paid registrants for this series get their portal invite automatically, the moment they pay."
+                  title="When on, new paid registrants for this league get their portal invite automatically, the moment they pay."
                 >
                   Auto-invite {item.auto_invite_enabled ? "On" : "Off"}
                 </span>
@@ -346,7 +346,7 @@ export default function AdminSeriesPage() {
             ) : null}
           </div>
         ))}
-        {series.length === 0 && <p style={{ padding: 20, color: "var(--ink-500)", fontSize: 14 }}>No series yet.</p>}
+        {series.length === 0 && <p style={{ padding: 20, color: "var(--ink-500)", fontSize: 14 }}>No leagues yet.</p>}
       </div>
     </div>
   );

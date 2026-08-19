@@ -79,12 +79,6 @@ export const CITY_PINS: LaunchCityPin[] = [
     "y": 168.3
   },
   {
-    "name": "Greenbrier Region",
-    "state": "WV",
-    "x": 287,
-    "y": 4.4
-  },
-  {
     "name": "Greenville/Pickens",
     "state": "SC",
     "x": 253.2,

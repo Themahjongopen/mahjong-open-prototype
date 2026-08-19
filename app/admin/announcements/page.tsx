@@ -26,14 +26,14 @@ export default function AdminAnnouncementsPage() {
       const [cRes, sRes] = await Promise.all([fetch("/api/admin/cities"), fetch("/api/admin/series")]);
       const cPayload = await cRes.json().catch(() => ({}));
       const sPayload = await sRes.json().catch(() => ({}));
-      if (!cRes.ok || !sRes.ok) { setError("Could not load cities or series."); return; }
+      if (!cRes.ok || !sRes.ok) { setError("Could not load cities or leagues."); return; }
       setCities(cPayload.cities ?? []);
       setSeries(sPayload.series ?? []);
       setSeriesId((sPayload.series ?? [])[0]?.id ?? "");
     })();
   }, []);
 
-  const seriesName = series.find((s) => s.id === seriesId)?.name ?? "this series";
+  const seriesName = series.find((s) => s.id === seriesId)?.name ?? "this league";
   const selectedCity = cities.find((c) => c.id === cityId);
   const scopeLabel = cityId === ALL_CITIES
     ? `all cities in ${seriesName}`
@@ -42,12 +42,12 @@ export default function AdminAnnouncementsPage() {
   async function handleSend() {
     setError(null);
     setResult(null);
-    if (!seriesId) { setError("Pick a series."); return; }
+    if (!seriesId) { setError("Pick a league."); return; }
     if (!subject.trim() || !message.trim()) { setError("Subject and message are both required."); return; }
 
     const ok = await confirm({
       title: "Send announcement?",
-      message: `This sends "${subject.trim()}" to ${scopeLabel} — every paid player there who hasn't opted out of series updates. It goes out immediately and can't be undone.`,
+      message: `This sends "${subject.trim()}" to ${scopeLabel} — every paid player there who hasn't opted out of league updates. It goes out immediately and can't be undone.`,
       confirmLabel: "Send announcement",
     });
     if (!ok) return;
@@ -92,7 +92,7 @@ export default function AdminAnnouncementsPage() {
       <div style={{ background: "#fff", border: "1px solid var(--hair-200)", borderRadius: "var(--radius-lg)", padding: 24, boxShadow: "var(--shadow-sm)", display: "flex", flexDirection: "column", gap: 18 }}>
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
           <div>
-            <label style={fieldLabel}>Series</label>
+            <label style={fieldLabel}>League</label>
             <select style={selectStyle} value={seriesId} onChange={(e) => setSeriesId(e.target.value)} disabled={series.length === 0}>
               {series.map((s) => (
                 <option key={s.id} value={s.id}>{s.name}{s.is_active ? "" : " (inactive)"}</option>
@@ -102,7 +102,7 @@ export default function AdminAnnouncementsPage() {
           <div>
             <label style={fieldLabel}>Audience</label>
             <select style={selectStyle} value={cityId} onChange={(e) => setCityId(e.target.value)}>
-              <option value={ALL_CITIES}>All cities in this series</option>
+              <option value={ALL_CITIES}>All cities in this league</option>
               {cities.map((c) => (
                 <option key={c.id} value={c.id}>{c.state ? `${c.name}, ${c.state}` : c.name}{c.is_active ? "" : " (inactive)"}</option>
               ))}

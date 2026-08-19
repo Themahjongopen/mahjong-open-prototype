@@ -288,7 +288,7 @@ export async function POST(request: Request) {
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f1f5f2;border:1px solid #dde7e0;border-radius:10px;margin:18px 0 0 0;">
           <tr>
             <td style="padding:18px 22px;font-family:Helvetica,Arial,sans-serif;">
-              <div style="font-size:11px;letter-spacing:1px;color:#8a9a93;text-transform:uppercase;margin-bottom:2px;">Series</div>
+              <div style="font-size:11px;letter-spacing:1px;color:#8a9a93;text-transform:uppercase;margin-bottom:2px;">League</div>
               <div style="font-size:15px;color:#1d4d59;font-weight:bold;margin-bottom:14px;">${seriesName}</div>
               <div style="font-size:11px;letter-spacing:1px;color:#8a9a93;text-transform:uppercase;margin-bottom:2px;">Dates</div>
               <div style="font-size:15px;color:#142f34;margin-bottom:14px;">${dateRange}</div>
@@ -297,7 +297,7 @@ export async function POST(request: Request) {
             </td>
           </tr>
         </table>
-        <p style="margin:18px 0 0 0;font-size:15px;line-height:1.65;color:#3a4a4f;">The player portal opens before the series begins. We&rsquo;ll email your access details and the full schedule as soon as it&rsquo;s ready &mdash; keep an eye on your inbox.</p>
+        <p style="margin:18px 0 0 0;font-size:15px;line-height:1.65;color:#3a4a4f;">The player portal opens before the league begins. We&rsquo;ll email your access details and the full schedule as soon as it&rsquo;s ready &mdash; keep an eye on your inbox.</p>
         ${rulebookBlock}
         <table role="presentation" cellpadding="0" cellspacing="0" style="margin:24px auto 0 auto;">
           <tr>

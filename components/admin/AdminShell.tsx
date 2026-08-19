@@ -11,7 +11,7 @@ import { LayoutDashboard, Building2, CalendarRange, Users, Table2, ClipboardChec
 const NAV_ITEMS = [
   { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
   { label: "Cities", href: "/admin/cities", icon: Building2 },
-  { label: "Series", href: "/admin/series", icon: CalendarRange },
+  { label: "Leagues", href: "/admin/series", icon: CalendarRange },
   { label: "Players", href: "/admin/players", icon: Users },
   { label: "Tables", href: "/admin/tables", icon: Table2 },
   { label: "Areas", href: "/admin/areas", icon: MapPin },

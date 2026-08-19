@@ -22,7 +22,7 @@ export async function sendRegistrationReminderEmail(
   const firstName = (recipient.fullName || "there").split(" ")[0];
   const innerHtml = `
             <p style="margin:0 0 12px 0;font-size:15px;line-height:1.65;color:#3a4a4f;">Hi ${firstName}, you’re almost in — your spot for <strong style="color:#1d4d59;">${details.seriesName}</strong> isn’t confirmed until payment is complete.</p>
-            <p style="margin:0 0 20px 0;font-size:15px;line-height:1.65;color:#3a4a4f;">Complete your registration to hold your place and keep your series plans moving.</p>
+            <p style="margin:0 0 20px 0;font-size:15px;line-height:1.65;color:#3a4a4f;">Complete your registration to hold your place and keep your league plans moving.</p>
             <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0;">
               <tr>
                 <td align="center" style="background-color:#ec466e;border-radius:999px;">

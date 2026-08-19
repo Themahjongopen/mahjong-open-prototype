@@ -52,7 +52,7 @@ export async function POST(request: Request) {
       const autoReplyInnerHtml = `
         <p style="margin:0 0 12px 0;font-size:15px;line-height:1.65;color:#3a4a4f;">Hi ${firstName},</p>
         <p style="margin:0 0 12px 0;font-size:15px;line-height:1.65;color:#3a4a4f;">Thanks for reaching out — we&rsquo;ve got your message and someone from The Mahjong Open will get back to you soon.</p>
-        <p style="margin:0 0 20px 0;font-size:15px;line-height:1.65;color:#3a4a4f;">In the meantime, feel free to explore how it works or register for the current series.</p>
+        <p style="margin:0 0 20px 0;font-size:15px;line-height:1.65;color:#3a4a4f;">In the meantime, feel free to explore how it works or register for the current league.</p>
         <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0;">
           <tr>
             <td align="center" style="background-color:#ec466e;border-radius:999px;">

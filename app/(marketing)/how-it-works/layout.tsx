@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 
 // Metadata lives in this server layout because how-it-works/page.tsx is a
 // client component (which can't export `metadata`).
-const title = "How The Mahjong Open Works — 8-Week Mahjong Series";
+const title = "How The Mahjong Open Works — 8-Week Mahjong League";
 const description =
-  "See how The Mahjong Open works: register for your city, play unlimited 4-player games across an 8-week series, submit scores, and climb the leaderboard.";
+  "See how The Mahjong Open works: register for your city, play unlimited 4-player games across an 8-week league, submit scores, and climb the leaderboard.";
 
 export const metadata: Metadata = {
   title,

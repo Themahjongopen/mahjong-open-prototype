@@ -126,7 +126,7 @@ export default async function StandingsPage() {
 
       <Table
         title="Ace Award"
-        subtitle="Your single highest round score this series."
+        subtitle="Your single highest round score this league."
         valueHeader="Score"
         rows={byAceAward(rows)}
         meId={meId}

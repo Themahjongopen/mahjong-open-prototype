@@ -404,7 +404,7 @@ export default function RegisterModal({ open, onClose, referral = null }: Regist
               Registration has closed
             </h2>
             <p style={{ fontSize: 16, color: "var(--ink-700)", lineHeight: 1.6, marginBottom: 28 }}>
-              Registration for this series has closed. Check back soon for the next one.
+              Registration for this league has closed. Check back soon for the next one.
             </p>
             <button className="btn btn-primary" onClick={handleClose} style={{ justifyContent: "center" }}>
               Close
@@ -412,7 +412,7 @@ export default function RegisterModal({ open, onClose, referral = null }: Regist
           </div>
         ) : (
           <>
-            <p className="eyebrow" style={{ marginBottom: 8 }}>{currentSeries?.name ?? "The Mahjong Open — 2026 — Series One"}</p>
+            <p className="eyebrow" style={{ marginBottom: 8 }}>{currentSeries?.name ?? "Fall League 2026"}</p>
             <h2
               style={{
                 fontFamily: "var(--font-display)",

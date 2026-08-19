@@ -14,11 +14,11 @@ export default function RegisterFirstScreen({ email }: { email: string }) {
           You&rsquo;re not registered yet
         </h1>
         <p style={{ fontSize: 15, color: "var(--ink-700)", lineHeight: 1.6, marginBottom: 24 }}>
-          We couldn&rsquo;t find a paid registration for <strong>{email || "your account"}</strong>. Once you&rsquo;ve registered and paid for a series, your portal will unlock here.
+          We couldn&rsquo;t find a paid registration for <strong>{email || "your account"}</strong>. Once you&rsquo;ve registered and paid for a league, your portal will unlock here.
         </p>
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           <Link href="/" className="btn btn-primary" style={{ justifyContent: "center" }}>
-            Register for a series
+            Register for a league
           </Link>
           <SignOutButton />
         </div>

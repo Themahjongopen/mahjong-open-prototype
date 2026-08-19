@@ -49,7 +49,7 @@ export default function Footer({ onRegisterClick }: { onRegisterClick?: () => vo
               />
             </div>
             <p style={{ fontSize: 14, lineHeight: 1.6, color: "rgba(234,242,242,0.6)", maxWidth: 220 }}>
-              Mahjong Made Social — for everyone who loves the game. One series, eight weeks, endless tables.
+              Mahjong Made Social — for everyone who loves the game. One league, eight weeks, endless tables.
             </p>
           </div>
 

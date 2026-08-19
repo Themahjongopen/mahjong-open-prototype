@@ -9,7 +9,7 @@ import { sendTableHostChangedEmail } from "@/lib/email/tableHostChangedEmail";
 import { sendTableCanceledEmail } from "@/lib/email/tableCanceledEmail";
 import { normalizeArea } from "@/lib/portal/area";
 
-const ROUND_TYPES = new Set(["social", "focused", "lightning"]);
+const ROUND_TYPES = new Set(["casual", "mindful", "lightning"]);
 const DEFAULT_TIMEZONE = "America/Chicago";
 
 // Creator/admin table actions. Seats are left intact; status drives display.
@@ -169,7 +169,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     const seriesRow = Array.isArray(table.series) ? table.series[0] : table.series;
     const seriesStart = seriesRow?.starts_at ?? null;
     if (seriesStart && seriesWeekForDate(seriesStart, tableDate) === null) {
-      return NextResponse.json({ error: "That date is outside the current series window." }, { status: 400 });
+      return NextResponse.json({ error: "That date is outside the current league window." }, { status: 400 });
     }
 
     const { error: updateError } = await admin

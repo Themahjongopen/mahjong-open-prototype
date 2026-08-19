@@ -21,7 +21,7 @@ export async function POST(request: Request) {
   const subject = body?.subject?.toString().trim();
   const message = body?.message?.toString().trim();
   if (!seriesId || !subject || !message) {
-    return NextResponse.json({ error: "A series, subject, and message are all required." }, { status: 400 });
+    return NextResponse.json({ error: "A league, subject, and message are all required." }, { status: 400 });
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -56,7 +56,7 @@ export async function POST(request: Request) {
   for (const p of byProfile.values()) {
     if (!p.email) continue; // no address on file — not a reachable recipient
     if (!resolvePrefs(p.notification_preferences).email_series_updates) {
-      outcomes.push({ email: p.email, status: "skipped", message: "Opted out of series updates." });
+      outcomes.push({ email: p.email, status: "skipped", message: "Opted out of league updates." });
       continue;
     }
     try {

@@ -128,8 +128,8 @@ export default function AdminTablesPage() {
             <option key={c.id} value={c.id}>{c.label}</option>
           ))}
         </select>
-        <select aria-label="Filter by series" className="input-mo" style={{ maxWidth: 260 }} value={seriesFilter} onChange={(e) => setSeriesFilter(e.target.value)}>
-          <option value="all">All series</option>
+        <select aria-label="Filter by league" className="input-mo" style={{ maxWidth: 260 }} value={seriesFilter} onChange={(e) => setSeriesFilter(e.target.value)}>
+          <option value="all">All leagues</option>
           {seriesOptions.map((s) => (
             <option key={s.id} value={s.id}>{s.label}</option>
           ))}
@@ -148,7 +148,7 @@ export default function AdminTablesPage() {
       <div style={{ background: "#fff", border: "1px solid var(--hair-200)", borderRadius: "var(--radius-lg)", overflow: "hidden", boxShadow: "var(--shadow-xs)" }}>
         <div className="admin-tables-table">
           <div className="admin-tables-table-header">
-            {["Wk", "Table", "City · Series", "Host", "Status", "Seats", "Actions"].map((h) => (
+            {["Wk", "Table", "City · League", "Host", "Status", "Seats", "Actions"].map((h) => (
               <p key={h}>{h}</p>
             ))}
           </div>
@@ -173,7 +173,7 @@ export default function AdminTablesPage() {
                   </p>
                 </div>
                 <div>
-                  <span className="admin-mobile-label">City · Series</span>
+                  <span className="admin-mobile-label">City · League</span>
                   <p style={{ fontSize: 13, color: "var(--ink-700)" }}>{[t.city_name, t.series_name].filter(Boolean).join(" · ") || "—"}</p>
                 </div>
                 <div>

@@ -7,21 +7,21 @@ import CommissionerSection from "@/components/marketing/CommissionerSection";
 import { ChevronDown } from "lucide-react";
 
 const STEPS = [
-  { n: "01", title: "Register for your city's series", body: "Choose your city, fill out your registration, and complete payment. Each series runs 8 weeks of open play." },
+  { n: "01", title: "Register for your city's league", body: "Choose your city, fill out your registration, and complete payment. Each league runs 8 weeks of open play." },
   { n: "02", title: "Get access to the player portal", body: "Once you're paid and confirmed, you'll receive login credentials for the private player portal. This is where your tables and standings live." },
   { n: "03", title: "Sign up for your weekly table", body: "Each week, browse open tables in your city — or create one. Pick your date, time, and location. You fill seat 1 automatically." },
   { n: "04", title: "Play your game", body: "Your foursome meets at the chosen spot. Play a full session of American mahjong. The table creator records the result." },
-  { n: "05", title: "Submit the score", body: "After the round, the host enters each player's score. Scores are visible in the portal immediately and update the standings within the series." },
-  { n: "06", title: "Watch your standings update", body: "The leaderboards update live as the series runs — Ace Award for your single best round, Champion Award summing your best round from every week, and Flight Winner for your best 7-of-8-week scoring average. Your city is also competing for the season's Mahjong Open Leader title." },
+  { n: "05", title: "Submit the score", body: "After the round, the host enters each player's score. Scores are visible in the portal immediately and update the standings within the league." },
+  { n: "06", title: "Watch your standings update", body: "The leaderboards update live as the league runs — Ace Award for your single best round, Champion Award summing your best round from every week, and Flight Winner for your best 7-of-8-week scoring average. Your city is also competing for the season's Mahjong Open Leader title." },
 ];
 
 const FAQS = [
-  { q: "Do I have to play every week?", a: "No — there's no attendance requirement. Play as many of the 8 weeks as you'd like. Points only come from weeks you play. The series concludes with your best 7 weeks of points." },
+  { q: "Do I have to play every week?", a: "No — there's no attendance requirement. Play as many of the 8 weeks as you'd like. Points only come from weeks you play. The league concludes with your best 7 weeks of points." },
   { q: "Can I play more than one table per week?", a: "Yes — play as many games as you like each week. Claim seats at open tables or host your own; there's no weekly limit." },
   { q: "What if a player cancels?", a: "You can cancel your seat any time up to 24 hours before your table. Inside that window, a cancellation only counts as a no-show (−25 points) if your spot goes unfilled — so let your table know and someone can usually step in to take it. If no one does, the no-show is −25 and the three players who showed up each get +25 for that round." },
   { q: "Who submits the score?", a: "Only the table creator submits scores after the game. They're live in all four players' portals and the standings immediately — scoring runs on the honor system." },
   { q: "What mahjong rules do you use?", a: "The Mahjong Open uses American mahjong rules (NMJL card). All skill levels are welcome." },
-  { q: "Can I join mid-series?", a: "Yes — registration stays open for the first two weeks of each series. After that, it closes until the next series." },
+  { q: "Can I join mid-league?", a: "Yes — registration stays open for the first two weeks of each league. After that, it closes until the next league." },
 ];
 
 export default function HowItWorksPage() {
@@ -32,16 +32,16 @@ export default function HowItWorksPage() {
       <PageBanner
         eyebrow="Learn the league"
         headline={<>The mahjong league that <em className="serif-italic">keeps moving</em></>}
-        lead="Eight weeks, one city, unlimited tables. Here's exactly how the series works."
+        lead="Eight weeks, one city, unlimited tables. Here's exactly how the league works."
       />
 
       {/* The basics */}
       <section style={{ padding: "72px 0" }}>
         <div className="container-mo" style={{ maxWidth: 800 }}>
           <p className="eyebrow" style={{ marginBottom: 16 }}>The basics</p>
-          <h2 className="h2" style={{ marginBottom: 24 }}>One series. Eight weeks. <em className="serif-italic">Your pace.</em></h2>
+          <h2 className="h2" style={{ marginBottom: 24 }}>One league. Eight weeks. <em className="serif-italic">Your pace.</em></h2>
           <p className="body-lg" style={{ marginBottom: 20 }}>
-            The Mahjong Open runs city-by-city on a series schedule. Each series is exactly 8 weeks long. When you register, you&rsquo;re in for the full series in your city — play as much or as little as you want.
+            The Mahjong Open runs city-by-city on a league schedule. Each league is exactly 8 weeks long. When you register, you&rsquo;re in for the full league in your city — play anywhere, play anytime.
           </p>
           <p style={{ fontSize: 16, color: "var(--ink-700)", lineHeight: 1.65 }}>
             Every week, paid players in your city can create or join a 4-person table. You pick the day, time, and location. The game happens. The table creator submits the score, and it lands in every player&rsquo;s portal and the standings immediately. Repeat.
@@ -53,7 +53,7 @@ export default function HowItWorksPage() {
       <section style={{ padding: "72px 0", background: "var(--pink-wash)" }}>
         <div className="container-mo">
           <p className="eyebrow" style={{ marginBottom: 16 }}>Step by step</p>
-          <h2 className="h2" style={{ marginBottom: 48 }}>How a series <em className="serif-italic">actually works</em></h2>
+          <h2 className="h2" style={{ marginBottom: 48 }}>How a league <em className="serif-italic">actually works</em></h2>
           <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
             {STEPS.map((step) => (
               <div
@@ -100,10 +100,10 @@ export default function HowItWorksPage() {
           <p className="eyebrow" style={{ marginBottom: 16 }}>Scoring &amp; standings</p>
           <h2 className="h2" style={{ marginBottom: 24 }}>How the leaderboard works</h2>
           <p style={{ fontSize: 16, color: "var(--ink-700)", lineHeight: 1.65, marginBottom: 16 }}>
-            After each round, the host submits every player&rsquo;s score. Results post to the portal immediately and update the standings within the series — no approval delay.
+            After each round, the host submits every player&rsquo;s score. Results post to the portal immediately and update the standings within the league — no approval delay.
           </p>
           <p style={{ fontSize: 16, color: "var(--ink-700)", lineHeight: 1.65 }}>
-            <strong>Ace Award</strong>{" "}tracks your single highest round score of the series — no minimum rounds required. <strong>Champion Award</strong>{" "}sums your single highest round from every week of the series. <strong>Flight Winner</strong>{" "}ranks your best 7-of-8-week combined scoring average (5 rounds minimum to qualify). Cities compete too: each city&rsquo;s top 3 individual round scores are added together, and the series&rsquo; leading city is named The Mahjong Open Leader.
+            <strong>Ace Award</strong>{" "}tracks your single highest round score of the league — no minimum rounds required. <strong>Champion Award</strong>{" "}sums your single highest round from every week of the league. <strong>Flight Winner</strong>{" "}ranks your best 7-of-8-week combined scoring average (5 rounds minimum to qualify). Cities compete too: each city&rsquo;s top 3 individual round scores are added together, and the league&rsquo;s leading city is named The Mahjong Open Leader.
           </p>
         </div>
       </section>

@@ -8,7 +8,7 @@ import { resolvePrefs } from "@/lib/portal/notificationPrefs";
 import { normalizeArea } from "@/lib/portal/area";
 import { sendNewTableEmail } from "@/lib/email/newTableEmail";
 
-const ROUND_TYPES = new Set(["social", "focused", "lightning"]);
+const ROUND_TYPES = new Set(["casual", "mindful", "lightning"]);
 
 // Create a table in the member's own city+series (or, for admins, their current
 // active city + the active series) and seat them at seat 1.
@@ -68,10 +68,10 @@ export async function POST(request: Request) {
   // Both skip gracefully if the relevant series date is unavailable.
   const [seriesStart, seriesEnd] = await Promise.all([getSeriesStartDate(seriesId), getSeriesEndDate(seriesId)]);
   if (seriesStart && seriesWeekForDate(seriesStart, tableDate) === null) {
-    return NextResponse.json({ error: "That date is outside the current series window." }, { status: 400 });
+    return NextResponse.json({ error: "That date is outside the current league window." }, { status: 400 });
   }
   if (seriesEnd && tableDate > seriesEnd) {
-    return NextResponse.json({ error: "That date is outside the current series window." }, { status: 400 });
+    return NextResponse.json({ error: "That date is outside the current league window." }, { status: 400 });
   }
 
   const admin: any = createAdminClient();

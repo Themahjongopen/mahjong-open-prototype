@@ -196,7 +196,7 @@ export default async function PlayerProfilePage({ params }: { params: Promise<{ 
         <div style={cardStyle}>
           <h3 style={{ fontFamily: "var(--font-display)", fontSize: 18, color: "var(--ink-900)", margin: "0 0 4px" }}>Would you like to play in an additional city?</h3>
           <p style={{ fontSize: 14, color: "var(--ink-500)", margin: "0 0 16px", lineHeight: 1.6 }}>
-            You can register for additional cities in this series — each is its own registration and payment. Use code <strong>2NDCITY</strong> at checkout to register in your second city for only $35.
+            You can register for additional cities in this league — each is its own registration and payment. Use code <strong>2NDCITY</strong> at checkout to register in your second city for only $35.
           </p>
           <Link href="/portal/register-city" className="btn btn-primary" style={{ display: "inline-flex", fontSize: 14 }}>
             Register another city

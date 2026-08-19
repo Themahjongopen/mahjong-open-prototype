@@ -72,7 +72,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     }
     const collides = (clashes ?? []).some((c: any) => String(c.email).toLowerCase() === email.toLowerCase());
     if (collides) {
-      return NextResponse.json({ error: "That email is already registered for this city and series." }, { status: 409 });
+      return NextResponse.json({ error: "That email is already registered for this city and league." }, { status: 409 });
     }
   }
 

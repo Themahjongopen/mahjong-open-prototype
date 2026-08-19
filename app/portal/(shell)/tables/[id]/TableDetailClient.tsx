@@ -381,8 +381,8 @@ export default function TableDetailClient({
         {field("Round type", true,
           <select className="input-mo" value={editForm.round_type} onChange={(e) => setEditForm((f) => ({ ...f, round_type: e.target.value }))}>
             <option value="">Select type</option>
-            <option value="social">Social</option>
-            <option value="focused">Focused</option>
+            <option value="casual">Casual</option>
+            <option value="mindful">Mindful</option>
             <option value="lightning">Lightning</option>
           </select>
         )}

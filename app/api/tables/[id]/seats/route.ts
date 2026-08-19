@@ -27,7 +27,7 @@ export async function POST(_request: Request, context: { params: Promise<{ id: s
     return NextResponse.json({ error: "That table no longer exists." }, { status: 404 });
   }
   if (!session.isAdmin && table.series_id !== session.series_id) {
-    return NextResponse.json({ error: "That table isn't in your series." }, { status: 403 });
+    return NextResponse.json({ error: "That table isn't in your league." }, { status: 403 });
   }
   if (table.status !== "open") {
     return NextResponse.json({ error: "This table isn't open for new players." }, { status: 409 });

@@ -7,8 +7,8 @@ import { enumerateSeriesWeeks } from "@/lib/portal/seriesWeek";
 import AreaCombobox from "@/components/portal/AreaCombobox";
 
 const ROUND_TYPE_INFO: { name: string; desc: string }[] = [
-  { name: "Social", desc: "Light conversation, casual play" },
-  { name: "Focused", desc: "Minimal talking, game focused" },
+  { name: "Casual", desc: "Light conversation, casual play" },
+  { name: "Mindful", desc: "Minimal talking, game focused" },
   { name: "Lightning", desc: "15-minute rounds; a quick way to get in a game when you’re short on time" },
 ];
 
@@ -238,8 +238,8 @@ export default function CreateTableForm({ cityId, cityName, seriesStartDate, ser
         {field("Round type", true,
           <select className="input-mo" value={form.round_type} onChange={(e) => setForm((f) => ({ ...f, round_type: e.target.value }))}>
             <option value="">Select type</option>
-            <option value="social">Social</option>
-            <option value="focused">Focused</option>
+            <option value="casual">Casual</option>
+            <option value="mindful">Mindful</option>
             <option value="lightning">Lightning</option>
           </select>,
           <RoundTypeInfo />

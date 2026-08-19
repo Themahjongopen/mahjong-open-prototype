@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 // Metadata lives in this server layout because contact/page.tsx is a client component.
 const title = "Contact The Mahjong Open — Get in Touch";
 const description =
-  "Questions about registration, your city, or the series? Contact The Mahjong Open — we typically respond within 1–2 business days.";
+  "Questions about registration, your city, or the league? Contact The Mahjong Open — we typically respond within 1–2 business days.";
 
 export const metadata: Metadata = {
   title,

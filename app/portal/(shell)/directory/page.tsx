@@ -64,7 +64,7 @@ export default async function DirectoryPage() {
         {cityName ? <p className="eyebrow" style={{ marginBottom: 4 }}>{cityName}</p> : null}
         <h2 style={{ fontFamily: "var(--font-display)", fontSize: 22, color: "var(--ink-900)" }}>Member Directory</h2>
         <p style={{ fontSize: 15, color: "var(--ink-500)", marginTop: 8 }}>
-          Your city roster for this series — connect with players and see who&rsquo;s active.
+          Your city roster for this league — connect with players and see who&rsquo;s active.
         </p>
       </div>
 
@@ -74,7 +74,7 @@ export default async function DirectoryPage() {
         </div>
       ) : members.length === 0 ? (
         <div style={{ background: "#fff", border: "1px solid var(--hair-200)", borderRadius: "var(--radius-lg)", padding: 20, color: "var(--ink-500)", fontSize: 14 }}>
-          No other members have joined your city for this series yet. Check back soon.
+          No other members have joined your city for this league yet. Check back soon.
         </div>
       ) : (
         <div style={{ display: "grid", gap: 12 }}>

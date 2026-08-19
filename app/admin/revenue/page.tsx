@@ -69,7 +69,7 @@ export default function AdminRevenuePage() {
       </p>
 
       <div style={{ marginBottom: 20, display: "flex", alignItems: "center", gap: 10 }}>
-        <label style={{ fontSize: 13, fontWeight: 600, color: "var(--ink-800)" }}>Series</label>
+        <label style={{ fontSize: 13, fontWeight: 600, color: "var(--ink-800)" }}>League</label>
         <select
           className="input-mo"
           value={selected}
@@ -87,7 +87,7 @@ export default function AdminRevenuePage() {
       ) : loading ? (
         <p style={{ fontSize: 14, color: "var(--ink-500)" }}>Loading…</p>
       ) : cities.length === 0 ? (
-        <p style={{ fontSize: 14, color: "var(--ink-500)" }}>No attributed revenue for this series yet.</p>
+        <p style={{ fontSize: 14, color: "var(--ink-500)" }}>No attributed revenue for this league yet.</p>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
           {cities.map((city) => (

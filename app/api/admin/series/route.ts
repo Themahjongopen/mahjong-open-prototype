@@ -34,7 +34,7 @@ function parseSeriesBody(body: any) {
   const registrationClosesRaw = body?.registration_closes_at?.toString().trim();
 
   if (!name) {
-    return { ok: false as const, error: "Please enter a series name." };
+    return { ok: false as const, error: "Please enter a league name." };
   }
   if (!startsAt || !endsAt) {
     return { ok: false as const, error: "Please set both a start and end date." };
@@ -89,7 +89,7 @@ export async function GET() {
     .order("starts_at", { ascending: true });
 
   if (error) {
-    return NextResponse.json({ error: "Series could not be loaded." }, { status: 500 });
+    return NextResponse.json({ error: "League could not be loaded." }, { status: 500 });
   }
 
   return NextResponse.json({ series: data ?? [] });
@@ -117,7 +117,7 @@ export async function POST(request: Request) {
     const duplicate = await findDuplicateName(supabase, parsed.values.name);
 
     if (duplicate) {
-      return NextResponse.json({ error: "A series with that name already exists." }, { status: 409 });
+      return NextResponse.json({ error: "A league with that name already exists." }, { status: 409 });
     }
 
     const { data, error } = await supabase
@@ -127,13 +127,13 @@ export async function POST(request: Request) {
       .single();
 
     if (error) {
-      return NextResponse.json({ error: "Series could not be created." }, { status: 500 });
+      return NextResponse.json({ error: "League could not be created." }, { status: 500 });
     }
 
     return NextResponse.json({ series: data });
   } catch (error) {
     console.error("Series creation failed", error);
-    return NextResponse.json({ error: "Series could not be created." }, { status: 500 });
+    return NextResponse.json({ error: "League could not be created." }, { status: 500 });
   }
 }
 
@@ -147,7 +147,7 @@ export async function PUT(request: Request) {
   const action = body?.action?.toString();
 
   if (!id) {
-    return NextResponse.json({ error: "Series id is required." }, { status: 400 });
+    return NextResponse.json({ error: "League id is required." }, { status: 400 });
   }
 
   const supabase: any = createAdminClient();
@@ -165,7 +165,7 @@ export async function PUT(request: Request) {
         .single();
 
       if (fetchError || !existing) {
-        return NextResponse.json({ error: "Series could not be found." }, { status: 404 });
+        return NextResponse.json({ error: "League could not be found." }, { status: 404 });
       }
 
       const { data, error } = await supabase
@@ -176,7 +176,7 @@ export async function PUT(request: Request) {
         .single();
 
       if (error) {
-        return NextResponse.json({ error: "Series status could not be updated." }, { status: 500 });
+        return NextResponse.json({ error: "League status could not be updated." }, { status: 500 });
       }
 
       return NextResponse.json({ series: data });
@@ -190,7 +190,7 @@ export async function PUT(request: Request) {
         .single();
 
       if (fetchError || !existing) {
-        return NextResponse.json({ error: "Series could not be found." }, { status: 404 });
+        return NextResponse.json({ error: "League could not be found." }, { status: 404 });
       }
 
       const { data, error } = await supabase
@@ -216,7 +216,7 @@ export async function PUT(request: Request) {
     const duplicate = await findDuplicateName(supabase, parsed.values.name, id);
 
     if (duplicate) {
-      return NextResponse.json({ error: "A series with that name already exists." }, { status: 409 });
+      return NextResponse.json({ error: "A league with that name already exists." }, { status: 409 });
     }
 
     const { data, error } = await supabase
@@ -227,13 +227,13 @@ export async function PUT(request: Request) {
       .single();
 
     if (error) {
-      return NextResponse.json({ error: "Series could not be updated." }, { status: 500 });
+      return NextResponse.json({ error: "League could not be updated." }, { status: 500 });
     }
 
     return NextResponse.json({ series: data });
   } catch (error) {
     console.error("Series update failed", error);
-    return NextResponse.json({ error: "Series could not be updated." }, { status: 500 });
+    return NextResponse.json({ error: "League could not be updated." }, { status: 500 });
   }
 }
 
@@ -246,7 +246,7 @@ export async function DELETE(request: Request) {
   const id = body?.id?.toString();
 
   if (!id) {
-    return NextResponse.json({ error: "Series id is required." }, { status: 400 });
+    return NextResponse.json({ error: "League id is required." }, { status: 400 });
   }
 
   const supabase: any = createAdminClient();
@@ -275,14 +275,14 @@ export async function DELETE(request: Request) {
         .maybeSingle();
 
       if (referenceError) {
-        return NextResponse.json({ error: "Series could not be checked for existing data." }, { status: 500 });
+        return NextResponse.json({ error: "League could not be checked for existing data." }, { status: 500 });
       }
 
       if (reference) {
         return NextResponse.json(
           {
             error:
-              "This series has registrations or league data and can't be deleted. Deactivate it instead to hide it from the registration form.",
+              "This league has registrations or table data and can't be deleted. Deactivate it instead to hide it from the registration form.",
           },
           { status: 409 }
         );
@@ -292,12 +292,12 @@ export async function DELETE(request: Request) {
     const { error } = await supabase.from("series").delete().eq("id", id);
 
     if (error) {
-      return NextResponse.json({ error: "Series could not be deleted." }, { status: 500 });
+      return NextResponse.json({ error: "League could not be deleted." }, { status: 500 });
     }
 
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error("Series deletion failed", error);
-    return NextResponse.json({ error: "Series could not be deleted." }, { status: 500 });
+    return NextResponse.json({ error: "League could not be deleted." }, { status: 500 });
   }
 }

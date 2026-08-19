@@ -595,7 +595,7 @@ export default function AdminRegistrationsPage() {
   );
 
   function handleExport() {
-    const header = ["Name", "Email", "Phone", "City", "Series", "Skill", "Payment status", "Registered date"];
+    const header = ["Name", "Email", "Phone", "City", "League", "Skill", "Payment status", "Registered date"];
     const lines = [header.join(",")];
     for (const r of filteredRows) {
       lines.push([
@@ -921,8 +921,8 @@ export default function AdminRegistrationsPage() {
             <option key={c.id} value={c.id}>{c.label} — {c.paid} paid, {c.pending} pending</option>
           ))}
         </select>
-        <select aria-label="Filter by series" className="input-mo" style={{ maxWidth: 340 }} value={seriesFilter} onChange={(e) => setSeriesFilter(e.target.value)}>
-          <option value="all">All series</option>
+        <select aria-label="Filter by league" className="input-mo" style={{ maxWidth: 340 }} value={seriesFilter} onChange={(e) => setSeriesFilter(e.target.value)}>
+          <option value="all">All leagues</option>
           {seriesOptions.map((s) => (
             <option key={s.id} value={s.id}>{s.label}</option>
           ))}
@@ -949,7 +949,7 @@ export default function AdminRegistrationsPage() {
                 aria-label="Select all visible rows"
               />
             </p>
-            {["Name", "Email", "Phone", "City", "Series", "Skill", "Payment", "Registered", "Portal", "Attribution"].map((h) => (
+            {["Name", "Email", "Phone", "City", "League", "Skill", "Payment", "Registered", "Portal", "Attribution"].map((h) => (
               <p key={h}>{h}</p>
             ))}
           </div>
@@ -1047,7 +1047,7 @@ export default function AdminRegistrationsPage() {
                   </div>
                 </div>
                 <div>
-                  <span className="admin-mobile-label">Series</span>
+                  <span className="admin-mobile-label">League</span>
                   <p style={{ fontSize: 13, color: "var(--ink-700)" }}>{r.series ?? "—"}</p>
                 </div>
                 <div>

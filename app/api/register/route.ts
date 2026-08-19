@@ -35,7 +35,7 @@ export async function POST(request: Request) {
       .single();
 
     if (seriesError || !seriesData) {
-      return NextResponse.json({ error: "The selected series could not be found." }, { status: 404 });
+      return NextResponse.json({ error: "The selected league could not be found." }, { status: 404 });
     }
 
     // registration_closes_at is an inclusive date (registration stays open
@@ -46,7 +46,7 @@ export async function POST(request: Request) {
       (seriesData.registration_closes_at && seriesData.registration_closes_at < today);
 
     if (registrationClosed) {
-      return NextResponse.json({ error: "Registration for this series has closed." }, { status: 400 });
+      return NextResponse.json({ error: "Registration for this league has closed." }, { status: 400 });
     }
 
     // If this email already has a portal account (a profile row), attach it to

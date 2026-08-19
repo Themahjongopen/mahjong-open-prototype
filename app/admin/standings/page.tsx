@@ -69,7 +69,7 @@ export default function AdminStandingsPage() {
       const [cRes, sRes] = await Promise.all([fetch("/api/admin/cities"), fetch("/api/admin/series")]);
       const cPayload = await cRes.json().catch(() => ({}));
       const sPayload = await sRes.json().catch(() => ({}));
-      if (!cRes.ok || !sRes.ok) { setError("Could not load cities or series."); setLoading(false); return; }
+      if (!cRes.ok || !sRes.ok) { setError("Could not load cities or leagues."); setLoading(false); return; }
       const cs: City[] = cPayload.cities ?? [];
       const ss: Series[] = sPayload.series ?? [];
       setCities(cs);
@@ -117,7 +117,7 @@ export default function AdminStandingsPage() {
     <div style={{ maxWidth: 900 }}>
       <h1 style={{ fontFamily: "var(--font-display)", fontSize: 26, color: "var(--ink-900)", marginBottom: 8 }}>Standings</h1>
       <p style={{ fontSize: 14, color: "var(--ink-500)", marginBottom: 24 }}>
-        Read-only leaderboards for any city and series — the same numbers players see.
+        Read-only leaderboards for any city and league — the same numbers players see.
       </p>
 
       {/* City + series selectors */}
@@ -131,7 +131,7 @@ export default function AdminStandingsPage() {
           </select>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          <label style={{ fontSize: 12, fontWeight: 600, color: "var(--ink-800)" }}>Series</label>
+          <label style={{ fontSize: 12, fontWeight: 600, color: "var(--ink-800)" }}>League</label>
           <select style={selectStyle} value={seriesId} onChange={(e) => setSeriesId(e.target.value)} disabled={series.length === 0}>
             {series.map((s) => (
               <option key={s.id} value={s.id}>{s.name}{s.is_active ? "" : " (inactive)"}</option>
@@ -146,7 +146,7 @@ export default function AdminStandingsPage() {
         <p style={{ color: "var(--ink-500)", fontSize: 14 }}>Loading standings…</p>
       ) : rows.length === 0 ? (
         <div style={{ background: "#fff", border: "1px solid var(--hair-200)", borderRadius: "var(--radius-lg)", padding: 28, textAlign: "center", boxShadow: "var(--shadow-xs)" }}>
-          <p style={{ fontSize: 15, color: "var(--ink-700)", margin: 0 }}>No scores yet for this city/series.</p>
+          <p style={{ fontSize: 15, color: "var(--ink-700)", margin: 0 }}>No scores yet for this city/league.</p>
           <p style={{ fontSize: 13, color: "var(--ink-500)", marginTop: 6 }}>
             {(cityName ?? "This city")}{seriesName ? ` · ${seriesName}` : ""} has no scored rounds yet.
           </p>
@@ -161,7 +161,7 @@ export default function AdminStandingsPage() {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 24, alignItems: "start" }}>
             <Board
               title="Ace Award"
-              subtitle="Your single highest round score this series."
+              subtitle="Your single highest round score this league."
               valueHeader="Score"
               rows={byAceAward(rows)}
               rankOf={(r) => String(r.ace_award_rank ?? "—")}

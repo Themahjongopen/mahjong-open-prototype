@@ -41,7 +41,7 @@ export default async function RegisterCityPage() {
         {series ? <p className="eyebrow" style={{ marginBottom: 4 }}>{series.name}</p> : null}
         <h2 style={{ fontFamily: "var(--font-display)", fontSize: 24, color: "var(--ink-900)", margin: 0 }}>Register to play in another city</h2>
         <p style={{ fontSize: 15, color: "var(--ink-500)", marginTop: 8 }}>
-          Join a second city in this series — a separate registration and payment. We&rsquo;ll reuse your profile details; just pick the city.
+          Join a second city in this league — a separate registration and payment. We&rsquo;ll reuse your profile details; just pick the city.
         </p>
         <p style={{ fontSize: 14, color: "var(--ink-700)", marginTop: 10 }}>
           Use code <strong>2NDCITY</strong> at checkout to register in your second city for only $35.
@@ -54,7 +54,7 @@ export default async function RegisterCityPage() {
         <Notice>Registration for {series.name} has closed. Check back soon for the next one.</Notice>
       ) : eligibleCities.length === 0 ? (
         <Notice>
-          You&rsquo;re already registered in every active city for this series — nothing left to add. See you at the table!
+          You&rsquo;re already registered in every active city for this league — nothing left to add. See you at the table!
         </Notice>
       ) : !profileComplete ? (
         <Notice>

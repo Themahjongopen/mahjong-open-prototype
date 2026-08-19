@@ -9,20 +9,20 @@ export const metadata: Metadata = {
 
 const SECTIONS = [
   {
-    heading: "Before your series begins",
-    body: "Your $80 registration is refundable any time before the first day of your series — you’ll receive the full $80 back to your original payment method.",
+    heading: "Before your league begins",
+    body: "Your $80 registration is refundable any time before the first day of your league — you’ll receive the full $80 back to your original payment method.",
   },
   {
-    heading: "Once your series has started",
-    body: "Registrations are non-refundable from the first day of the series onward, as your spot, tables, and standings are active for the full 8 weeks.",
+    heading: "Once your league has started",
+    body: "Registrations are non-refundable from the first day of the league onward, as your spot, tables, and standings are active for the full 8 weeks.",
   },
   {
     heading: "If your city doesn’t reach its minimum",
-    body: "A series only runs when a city reaches at least 20 registered players. If your city doesn’t reach 20 players, the series won’t run and all registrants receive a full refund automatically.",
+    body: "A league only runs when a city reaches at least 20 registered players. If your city doesn’t reach 20 players, the league won’t run and all registrants receive a full refund automatically.",
   },
   {
     heading: "If we cancel",
-    body: "If The Mahjong Open cancels a series for any other reason before it begins, you’ll receive a full refund (or the option to roll your registration to the next series).",
+    body: "If The Mahjong Open cancels a league for any other reason before it begins, you’ll receive a full refund (or the option to roll your registration to the next league).",
   },
 ];
 
@@ -64,7 +64,7 @@ export default function RefundPolicyPage() {
               <a href="mailto:themahjongopen@gmail.com" style={{ color: "var(--pink-600)", textDecoration: "none" }}>
                 themahjongopen@gmail.com
               </a>{" "}
-              with your name and the city/series you registered for, before your series begins. Approved refunds are processed
+              with your name and the city/league you registered for, before your league begins. Approved refunds are processed
               within 5&ndash;10 business days and may take a few additional days to appear, depending on your bank or card issuer.
             </p>
           </div>

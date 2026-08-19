@@ -12,12 +12,12 @@ const FORMAT_STEPS = [
   {
     icon: Users,
     title: "Register for your city",
-    body: "Join the series in your city. One registration covers your full 8-week League.",
+    body: "Join the league in your city. One registration covers your full 8-week league.",
   },
   {
     icon: CalendarDays,
     title: "Propose or accept rounds",
-    body: "Propose a round or accept an existing round that fits your schedule. Play as much or as little as you want. Any registered player in your city can host.",
+    body: "Propose a round or accept an existing round that fits your schedule. Play anywhere, play anytime. Any registered player in your city can host.",
   },
   {
     icon: Shuffle,
@@ -27,7 +27,7 @@ const FORMAT_STEPS = [
   {
     icon: Trophy,
     title: "Track your scores",
-    body: "Scores are self-reported each round — Ace Award tracks your single best round score of the series, Champion Award sums your single best round from every week of the series, and Flight Winner ranks your best 7-of-8-week scoring average.",
+    body: "Scores are self-reported each round — Ace Award tracks your single best round score of the league, Champion Award sums your single best round from every week of the league, and Flight Winner ranks your best 7-of-8-week scoring average.",
   },
   {
     icon: Repeat2,
@@ -43,16 +43,16 @@ const FORMAT_STEPS = [
 
 const SERIES_SCHEDULE = [
   {
-    name: "Series One",
+    name: "Fall League",
     year: "2026",
     dates: "Aug 17 – Oct 11, 2026",
-    body: "The inaugural 8-week series. Register, join tables across your city, and set the pace on the leaderboard.",
+    body: "The inaugural 8-week league. Register, join tables across your city, and set the pace on the leaderboard.",
   },
   {
-    name: "Series Two",
+    name: "Holiday League",
     year: "2026",
     dates: "Oct 26 – Dec 20, 2026",
-    body: "After a short break, the second 8-week series runs through the season. Registration opens as Series One wraps.",
+    body: "After a short break, the second 8-week league runs through the season. Registration opens as Fall League wraps.",
   },
 ];
 
@@ -60,12 +60,12 @@ const WHY_LOVE = [
   {
     icon: CalendarDays,
     title: "Play on your schedule",
-    body: "Unlimited games across the 8-week series. Join an open table or host your own, whenever it suits you. Anywhere, anytime.",
+    body: "Unlimited games across the 8-week league. Join an open table or host your own, whenever it suits you. Anywhere, anytime.",
   },
   {
     icon: Users,
     title: "Meet your city",
-    body: "Every series brings your local players together — new tables, new faces, and a community that lasts.",
+    body: "Every league brings your local players together — new tables, new faces, and a community that lasts.",
   },
   {
     icon: Sparkles,
@@ -74,7 +74,7 @@ const WHY_LOVE = [
   },
 ];
 
-// Series One launch cities. Add another object here and the grid below
+// Launch cities. Add another object here and the grid below
 // accommodates it automatically — no layout changes needed. `description` is an
 // optional tagline rendered under the name; omit it and the card shows nothing.
 type LaunchCity = { name: string; state: string; photo: string; description?: string };
@@ -95,7 +95,6 @@ const LAUNCH_CITIES: LaunchCity[] = [
   { name: "Greater Tuscaloosa", state: "Alabama", photo: "/brand-photo-9.jpg" },
   { name: "Charleston", state: "South Carolina", photo: "/brand-photo-10.jpg" },
   { name: "Baldwin County", state: "Alabama", photo: "/brand-photo-13.jpg" },
-  { name: "Greenbrier Region", state: "West Virginia", photo: "/brand-photo-15.jpg" },
   { name: "Greenville/Pickens", state: "South Carolina", photo: "/brand-photo-18.jpg" },
   { name: "Central Arkansas", state: "Arkansas", photo: "/brand-photo-19.jpg" },
   { name: "Vicksburg", state: "Mississippi", photo: "/brand-photo-20.jpg" },
@@ -197,15 +196,15 @@ function LaunchCityCard({ city }: { city: LaunchCity }) {
 const FAQS = [
   {
     q: "What is The Mahjong Open?",
-    a: "Mahjong Made Social — mahjong that brings your city together. Register once, play unlimited games over a flexible 8-week series, meet new friends, and climb your city's leaderboard.",
+    a: "Mahjong Made Social — mahjong that brings your city together. Register once, play unlimited games over a flexible 8-week league, meet new friends, and climb your city's leaderboard.",
   },
   {
     q: "How much does it cost?",
-    a: "$80 per 8-week series.",
+    a: "$80 per 8-week league.",
   },
   {
-    q: "How long is a series?",
-    a: "Eight weeks, with five series a year.",
+    q: "How long is a league?",
+    a: "Eight weeks, with five leagues a year.",
   },
   {
     q: "Do I need a partner or experience?",
@@ -213,7 +212,7 @@ const FAQS = [
   },
   {
     q: "How do standings work?",
-    a: "Ace Award tracks your single highest round score of the series — no minimum rounds required. Champion Award sums your single highest round from every week of the series. Flight Winner ranks your best 7-of-8-week combined scoring average (5 rounds minimum to qualify). Cities also compete: each city's top 3 individual round scores are added together, and the leading city is named The Mahjong Open Leader.",
+    a: "Ace Award tracks your single highest round score of the league — no minimum rounds required. Champion Award sums your single highest round from every week of the league. Flight Winner ranks your best 7-of-8-week combined scoring average (5 rounds minimum to qualify). Cities also compete: each city's top 3 individual round scores are added together, and the leading city is named The Mahjong Open Leader.",
   },
 ];
 
@@ -328,11 +327,11 @@ export default function HomePage() {
               {/* Stats */}
               <div style={{ display: "flex", gap: 32, flexWrap: "wrap", paddingTop: 8 }}>
                 {[
-                  { num: "8", label: "Weeks per series" },
-                  { num: "5", label: "Series a year" },
-                  { num: "$80", label: "Per series" },
+                  { num: "8", label: "Weeks per league" },
+                  { num: "5", label: "Leagues a year" },
+                  { num: "$80", label: "Per league" },
                 ].map((s) => (
-                  <div key={s.label} style={{ marginLeft: s.label === "Per series" ? 16 : 0 }}>
+                  <div key={s.label} style={{ marginLeft: s.label === "Per league" ? 16 : 0 }}>
                     <p
                       style={{
                         fontFamily: "var(--font-display)",
@@ -551,12 +550,12 @@ export default function HomePage() {
             <p className="eyebrow" style={{ display: "inline-flex", alignItems: "center", gap: 7, marginBottom: 14 }}>
               <Sparkles size={14} /> Now launching
             </p>
-            {/* Spelled-out count must match LAUNCH_CITIES.length (currently 36). A
+            {/* Spelled-out count must match LAUNCH_CITIES.length (currently 35). A
                 third hardcoded spot alongside the card array + the map pins — update
                 all three together when the launch-city list changes. */}
-            <h2 className="h2">Series One starts in{" "}<em className="serif-italic">thirty-six cities</em></h2>
+            <h2 className="h2">Fall League starts in{" "}<em className="serif-italic">thirty-five cities</em></h2>
             <p className="body-lg" style={{ marginTop: 16, maxWidth: 540, marginInline: "auto" }}>
-              Our inaugural 8-week series kicks off this August. Be one of the first to take a seat at the table in your city.
+              Our inaugural 8-week league kicks off this August. Be one of the first to take a seat at the table in your city.
             </p>
           </div>
 
@@ -606,8 +605,8 @@ export default function HomePage() {
       <section className="stack-panel stack-panel--reveal" style={{ padding: "72px 0", background: "var(--pink-wash)" }}>
         <div className="container-mo">
           <div style={{ textAlign: "center", marginBottom: 48 }}>
-            <p className="eyebrow" style={{ marginBottom: 12 }}>Series schedule</p>
-            <h2 className="h2">The 2026 <em className="serif-italic">Series Schedule</em></h2>
+            <p className="eyebrow" style={{ marginBottom: 12 }}>League schedule</p>
+            <h2 className="h2">The 2026 <em className="serif-italic">League Schedule</em></h2>
             <p className="body-lg" style={{ marginTop: 16, maxWidth: 560, marginInline: "auto" }}>
               Each series runs 8 weeks of open play. There will be 5 series per year with breaks between.
             </p>
@@ -802,7 +801,7 @@ export default function HomePage() {
                   boxShadow: "var(--shadow-sm)",
                 }}
               >
-                <p style={{ fontSize: 13, fontWeight: 600, color: "var(--ink-900)", marginBottom: 12 }}>Your series includes:</p>
+                <p style={{ fontSize: 13, fontWeight: 600, color: "var(--ink-900)", marginBottom: 12 }}>Your league includes:</p>
                 <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 8 }}>
                   {[
                     "8 weeks of open play",

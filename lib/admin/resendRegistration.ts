@@ -30,13 +30,13 @@ export async function resendOneRegistration(
     .select("name, price_cents, is_active, registration_closes_at")
     .eq("id", reg.series_id)
     .single();
-  if (!seriesData) return { ok: false, error: "The series could not be found." };
+  if (!seriesData) return { ok: false, error: "The league could not be found." };
 
   const today = new Date().toISOString().slice(0, 10);
   const registrationClosed =
     !seriesData.is_active || (seriesData.registration_closes_at && seriesData.registration_closes_at < today);
   if (registrationClosed) {
-    return { ok: false, skipped: true, error: "Registration for this series has closed — a new link can't be issued." };
+    return { ok: false, skipped: true, error: "Registration for this league has closed — a new link can't be issued." };
   }
 
   await supabase.from("registrations").update({ reminder_sent_at: new Date().toISOString() }).eq("id", reg.id);

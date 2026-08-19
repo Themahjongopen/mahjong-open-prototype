@@ -30,8 +30,8 @@ export const NOTIFICATION_PREFS: {
   },
   {
     key: "email_series_updates",
-    label: "Series updates",
-    description: "Occasional announcements about my current series.",
+    label: "League updates",
+    description: "Occasional announcements about my current league.",
     default: true,
   },
   {

@@ -11,7 +11,7 @@ const usd = (n: number) =>
 
 const SHORTCUTS = [
   { label: "Manage cities", href: "/admin/cities" },
-  { label: "Manage series", href: "/admin/series" },
+  { label: "Manage leagues", href: "/admin/series" },
   { label: "View players", href: "/admin/players" },
   { label: "All tables", href: "/admin/tables" },
 ];
@@ -49,13 +49,13 @@ export default function AdminDashboard() {
   // Live metrics load independently of the console preview data; show a
   // placeholder in each tile until the query returns.
   const metricCards = [
-    { label: "Registrations this series", value: metrics ? metrics.registrationsThisSeries.toLocaleString() : "—" },
-    { label: "Paid this series", value: metrics ? metrics.paidRegistrationsThisSeries.toLocaleString() : "—" },
+    { label: "Registrations this league", value: metrics ? metrics.registrationsThisSeries.toLocaleString() : "—" },
+    { label: "Paid this league", value: metrics ? metrics.paidRegistrationsThisSeries.toLocaleString() : "—" },
     { label: "Registrations all-time", value: metrics ? metrics.registrationsAllTime.toLocaleString() : "—" },
     { label: "Active players", value: metrics ? metrics.activePlayers.toLocaleString() : "—" },
     { label: "Revenue today", value: metrics ? usd(metrics.revenueToday) : "—" },
     { label: "Revenue this month", value: metrics ? usd(metrics.revenueThisMonth) : "—" },
-    { label: "Revenue this series", value: metrics ? usd(metrics.revenueThisSeries) : "—" },
+    { label: "Revenue this league", value: metrics ? usd(metrics.revenueThisSeries) : "—" },
     { label: "Active cities", value: metrics ? metrics.activeCities.toLocaleString() : "—" },
     { label: "Locked-in cities", value: metrics ? `${metrics.lockedInCities.toLocaleString()} / ${metrics.activeCities.toLocaleString()}` : "—" },
     { label: "Table fill rate", value: metrics ? `${Math.round(metrics.tableFillRate * 100)}%` : "—" },
