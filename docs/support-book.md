@@ -22,7 +22,7 @@ From there you can:
 
 - **Edit your name or skill level** — change it and it saves immediately.
 - **Change your photo** — same real-photo rule as registration applies.
-- **Update your notification preferences** — five toggles: table reminders (emailed before a table you're seated at), scores posted (emailed when a table you played gets scored), series updates (occasional announcements), new tables (emailed when a table opens in your city), and table filled (emailed when a table you're seated at fills up). All are on by default except new tables.
+- **Update your notification preferences** — five toggles: table reminders (emailed before a table you're seated at), scores posted (emailed when a table you played gets scored), league updates (occasional announcements), new tables (emailed when a table opens in your city), and table filled (emailed when a table you're seated at fills up). All are on by default except new tables.
 - **See your season stats** — rounds played, total score, average score, your cumulative rank, and your average rank for the current season, plus your all-time totals below that.
 - **Register for a second city (if eligible)** — a "Would you like to play in an additional city?" card appears when there's another active city you haven't registered in yet. It's a separate registration and payment; use code 2NDCITY at checkout for $35. Your name, email, phone, skill level, and photo are all reused — you don't fill anything in twice.
 
@@ -46,7 +46,7 @@ Tap Create from the Open Tables screen. You'll need:
 - **Date and time**
 - **Location name** (and optional address/directions)
 - **Part of town** — required. See the section below.
-- **Round type** — Social (light conversation, casual play), Focused (minimal talking, game-focused), or Lightning (15-minute rounds, good for a quick game)
+- **Round type** — Casual (light conversation, casual play), Mindful (minimal talking, game-focused), or Lightning (15-minute rounds, good for a quick game)
 - **Notes** (optional)
 
 You're automatically seated in seat 1 as the table's host. Hosting means you're responsible for two more things once the round happens — see below.
@@ -85,7 +85,7 @@ Open the table and tap **Invite players**. You'll see a searchable list of playe
 
 **If an invite doesn't go through**, you'll see a message naming the person — "Couldn't reach Marcus — try again." Nothing is recorded when a send fails, so you can retry, or just text her the old-fashioned way.
 
-**Who shows up in the list:** paid players registered in that table's city and series. You won't see players who've chosen to hide themselves from the player directory, or anyone already seated at the table. Someone who joined and later cancelled her seat *will* still appear — useful when a table's time or place has changed and she might be free after all.
+**Who shows up in the list:** paid players registered in that table's city and league. You won't see players who've chosen to hide themselves from the player directory, or anyone already seated at the table. Someone who joined and later cancelled her seat *will* still appear — useful when a table's time or place has changed and she might be free after all.
 
 **A note on where the email lands:** invite emails often arrive in Gmail's **Promotions** tab rather than the main inbox. Tell players to look there and drag the message to Primary — Gmail remembers, and future invites and reminders will land in the inbox from then on.
 
@@ -132,7 +132,7 @@ Both leaderboards show rounds played alongside your rank, and your own row is al
 
 ## Directory
 
-Tap Directory in the bottom nav to see your city's roster for the current series — everyone's name, photo, and skill level, plus a "Commissioner" badge for anyone who holds that role in your city. Tap any member to see their profile and season stats.
+Tap Directory in the bottom nav to see your city's roster for the current league — everyone's name, photo, and skill level, plus a "Commissioner" badge for anyone who holds that role in your city. Tap any member to see their profile and season stats.
 
 ## Getting help
 
