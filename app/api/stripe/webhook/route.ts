@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { Resend } from "resend";
 import Stripe from "stripe";
 import { buildBrandedEmail } from "@/lib/email/brandedEmail";
+import { buildNewRegistrationCommissionerEmail } from "@/lib/email/newRegistrationCommissionerEmail";
 import { sendRegistrationReminderEmail } from "@/lib/email/registrationReminderEmail";
 import { sendPortalInvite } from "@/lib/email/portalInvite";
 import { ensureAttributionOnPaid } from "@/lib/registration/attribution";
@@ -336,6 +337,51 @@ export async function POST(request: Request) {
         });
       } catch (emailError) {
         console.error("Welcome or registration notice email failed after payment confirmation.", emailError);
+      }
+
+      // Commissioner notification — email every commissioner of the registered
+      // city so they can onboard the new player (GroupMe, welcome email) without
+      // opening the admin console. commissioner_cities (029) is the authoritative
+      // city→commissioner map and supports multiple commissioners per city (e.g.
+      // Memphis); is_commissioner (017) is only a derived badge, not city-scoped.
+      // For a 2NDCITY second-city registration this row's city_id is the SECOND
+      // city, so its commissioner is the one notified — correct, no duplicate to
+      // the first city's commissioner. Fully isolated in its own try/catch:
+      // payment is already recorded above, so a send failure here only logs — a
+      // notification must never cause a paid checkout to be treated as failed.
+      try {
+        const { data: commRows } = await supabase
+          .from("commissioner_cities")
+          .select("profiles(email, full_name)")
+          .eq("city_id", registrationData.city_id);
+        const recipients = Array.from(
+          new Set(
+            ((commRows ?? []) as { profiles: { email: string | null } | { email: string | null }[] | null }[])
+              .map((r) => (Array.isArray(r.profiles) ? r.profiles[0] : r.profiles)?.email)
+              .filter((e): e is string => !!e)
+          )
+        );
+        if (recipients.length > 0) {
+          const { subject, html } = buildNewRegistrationCommissionerEmail({
+            playerName: registrationData.full_name,
+            email: registrationData.email,
+            phone: registrationData.phone,
+            cityName,
+            registeredAt,
+          });
+          const resend = new Resend(resendApiKey);
+          for (const to of recipients) {
+            await resend.emails.send({
+              from: "The Mahjong Open <welcome@themahjongopen.com>",
+              to: [to],
+              replyTo: registrationData.email,
+              subject,
+              html,
+            });
+          }
+        }
+      } catch (commissionerError) {
+        console.error("[stripe-webhook] commissioner new-registration notification failed (payment unaffected)", commissionerError);
       }
 
       // Auto-invite (per-series opt-in): if this series has it on, send the portal
