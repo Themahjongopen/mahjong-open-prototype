@@ -219,7 +219,7 @@ export default function RegisterModal({ open, onClose, referral = null }: Regist
     }
 
     setLoading(true);
-    // Bound how long "Saving your spot…" can hang: /api/register creates a Stripe
+    // Bound how long "Registering…" can hang: /api/register creates a Stripe
     // session, so give it a generous 20s, then abort so the button re-enables with
     // an actionable message instead of an indefinite spinner.
     const controller = new AbortController();
@@ -413,6 +413,15 @@ export default function RegisterModal({ open, onClose, referral = null }: Regist
         ) : (
           <>
             <p className="eyebrow" style={{ marginBottom: 8 }}>{currentSeries?.name ?? "Fall League 2026"}</p>
+            {/* Surface the deadline as a live nudge — play has begun and the two-week
+                registration window is closing. Parsed at noon so the bare date never
+                shifts a day across timezones. */}
+            {currentSeries?.registration_closes_at ? (
+              <p style={{ fontSize: 13, fontWeight: 600, color: "var(--pink-600)", marginBottom: 12 }}>
+                Registration closes{" "}
+                {new Date(`${currentSeries.registration_closes_at}T12:00:00`).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+              </p>
+            ) : null}
             <h2
               style={{
                 fontFamily: "var(--font-display)",
@@ -564,7 +573,7 @@ export default function RegisterModal({ open, onClose, referral = null }: Regist
                 disabled={loading || uploading}
                 style={{ marginTop: 8, justifyContent: "center", padding: "14px 24px" }}
               >
-                {loading ? "Saving your spot…" : "Save my spot →"}
+                {loading ? "Registering…" : "Register now →"}
               </button>
             </form>
           </>

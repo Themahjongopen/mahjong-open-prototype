@@ -21,7 +21,7 @@ const FAQS = [
   { q: "What if a player cancels?", a: "You can cancel your seat any time up to 24 hours before your table. Inside that window, a cancellation only counts as a no-show (−25 points) if your spot goes unfilled — so let your table know and someone can usually step in to take it. If no one does, the no-show is −25 and the three players who showed up each get +25 for that round." },
   { q: "Who submits the score?", a: "Only the table creator submits scores after the game. They're live in all four players' portals and the standings immediately — scoring runs on the honor system." },
   { q: "What mahjong rules do you use?", a: "The Mahjong Open uses American mahjong rules (NMJL card). All skill levels are welcome." },
-  { q: "Can I join mid-league?", a: "Yes — registration stays open for the first two weeks of each league. After that, it closes until the next league." },
+  { q: "Can I join mid-league?", a: "Yes — registration for each league stays open through its first two weeks of play. For Fall League 2026 that's through August 31. Registration for the next league opens the day after the current one ends, so there's never a gap — Holiday League registration opens October 12." },
 ];
 
 export default function HowItWorksPage() {

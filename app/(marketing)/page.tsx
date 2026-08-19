@@ -46,13 +46,13 @@ const SERIES_SCHEDULE = [
     name: "Fall League",
     year: "2026",
     dates: "Aug 17 – Oct 11, 2026",
-    body: "The inaugural 8-week league. Register, join tables across your city, and set the pace on the leaderboard.",
+    body: "The inaugural 8-week league — now underway. Register through Aug 31, join tables across your city, and climb the leaderboard.",
   },
   {
     name: "Holiday League",
     year: "2026",
     dates: "Oct 26 – Dec 20, 2026",
-    body: "After a short break, the second 8-week league runs through the season. Registration opens as Fall League wraps.",
+    body: "The second 8-week league. Registration opens October 12 — the day after Fall League ends — and closes November 9.",
   },
 ];
 
@@ -81,6 +81,11 @@ type LaunchCity = { name: string; state: string; photo: string; description?: st
 
 // Toggle the "See live launch status" map section on/off without deleting the
 // section or its data — flip back to true to bring it back.
+// ⚠️ PRE-LAUNCH COPY: the map section's strings ("See live launch status",
+// "…ready to go", and the LaunchCitiesMap "Registration open" tooltips) were
+// written before Fall League started. Fall League is now live (play began Aug 17),
+// so if you re-enable this map, update that copy to present-tense / playing-now
+// language first.
 const SHOW_LAUNCH_MAP = false;
 
 const LAUNCH_CITIES: LaunchCity[] = [
@@ -173,7 +178,7 @@ function LaunchCityCard({ city }: { city: LaunchCity }) {
       {/* Bottom half — soft sage (padding in CSS so it can tighten on mobile) */}
       <div className="launch-card-body" style={{ background: "var(--lime-200)", textAlign: "center" }}>
         <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.16em", textTransform: "uppercase", color: "var(--lime-700)", marginBottom: 10 }}>
-          Launch city
+          Playing now
         </p>
         <h3
           className={`launch-card-title${city.name.length >= 20 ? " launch-card-title--long" : ""}`}
@@ -318,7 +323,7 @@ export default function HomePage() {
                   onClick={() => setModalOpen(true)}
                   style={{ fontSize: 15 }}
                 >
-                  Save my spot →
+                  Register now →
                 </button>
                 <Link href="/how-it-works" className="btn btn-ghost" style={{ fontSize: 15 }}>
                   See how it works
@@ -577,7 +582,7 @@ export default function HomePage() {
 
           <div style={{ textAlign: "center", marginTop: 40 }}>
             <button className="btn btn-primary" onClick={() => setModalOpen(true)} style={{ fontSize: 15 }}>
-              Save my spot →
+              Register now →
             </button>
           </div>
         </div>
@@ -771,7 +776,7 @@ export default function HomePage() {
                   marginBottom: 16,
                 }}
               >
-                Launching August 2026
+                Playing now · Fall League 2026
               </p>
               <h2
                 style={{
@@ -784,7 +789,7 @@ export default function HomePage() {
                 }}
               >
                 Ready to play?{" "}
-                <em className="serif-italic" style={{ color: "var(--pink-600)" }}>Save your spot.</em>
+                <em className="serif-italic" style={{ color: "var(--pink-600)" }}>Register now →</em>
               </h2>
               <p style={{ fontSize: 15, color: "var(--ink-700)", lineHeight: 1.6 }}>
                 Registration includes your full 8-week league, access to all city tables, and a spot on the leaderboard.
@@ -822,7 +827,7 @@ export default function HomePage() {
                 onClick={() => setModalOpen(true)}
                 style={{ justifyContent: "center", fontSize: 15 }}
               >
-                Save my spot →
+                Register now →
               </button>
             </div>
           </div>

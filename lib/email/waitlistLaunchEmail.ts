@@ -7,7 +7,7 @@ import { buildBrandedEmail } from "./brandedEmail";
 // email. Kept as a reusable module so the real blast (likely a Resend
 // broadcast, for unsubscribe handling) can render identical HTML.
 
-export const WAITLIST_LAUNCH_SUBJECT = "The Mahjong Open is live — save your spot";
+export const WAITLIST_LAUNCH_SUBJECT = "The Mahjong Open is live — register now";
 
 export const WAITLIST_LAUNCH_PREHEADER =
   "Registration is officially open — grab your seat for the first 8-week league.";
@@ -24,7 +24,7 @@ export function buildWaitlistLaunchEmail() {
         <table role="presentation" cellpadding="0" cellspacing="0" style="margin:24px auto 24px auto;">
           <tr>
             <td align="center" style="background-color:#ec466e;border-radius:999px;">
-              <a href="${REGISTER_URL}" style="display:inline-block;padding:13px 32px;font-family:Helvetica,Arial,sans-serif;font-size:15px;color:#ffffff;text-decoration:none;font-weight:bold;">Save my spot</a>
+              <a href="${REGISTER_URL}" style="display:inline-block;padding:13px 32px;font-family:Helvetica,Arial,sans-serif;font-size:15px;color:#ffffff;text-decoration:none;font-weight:bold;">Register now</a>
             </td>
           </tr>
         </table>
