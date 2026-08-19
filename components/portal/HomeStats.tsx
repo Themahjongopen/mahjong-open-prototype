@@ -1,19 +1,13 @@
-"use client";
-
-import { useEffect, useState } from "react";
-import type { MyStats } from "@/app/api/portal/my-stats/route";
+import type { MyStats } from "@/lib/portal/myStats";
 
 // The logged-in player's season stats for the home screen: a Games-played tile
 // plus a card per award system (Ace / Champion / Flight Winner), each with its
 // own score + rank — full parity with the profile page's "Current season"
-// section (same values, same decimal places), fetched from the service-role-only
-// /api/portal/my-stats route. Until it loads (and for a player with no standing
-// yet) scores show 0 and ranks show "—".
-//
-// activeCityId is the city the page is currently showing (an admin's active
-// city, or a regular member's own city). It's in the effect deps so switching
-// cities via the app-bar switcher re-fetches this player's stats for the new
-// city instead of leaving the tiles stale.
+// section (same values, same decimal places). Now purely presentational: the
+// dashboard Server Component computes the stats (reusing the request's auth) and
+// passes them in, so there's no second client fetch / second getUser(). On an
+// admin/multi-city switch the dashboard re-renders (router.refresh) with fresh
+// stats, so no client effect is needed.
 const cardStyle: React.CSSProperties = {
   background: "#fff",
   border: "1px solid var(--hair-200)",
@@ -28,36 +22,20 @@ const awardLabelStyle: React.CSSProperties = {
   color: "var(--ink-500)", marginBottom: 10,
 };
 
-export default function HomeStats({ activeCityId = null }: { activeCityId?: string | null }) {
-  const [stats, setStats] = useState<MyStats | null>(null);
-
-  useEffect(() => {
-    let active = true;
-    fetch("/api/portal/my-stats", { credentials: "include" })
-      .then((res) => (res.ok ? res.json() : null))
-      .then((json) => {
-        if (active && json?.stats) setStats(json.stats);
-      })
-      .catch(() => {});
-    return () => {
-      active = false;
-    };
-  }, [activeCityId]);
-
-  const rounds = stats?.rounds ?? 0;
+export default function HomeStats({ stats }: { stats: MyStats }) {
   // Score formatting matches the profile page exactly, award-for-award: Ace is a
   // plain integer, Champion 1dp, Flight Winner 2dp (commonly "—" rank under the
   // 5-round minimum). Ranks show "#N" or "—" when unranked.
   const awards = [
-    { label: "Ace Award", score: String(stats?.ace.score ?? 0), rank: stats?.ace.rank ? `#${stats.ace.rank}` : "—" },
-    { label: "Champion Award", score: (stats?.champion.score ?? 0).toFixed(1), rank: stats?.champion.rank ? `#${stats.champion.rank}` : "—" },
-    { label: "Flight Winner", score: (stats?.flightWinner.score ?? 0).toFixed(2), rank: stats?.flightWinner.rank ? `#${stats.flightWinner.rank}` : "—" },
+    { label: "Ace Award", score: String(stats.ace.score), rank: stats.ace.rank ? `#${stats.ace.rank}` : "—" },
+    { label: "Champion Award", score: stats.champion.score.toFixed(1), rank: stats.champion.rank ? `#${stats.champion.rank}` : "—" },
+    { label: "Flight Winner", score: stats.flightWinner.score.toFixed(2), rank: stats.flightWinner.rank ? `#${stats.flightWinner.rank}` : "—" },
   ];
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 24 }}>
       <div style={{ ...cardStyle, textAlign: "center" }}>
-        <p style={valueStyle}>{rounds}</p>
+        <p style={valueStyle}>{stats.rounds}</p>
         <p style={labelStyle}>Games played</p>
       </div>
 

@@ -4,6 +4,7 @@ import { getPortalUser } from "@/lib/portal/session";
 import { withAdminCity } from "@/lib/portal/adminCity";
 import { getNextTable } from "@/lib/portal/tables";
 import { getRegisterCityOptions } from "@/lib/portal/registerCity";
+import { getMyStats, EMPTY_STATS } from "@/lib/portal/myStats";
 import HomeStats from "@/components/portal/HomeStats";
 import { formatTableTime } from "@/lib/format/time";
 
@@ -20,13 +21,22 @@ export default async function PortalDashboard() {
   // Admins have no home city; withAdminCity fills in their active-city
   // selection (a no-op for regular members).
   const member = session && session.status === "active" ? await withAdminCity(session) : null;
-  const next = member ? await getNextTable(member) : null;
+
+  // These three reads are independent — run them in parallel rather than
+  // sequentially. getMyStats is computed here (server-side, reusing this
+  // request's auth) and passed to HomeStats, instead of the client re-fetching
+  // it through /api/portal/my-stats (a second invocation + a second getUser()).
+  const [next, addCity, stats] = member
+    ? await Promise.all([
+        getNextTable(member),
+        // Regular players can register for more cities; admins can't.
+        member.isAdmin ? Promise.resolve(null) : getRegisterCityOptions(member.memberships),
+        getMyStats(member.id, member.series_id, member.city_id),
+      ])
+    : [null, null, EMPTY_STATS];
+
   const nextTable = next?.table ?? null;
   const firstName = (member?.full_name ?? "").trim().split(" ")[0] || "there";
-
-  // Regular players can register for more cities in the active series; only
-  // surface the prompt when at least one city is still eligible.
-  const addCity = session?.status === "active" && !session.isAdmin ? await getRegisterCityOptions(session.memberships) : null;
   const canAddCity = !!addCity?.series && !addCity.registrationClosed && addCity.eligibleCities.length > 0;
 
   return (
@@ -70,8 +80,9 @@ export default async function PortalDashboard() {
         </Link>
       ) : null}
 
-      {/* Stats — activeCityId drives a re-fetch when an admin switches cities */}
-      <HomeStats activeCityId={member?.city_id ?? null} />
+      {/* Stats computed server-side above; the dashboard re-renders (router.refresh)
+          on an admin/multi-city switch, so these refresh without a client fetch. */}
+      <HomeStats stats={stats} />
 
       {/* Quick actions */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 20 }}>
