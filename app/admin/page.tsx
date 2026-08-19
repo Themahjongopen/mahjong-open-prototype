@@ -98,7 +98,7 @@ export default function AdminDashboard() {
           </p>
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
             <Link href="/portal" className="btn btn-primary" style={{ justifyContent: "center" }}>Open portal home</Link>
-            <a href="/handbook/the-mahjong-open-handbook-2026.pdf" target="_blank" rel="noopener noreferrer" className="btn btn-ghost" style={{ justifyContent: "center" }}>Open rulebook</a>
+            <a href="/handbook/the-mahjong-open-handbook-2026-2.pdf" target="_blank" rel="noopener noreferrer" className="btn btn-ghost" style={{ justifyContent: "center" }}>Open rulebook</a>
           </div>
         </div>
       ) : (
