@@ -571,7 +571,7 @@ export default function HomePage() {
 
           <p style={{ textAlign: "center", marginTop: 40 }}>
             <span style={{ display: "inline-block", fontSize: 12, fontWeight: 600, letterSpacing: "0.03em", color: "var(--pink-700)", background: "#fff", border: "1px solid var(--pink-100)", borderRadius: "999px", padding: "7px 16px" }}>
-              Series One · Aug 17 – Oct 11, 2026
+              Fall League · Aug 17 – Oct 11, 2026
             </span>
           </p>
 
@@ -608,7 +608,7 @@ export default function HomePage() {
             <p className="eyebrow" style={{ marginBottom: 12 }}>League schedule</p>
             <h2 className="h2">The 2026 <em className="serif-italic">League Schedule</em></h2>
             <p className="body-lg" style={{ marginTop: 16, maxWidth: 560, marginInline: "auto" }}>
-              Each series runs 8 weeks of open play. There will be 5 series per year with breaks between.
+              Each league runs 8 weeks of open play. There will be 5 leagues per year with breaks between.
             </p>
           </div>
           <div className="schedule-grid">
@@ -787,7 +787,7 @@ export default function HomePage() {
                 <em className="serif-italic" style={{ color: "var(--pink-600)" }}>Save your spot.</em>
               </h2>
               <p style={{ fontSize: 15, color: "var(--ink-700)", lineHeight: 1.6 }}>
-                Registration includes your full 8-week series, access to all city tables, and a spot on the leaderboard.
+                Registration includes your full 8-week league, access to all city tables, and a spot on the leaderboard.
               </p>
             </div>
 
