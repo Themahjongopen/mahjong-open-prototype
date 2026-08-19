@@ -3,17 +3,19 @@
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { RotateCw } from "lucide-react";
+import { useOpenTablesRealtime } from "./useOpenTablesRealtime";
 
-// "Updated X ago" for the Open Tables list. The Phase-1 audit found the portal
-// has no polling and no realtime, so this list only reflects the moment it was
-// last loaded — a player sitting on it never sees a newly-created table appear.
-// This bar makes that staleness legible (a visible relative timestamp) and gives
-// an obvious, labelled way to pull fresh data. Half the affected players are 60+
-// on phones, so the control is a big labelled button, not an icon alone.
+// Header bar for Open Tables: a connection-state indicator + "Updated X ago" +
+// a manual Refresh button.
+//
+// Live updates (Supabase Realtime) refetch the page automatically, but a phone
+// that sleeps or loses signal can silently stop receiving events. The indicator
+// tells the truth about that: it shows "Live" ONLY while the channel is healthy,
+// and otherwise falls back to a visible "Updated X ago" and points at Refresh.
+// The manual button never goes away — it is the fallback when the live path
+// fails. Half the affected players are 60+ on phones, so state is conveyed with a
+// word, not a coloured dot alone.
 
-// Relative label from a millisecond delta. Coarse on purpose — a player only
-// needs "is this current or old", not second precision. Clamps negatives (client
-// clock slightly behind the server render clock) to "just now".
 function relativeLabel(deltaMs: number): string {
   const s = Math.floor(deltaMs / 1000);
   if (s < 10) return "just now";
@@ -24,18 +26,33 @@ function relativeLabel(deltaMs: number): string {
   return `${h} hour${h === 1 ? "" : "s"} ago`;
 }
 
-export default function TablesRefreshBar({ loadedAt }: { loadedAt: number }) {
+function Dot({ color }: { color: string }) {
+  return (
+    <span
+      aria-hidden
+      style={{ width: 8, height: 8, borderRadius: "50%", background: color, flexShrink: 0, display: "inline-block" }}
+    />
+  );
+}
+
+export default function TablesRefreshBar({
+  loadedAt,
+  cityId,
+  tableIds,
+}: {
+  loadedAt: number;
+  cityId: string | null;
+  tableIds: string[];
+}) {
   const router = useRouter();
   // router.refresh() returns void without awaiting the server refetch, so a
-  // transition is what holds isPending true until the fresh data commits — same
-  // pattern PlayerCitySwitcher / AdminCitySwitcher use.
+  // transition holds isPending true until the fresh data commits.
   const [isPending, startTransition] = useTransition();
 
-  // `now` ticks the label forward without any network work. It starts equal to
-  // loadedAt so the server render and the first client render agree ("just now",
-  // no hydration mismatch); the effect then switches it to the real clock. The
-  // effect re-runs whenever loadedAt changes (a fresh load after refresh), which
-  // resets the label back to "just now".
+  // `now` ticks the "X ago" label forward without any network work. Starts equal
+  // to loadedAt so server and first client render agree (no hydration mismatch),
+  // then the effect switches to the real clock; it re-runs whenever loadedAt
+  // changes (a fresh load — manual or a live refetch), resetting to "just now".
   const [now, setNow] = useState(loadedAt);
   useEffect(() => {
     setNow(Date.now());
@@ -43,12 +60,53 @@ export default function TablesRefreshBar({ loadedAt }: { loadedAt: number }) {
     return () => clearInterval(id);
   }, [loadedAt]);
 
-  const label = isPending ? "Refreshing…" : `Updated ${relativeLabel(now - loadedAt)}`;
+  const status = useOpenTablesRealtime(cityId, tableIds);
+  const ago = relativeLabel(now - loadedAt);
 
   function refresh() {
     startTransition(() => {
       router.refresh();
     });
+  }
+
+  // Left-hand status line. Priority: a manual refresh in flight > live > the
+  // connecting/offline fallbacks (both of which keep the honest timestamp).
+  let statusLine: React.ReactNode;
+  if (isPending) {
+    statusLine = (
+      <span style={{ display: "inline-flex", alignItems: "center", gap: 7 }}>
+        <Dot color="var(--ink-400)" />
+        <span style={{ color: "var(--ink-700)" }}>Refreshing…</span>
+      </span>
+    );
+  } else if (status === "live") {
+    statusLine = (
+      <span style={{ display: "inline-flex", alignItems: "center", gap: 7, minWidth: 0 }}>
+        <Dot color="var(--lime-600)" />
+        <span style={{ color: "var(--ink-800)", fontWeight: 600 }}>Live</span>
+        <span style={{ color: "var(--ink-400)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          · updated {ago}
+        </span>
+      </span>
+    );
+  } else if (status === "connecting") {
+    statusLine = (
+      <span style={{ display: "inline-flex", alignItems: "center", gap: 7 }}>
+        <Dot color="var(--ink-400)" />
+        <span style={{ color: "var(--ink-700)" }}>Connecting… · updated {ago}</span>
+      </span>
+    );
+  } else {
+    // offline — the important case: be visible and honest, and point at Refresh.
+    statusLine = (
+      <span style={{ display: "inline-flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 7 }}>
+          <Dot color="var(--crimson-500)" />
+          <span style={{ color: "var(--ink-800)", fontWeight: 600 }}>Updated {ago}</span>
+        </span>
+        <span style={{ fontSize: 12, color: "var(--ink-500)" }}>Live updates unavailable — tap Refresh</span>
+      </span>
+    );
   }
 
   return (
@@ -61,11 +119,8 @@ export default function TablesRefreshBar({ loadedAt }: { loadedAt: number }) {
         marginBottom: 16,
       }}
     >
-      <span
-        aria-live="polite"
-        style={{ fontSize: 13, color: "var(--ink-500)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
-      >
-        {label}
+      <span aria-live="polite" style={{ fontSize: 13, minWidth: 0 }}>
+        {statusLine}
       </span>
       <button
         type="button"

@@ -54,7 +54,7 @@ export default async function TablesPage({ searchParams }: { searchParams: Promi
       {/* Manual refresh + "Updated X ago". Renders in both the list and the
           empty-state cases (a player waiting for the first table of the night is
           exactly who needs it), so it sits above the zero-tables branch. */}
-      <TablesRefreshBar loadedAt={loadedAt} />
+      <TablesRefreshBar loadedAt={loadedAt} cityId={member?.city_id ?? null} tableIds={tables.map((t) => t.id)} />
 
       {tables.length === 0 && (
         <div style={{ textAlign: "center", padding: "48px 24px", color: "var(--ink-500)" }}>
