@@ -294,11 +294,10 @@ export default function TableDetailClient({
   // "Cancel my spot" appears, "Mark as played" disappears — no manual reload.
   async function handleHandoff(seat: SeatRow) {
     const name = seat.profiles?.full_name ?? "this player";
-    const first = name.split(" ")[0];
     const ok = await confirm({
       title: "Hand off hosting?",
       message: `${name} will take over as host of this table. You'll no longer be able to mark it as played or enter scores, and you won't be able to take hosting back yourself.`,
-      confirmLabel: `Hand off to ${first}`,
+      confirmLabel: `Hand off to ${name}`,
       danger: true,
     });
     if (!ok) return;

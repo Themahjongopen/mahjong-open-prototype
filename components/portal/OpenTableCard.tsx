@@ -130,8 +130,10 @@ export default function OpenTableCard({ table, currentUserId }: { table: LeagueT
       {active.length > 0 && (
         <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 10, fontSize: 13, color: "var(--ink-700)" }}>
           {active.map((s) => (
-            <span key={s.user_id} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
-              {s.profiles?.full_name?.split(" ")[0] ?? "Player"}
+            <span key={s.user_id} style={{ display: "inline-flex", alignItems: "center", gap: 4, maxWidth: "100%" }}>
+              <span title={s.profiles?.full_name ?? undefined} style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 160 }}>
+                {s.profiles?.full_name ?? "Player"}
+              </span>
               {s.profiles?.skill_level && (
                 <span className={`badge ${SKILL_COLORS[s.profiles.skill_level] ?? "badge-mute"}`} style={{ fontSize: 10 }}>{s.profiles.skill_level}</span>
               )}

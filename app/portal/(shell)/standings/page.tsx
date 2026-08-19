@@ -18,10 +18,6 @@ const SKILL_ABBR: Record<string, string> = {
   advanced: "Adv",
 };
 
-function firstName(name: string | null) {
-  return (name ?? "Player").split(" ")[0];
-}
-
 function Row({
   row,
   isMe,
@@ -51,8 +47,8 @@ function Row({
       <p style={{ fontSize: 15, fontFamily: "var(--font-display)", color: rank === "1" ? "var(--crimson-500)" : "var(--ink-700)" }}>{rank}</p>
       <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
         <Avatar src={row.avatar_url} size={28} alt={name} />
-        <p style={{ fontSize: 14, fontWeight: isMe ? 600 : 400, color: "var(--ink-900)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-          {isMe ? "You" : firstName(name)}
+        <p title={isMe ? undefined : name} style={{ fontSize: 14, fontWeight: isMe ? 600 : 400, color: "var(--ink-900)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {isMe ? "You" : name}
         </p>
         {row.skill_level ? (
           <span className={`badge ${SKILL_COLORS[row.skill_level] ?? "badge-mute"}`} style={{ fontSize: 10, flexShrink: 0 }}>
