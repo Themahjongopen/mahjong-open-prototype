@@ -172,11 +172,10 @@ export default function TableDetailClient({
     if (joinInFlight.current) return;
     joinInFlight.current = true;
     try {
-      const dateLabel = new Date(`${table.table_date}T12:00:00`).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
-      const whenLabel = table.table_time ? `${dateLabel} at ${formatTableTime(table.table_time)}` : dateLabel;
+      const dateLabel = new Date(`${table.table_date}T12:00:00`).toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
       const ok = await confirm({
         title: "Join this table?",
-        message: `${whenLabel} — ${table.location_name}${table.location_address ? `, ${table.location_address}` : ""}.\n\nLeaving within 24 hours of the table counts as a no-show (−25 points) unless another player takes your seat.`,
+        message: `${dateLabel} at ${formatTableTime(table.table_time)}\n${table.location_name}\n\nLeaving within 24 hours counts as a no-show.`,
         confirmLabel: "Take a seat",
       });
       if (!ok) return;
