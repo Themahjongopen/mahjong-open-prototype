@@ -548,14 +548,14 @@ export default function HomePage() {
         <div className="container-mo">
           <div style={{ textAlign: "center", marginBottom: 52 }}>
             <p className="eyebrow" style={{ display: "inline-flex", alignItems: "center", gap: 7, marginBottom: 14 }}>
-              <Sparkles size={14} /> Now launching
+              <Sparkles size={14} /> Now playing
             </p>
             {/* Spelled-out count must match LAUNCH_CITIES.length (currently 35). A
                 third hardcoded spot alongside the card array + the map pins — update
                 all three together when the launch-city list changes. */}
-            <h2 className="h2">Fall League starts in{" "}<em className="serif-italic">thirty-five cities</em></h2>
+            <h2 className="h2">Fall League is underway in{" "}<em className="serif-italic">thirty-five cities</em></h2>
             <p className="body-lg" style={{ marginTop: 16, maxWidth: 540, marginInline: "auto" }}>
-              Our inaugural 8-week league kicks off this August. Be one of the first to take a seat at the table in your city.
+              Play has begun, and registration is open through August 31. Take a seat at the table in your city.
             </p>
           </div>
 
