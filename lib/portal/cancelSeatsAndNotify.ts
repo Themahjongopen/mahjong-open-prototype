@@ -1,17 +1,21 @@
 import { sendTableUnderfilledEmail } from "@/lib/email/tableUnderfilledEmail";
+import { zonedTimeToUtc } from "@/lib/format/zonedTime";
 
 // Shared: cancel a set of seats, reopen any table that drops out of 'full', and
-// notify the REMAINING players on the exact 4→3 active-player transition ("a seat
-// opened on your table"). Extracted verbatim from the self-serve seat cancel
-// (app/api/tables/[id]/seats/cancel) and the admin change-city move — the admin
-// refund is the third caller. All three remove a player from a table and must
-// leave the others informed and the table joinable again.
+// notify the REMAINING players when a seat opens. Used by all four seat-removing
+// paths (self-serve leave-seat, admin change-city, admin refund, admin
+// remove-seat) so they stay in lockstep.
 //
-// The 4→3 gate matches the self-serve original: fire ONLY when a table goes from
-// four active players to three, so an already-short table isn't re-spammed.
-// excludeProfileId (the player being removed) is left OUT of the recipients.
-// Underfilled sends are best-effort and fully wrapped — a send never blocks the
-// cancel — and unconditional (not preference-gated), same as before.
+// Notify triggers (OR, deduplicated to one email per recipient):
+//   * a 4→3 drop (a full table losing a player — the long-standing default), OR
+//   * ANY active-seat decrease when the table starts within the next 24h
+//     (a late drop is urgent whether the table was at 4 or 3, and notifying can
+//     prevent the −25 no-show that stands only when the open seat is never
+//     re-filled).
+// Suppressed when: the table already started (hoursUntil ≤ 0), it's completed or
+// canceled, no one is left to notify, or the cancel didn't actually reduce the
+// count. excludeProfileId (the departing player) is always left out. Sends are
+// best-effort/wrapped — a send never blocks the cancel — and unconditional.
 //
 // Returns the number of seats actually cancelled and the seat-update error (if
 // any) so a caller for whom the cancel is the PRIMARY action (self-serve) can
@@ -19,6 +23,24 @@ import { sendTableUnderfilledEmail } from "@/lib/email/tableUnderfilledEmail";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Admin = any;
+
+// Hours until a table's local start time, or null if it can't be computed. The
+// ONLY place table_date + table_time are combined. Both are naive wall-clock
+// values (no zone) at the venue's local time, so they're anchored to the city's
+// IANA timezone (cities.timezone). Active cities today span BOTH Central and
+// Eastern, so this must use the row's own zone, not a constant — America/Chicago
+// is only a defensive fallback for a column that is NOT NULL and shouldn't ever
+// be blank (revisit if a series launches outside the US). Never throws; returns
+// null on missing/malformed data, and callers treat null as "not imminent".
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function hoursUntilTablePlays(table: any): number | null {
+  if (!table?.table_date || !table?.table_time) return null;
+  const city = Array.isArray(table.cities) ? table.cities[0] : table.cities;
+  const tz = city?.timezone || "America/Chicago";
+  const instant = zonedTimeToUtc(table.table_date, table.table_time, tz);
+  if (Number.isNaN(instant.getTime())) return null;
+  return (instant.getTime() - Date.now()) / (1000 * 60 * 60);
+}
 
 export async function cancelSeatsAndNotify(
   admin: Admin,
@@ -46,15 +68,36 @@ export async function cancelSeatsAndNotify(
   const { error: reopenErr } = await admin.from("league_tables").update({ status: "open" }).in("id", tableIds).eq("status", "full");
   if (reopenErr) console.error("cancelSeatsAndNotify: reopen full tables failed", reopenErr);
 
-  // Notify remaining players on the exact 4→3 transition. Best-effort, wrapped.
+  // Notify remaining players when a seat opens — 4→3 always, or ANY decrease when
+  // the table is within 24h. Best-effort, wrapped.
   try {
     const { data: affected } = await admin
       .from("league_tables")
-      .select("id, table_date, table_time, location_name, location_address, round_type, table_seats(user_id, canceled_at)")
+      .select("id, status, table_date, table_time, location_name, location_address, round_type, cities(timezone), table_seats(user_id, canceled_at)")
       .in("id", tableIds);
     for (const t of (affected ?? []) as any[]) {
-      const activeAfter = (t.table_seats ?? []).filter((s: any) => !s.canceled_at).length;
-      if (activeAfter !== 3) continue;
+      const nextActive = (t.table_seats ?? []).filter((s: any) => !s.canceled_at).length;
+      // Each row in `canceled` was active before (the .is("canceled_at", null)
+      // guard on the update), so the count we just cancelled on THIS table
+      // reconstructs the pre-cancel active count.
+      const canceledHere = (canceled ?? []).filter((c: any) => c.table_id === t.id).length;
+      const prevActive = nextActive + canceledHere;
+
+      const hoursUntil = hoursUntilTablePlays(t);
+      const started = hoursUntil !== null && hoursUntil <= 0; // start time already passed
+      const isImminent = hoursUntil !== null && hoursUntil > 0 && hoursUntil <= 24;
+      const droppedFromFull = prevActive === 4 && nextActive === 3;
+      const reduced = nextActive < prevActive;
+      // Trigger = 4→3 OR any decrease within 24h — but never after the table has
+      // started, on a completed/canceled table, or with no one left to notify.
+      // A single send loop → a 4→3-within-24h drop sends exactly one email each.
+      const shouldNotify =
+        t.status !== "completed" && t.status !== "canceled" &&
+        nextActive > 0 && reduced && !started &&
+        (droppedFromFull || (isImminent && reduced));
+
+      if (!shouldNotify) continue;
+
       const remainingIds = [
         ...new Set(
           (t.table_seats ?? [])
@@ -76,7 +119,8 @@ export async function cancelSeatsAndNotify(
               locationName: t.location_name,
               locationAddress: t.location_address,
               roundType: t.round_type,
-              activeCount: activeAfter,
+              activeCount: nextActive,
+              imminent: isImminent,
             }
           );
           if (!res.ok) console.error("underfilled email not sent", p.email, res.error);

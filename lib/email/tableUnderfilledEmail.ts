@@ -25,11 +25,13 @@ function formatTime(value: string | null): string | null {
 
 /**
  * "A seat opened up and your table is now short a player" notice, sent to the
- * remaining seated players when a cancellation drops a table from 4 → 3 active
- * players (fired once, on that transition only — see the caller). Branded via
- * Resend + buildBrandedEmail, same as tableReminderEmail. Purely informational,
- * best-effort: the seat cancel has already committed and must not be blocked by
- * a send failure.
+ * remaining seated players when a cancellation opens a seat (see the caller for
+ * the trigger conditions). Branded via Resend + buildBrandedEmail, same as
+ * tableReminderEmail. Purely informational, best-effort: the seat cancel has
+ * already committed and must not be blocked by a send failure.
+ *
+ * `imminent` (table starts within 24h) only changes the subject, title, and
+ * opening line to convey urgency — the details, join link, and voice are identical.
  */
 export async function sendTableUnderfilledEmail(
   recipient: { email: string; fullName?: string | null },
@@ -41,6 +43,7 @@ export async function sendTableUnderfilledEmail(
     locationAddress: string | null;
     roundType: string | null;
     activeCount: number;
+    imminent?: boolean;
   }
 ): Promise<TableUnderfilledResult> {
   const resendApiKey = process.env.RESEND_API_KEY;
@@ -50,6 +53,15 @@ export async function sendTableUnderfilledEmail(
   const dateLabel = formatDate(table.tableDate);
   const timeLabel = formatTime(table.tableTime);
   const url = `${SITE_URL}/portal/tables/${table.tableId}`;
+
+  // Same voice either way; the imminent variant just adds urgency (table plays
+  // within 24h) to the subject, title, and opening line. Body/details/link identical.
+  const imminent = table.imminent === true;
+  const subject = imminent ? "A seat just opened at your upcoming table" : "A seat opened up at your table";
+  const title = imminent ? "Your table plays soon — and it's short a player" : "Your table is short a player";
+  const openingLine = imminent
+    ? "A seat just opened up at your Mahjong Open table, and it plays within the next day &mdash; so there isn&rsquo;t much time to fill it. A round needs four to count, so now&rsquo;s the moment to help find someone for the open spot."
+    : "A seat opened up at your Mahjong Open table, so it&rsquo;s now short a player. A round needs four to count, so you may want to help find someone to fill the spot.";
 
   const detailRows = [
     `<strong>Players:</strong> ${table.activeCount} of 4 seated`,
@@ -62,7 +74,7 @@ export async function sendTableUnderfilledEmail(
 
   const innerHtml = `
     <p style="margin:0 0 12px 0;font-size:15px;line-height:1.65;color:#3a4a4f;">Hi ${firstName},</p>
-    <p style="margin:0 0 16px 0;font-size:15px;line-height:1.65;color:#3a4a4f;">A seat opened up at your Mahjong Open table, so it&rsquo;s now short a player. A round needs four to count, so you may want to help find someone to fill the spot.</p>
+    <p style="margin:0 0 16px 0;font-size:15px;line-height:1.65;color:#3a4a4f;">${openingLine}</p>
     ${detailsHtml}
     <table role="presentation" cellpadding="0" cellspacing="0" style="margin:18px 0;">
       <tr>
@@ -79,9 +91,9 @@ export async function sendTableUnderfilledEmail(
     const { error } = await resend.emails.send({
       from: FROM,
       to: [recipient.email],
-      subject: "A seat opened up at your table",
+      subject,
       html: buildBrandedEmail({
-        title: "Your table is short a player",
+        title,
         innerHtml,
         preheader: `${table.activeCount} of 4 seated — ${dateLabel}${timeLabel ? ` at ${timeLabel}` : ""}`,
       }),
