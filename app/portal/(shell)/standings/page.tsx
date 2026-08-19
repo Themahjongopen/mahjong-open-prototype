@@ -65,6 +65,7 @@ function Row({
 function Table({
   title,
   subtitle,
+  note,
   valueHeader,
   rows,
   meId,
@@ -73,6 +74,7 @@ function Table({
 }: {
   title: string;
   subtitle: string;
+  note?: string;
   valueHeader: string;
   rows: StandingRow[];
   meId: string | null;
@@ -84,6 +86,7 @@ function Table({
       <div style={{ marginBottom: 12 }}>
         <h3 style={{ fontFamily: "var(--font-display)", fontSize: 18, color: "var(--ink-900)", margin: 0 }}>{title}</h3>
         <p style={{ fontSize: 12, color: "var(--ink-500)", marginTop: 2 }}>{subtitle}</p>
+        {note ? <p style={{ fontSize: 12, color: "var(--ink-500)", marginTop: 2 }}>{note}</p> : null}
       </div>
       <div style={{ background: "#fff", border: "1px solid var(--hair-200)", borderRadius: "var(--radius-lg)", overflow: "hidden", boxShadow: "var(--shadow-sm)" }}>
         <div style={{ display: "grid", gridTemplateColumns: COLS, padding: "10px 16px", borderBottom: "1px solid var(--hair-200)", gap: 8 }}>
@@ -143,6 +146,7 @@ export default async function StandingsPage() {
       <Table
         title="Flight Winner"
         subtitle="Total points ÷ total rounds across your best 7 of 8 weeks. Requires 5 rounds played to qualify."
+        note="Your lowest week isn't dropped until all 8 weeks are complete."
         valueHeader="Avg"
         rows={byFlightWinner(rows)}
         meId={meId}
