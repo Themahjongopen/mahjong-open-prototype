@@ -23,6 +23,14 @@ export default function BottomTabBar() {
           <Link
             key={href}
             href={href}
+            // These tabs render on every portal page and point at fully-dynamic
+            // routes (they read cookies via getPortalUser), so with no loading
+            // boundary the prefetch returned only a ~230-byte "nothing
+            // prefetchable" marker while still costing a function invocation +
+            // getUser() each — ~5 wasted invocations per page view. The Part-A
+            // loading.tsx boundaries now give the instant-tap feedback prefetch
+            // was nominally there to approximate, so disable it.
+            prefetch={false}
             style={{
               flex: 1,
               display: "flex",
