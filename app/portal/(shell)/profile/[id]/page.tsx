@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { getPortalUser } from "@/lib/portal/session";
 import { getAdminContext } from "@/lib/portal/adminCity";
@@ -57,7 +58,12 @@ function notFound() {
 
 export default async function PlayerProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  // Profiles show other members' details and let you edit your own, so this page
+  // keeps the strong getPortalUser (catches a revoked session) instead of the
+  // layout's cheaper getClaims, and hard-gates on it — the layout now trusts
+  // local claims, so this getUser check is what enforces revocation here.
   const session = await getPortalUser();
+  if (!session) redirect("/portal/login");
   const viewerId = session && session.status === "active" ? session.id : null;
   const isOwn = !!viewerId && id === viewerId;
 

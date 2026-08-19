@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { CalendarDays, MapPin, Trophy, Plus, Printer } from "lucide-react";
-import { getPortalUser } from "@/lib/portal/session";
+import { getPortalClaims } from "@/lib/portal/session";
 import { withAdminCity } from "@/lib/portal/adminCity";
 import { getNextTable } from "@/lib/portal/tables";
 import { getRegisterCityOptions } from "@/lib/portal/registerCity";
@@ -17,7 +17,8 @@ function greeting(name: string) {
 }
 
 export default async function PortalDashboard() {
-  const session = await getPortalUser();
+  // Read-only dashboard: locally-verified claims are enough (no getUser round-trip).
+  const session = await getPortalClaims();
   // Admins have no home city; withAdminCity fills in their active-city
   // selection (a no-op for regular members).
   const member = session && session.status === "active" ? await withAdminCity(session) : null;

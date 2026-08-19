@@ -1,11 +1,14 @@
 import Link from "next/link";
-import { getPortalUser } from "@/lib/portal/session";
+import { getPortalClaims } from "@/lib/portal/session";
 import { getEligibleScoreTables, getTableForScoring } from "@/lib/portal/scores";
 import ScoreEntryForm from "@/components/portal/ScoreEntryForm";
 
 export default async function ScoresPage({ searchParams }: { searchParams: Promise<{ table_id?: string }> }) {
   const { table_id } = await searchParams;
-  const session = await getPortalUser();
+  // Read-only score-entry page (lists the host's scorable tables and renders the
+  // form). The actual score submit/correct POSTs to API routes that re-check with
+  // the strong getPortalUser, so this read trusting local claims is safe.
+  const session = await getPortalClaims();
   const member = session && session.status === "active" ? session : null;
   if (!member) return null;
 

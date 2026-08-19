@@ -1,11 +1,16 @@
 import { redirect } from "next/navigation";
 import PortalShellClient from "@/components/portal/PortalShellClient";
 import RegisterFirstScreen from "@/components/portal/RegisterFirstScreen";
-import { getPortalUser } from "@/lib/portal/session";
+import { getPortalClaims } from "@/lib/portal/session";
 import { getAdminContext } from "@/lib/portal/adminCity";
 
 export default async function PortalLayout({ children }: { children: React.ReactNode }) {
-  const session = await getPortalUser();
+  // The shared shell gate runs on EVERY portal page view, so it uses the cheap
+  // locally-verified auth (getClaims — no per-request round-trip to Supabase
+  // Auth). The read pages under this layout are fine with that. The two PII
+  // pages (directory, profile/[id]) and every mutation deliberately re-check with
+  // the strong getPortalUser so a revoked session is caught immediately there.
+  const session = await getPortalClaims();
 
   // Not signed in — proxy normally catches this, but guard here too.
   if (!session) {

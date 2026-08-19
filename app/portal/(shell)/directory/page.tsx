@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getPortalUser } from "@/lib/portal/session";
 import { getAdminContext } from "@/lib/portal/adminCity";
@@ -21,7 +22,13 @@ function skillLabel(skill: string | null) {
 }
 
 export default async function DirectoryPage() {
+  // This page exposes other members' names/photos, so it keeps the strong auth
+  // (getPortalUser hits Supabase Auth and catches a revoked session) rather than
+  // the layout's cheaper getClaims — and hard-gates on it: the shell layout now
+  // trusts local claims, so a session revoked within the JWT window would still
+  // clear the layout, and only this getUser check stops it seeing the roster.
   const session = await getPortalUser();
+  if (!session) redirect("/portal/login");
   const viewerId = session && session.status === "active" ? session.id : null;
   // Admins see every city via RLS, so scope the roster to their active city.
   const adminCtx = session && session.status === "active" && session.isAdmin ? await getAdminContext() : null;

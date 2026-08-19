@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Plus } from "lucide-react";
-import { getPortalUser } from "@/lib/portal/session";
+import { getPortalClaims } from "@/lib/portal/session";
 import { withAdminCity } from "@/lib/portal/adminCity";
 import { getOpenTables, getAllTables, getCityName, type LeagueTable } from "@/lib/portal/tables";
 import TablesFilterList from "@/components/portal/TablesFilterList";
@@ -8,7 +8,8 @@ import TablesFilterList from "@/components/portal/TablesFilterList";
 export default async function TablesPage({ searchParams }: { searchParams: Promise<{ view?: string }> }) {
   const { view } = await searchParams;
   const showAll = view === "all";
-  const session = await getPortalUser();
+  // Read-only table list: locally-verified claims are enough (no getUser round-trip).
+  const session = await getPortalClaims();
   // Admins have no home city; the table reads reflect their active-city selection.
   const member = session && session.status === "active" ? await withAdminCity(session) : null;
   const [tables, cityName] = member

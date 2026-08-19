@@ -1,4 +1,4 @@
-import { getPortalUser } from "@/lib/portal/session";
+import { getPortalClaims } from "@/lib/portal/session";
 import { withAdminCity } from "@/lib/portal/adminCity";
 import { getStandings, getCityStandings, byAceAward, byChampionAward, byFlightWinner, type StandingRow } from "@/lib/portal/standings";
 import Avatar from "@/components/portal/Avatar";
@@ -108,7 +108,8 @@ function Table({
 }
 
 export default async function StandingsPage() {
-  const session = await getPortalUser();
+  // Read-only leaderboards: locally-verified claims are enough (no getUser round-trip).
+  const session = await getPortalClaims();
   // Admins have no home city; getStandings reads their active-city selection.
   const member = session && session.status === "active" ? await withAdminCity(session) : null;
   const { cityName, rows } = member ? await getStandings(member) : { cityName: null, rows: [] };

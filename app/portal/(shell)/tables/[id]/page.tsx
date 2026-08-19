@@ -1,13 +1,16 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { getPortalUser } from "@/lib/portal/session";
+import { getPortalClaims } from "@/lib/portal/session";
 import { getTableDetail } from "@/lib/portal/tables";
 import { getSubmissionForTable } from "@/lib/portal/scores";
 import TableDetailClient from "./TableDetailClient";
 
 export default async function TableDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const session = await getPortalUser();
+  // Read-only table detail: locally-verified claims are enough. The seat-join /
+  // leave / score actions inside TableDetailClient POST to API routes that
+  // re-check with the strong getPortalUser, so no mutation trusts these claims.
+  const session = await getPortalClaims();
   const member = session && session.status === "active" ? session : null;
   const table = member ? await getTableDetail(id, member) : null;
   if (!member || !table) notFound();

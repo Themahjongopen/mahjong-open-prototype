@@ -35,6 +35,12 @@ export type PortalSession = PortalMember | PortalPending | null;
 // Resolves the current portal user from the Supabase session, then loads their
 // profile + paid membership via the service-role client (profiles/registrations
 // are RLS-locked to service-role). Memoized per render pass.
+//
+// This is the STRONG check: getUser() makes a network round-trip to Supabase
+// Auth that re-validates the session against the server, so a revoked/signed-out
+// session is caught immediately. Use it on the layout gate for PII pages
+// (directory/profile) and on EVERY mutation. See getPortalClaims below for the
+// cheaper read-only variant.
 export const getPortalUser = cache(async (): Promise<PortalSession> => {
   const supabase = await createClient();
   const {
@@ -43,6 +49,43 @@ export const getPortalUser = cache(async (): Promise<PortalSession> => {
 
   if (!user) return null;
 
+  return resolvePortalSession(user.id, user.email ?? "");
+});
+
+// Cheaper auth for read-only routes: getClaims() verifies the access-token JWT
+// LOCALLY (JWKS public key + WebCrypto) rather than calling Supabase Auth, so it
+// costs no network round-trip per page view — the change that cut the per-request
+// invocation cost on the busy read pages.
+//
+// DEPENDS ON ASYMMETRIC JWTS: this project signs access tokens with ES256 (the
+// project's JWT signing key is an EC key; verified via the JWKS endpoint). On an
+// ES256 token getClaims() verifies signature + expiry offline. If the signing
+// key were ever switched back to the legacy shared secret (HS256), getClaims()
+// CANNOT verify it locally and silently falls back to a getUser() network call —
+// correct, just no longer cheaper. So this stays a performance optimization that
+// degrades safely, never a correctness risk.
+//
+// TRADEOFF vs getPortalUser: a locally-verified JWT is trusted until it expires
+// (≤60 min here — see the access-token expiry in Supabase Auth settings), so a
+// session revoked mid-token still reads for up to that window. Acceptable for the
+// read routes (they only expose the viewer's own standings/tables); NOT for the
+// PII pages or any mutation, which keep getPortalUser.
+export const getPortalClaims = cache(async (): Promise<PortalSession> => {
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.getClaims();
+  const claims = data?.claims;
+  // sub = the auth user id; email is a standard claim on the Supabase access token.
+  if (error || !claims?.sub) return null;
+
+  return resolvePortalSession(claims.sub, typeof claims.email === "string" ? claims.email : "");
+});
+
+// Shared DB derivation: given an authenticated user's id + email, load their
+// profile, led-cities, and paid memberships and resolve the active city/series.
+// Identical result whichever auth path (getUser / getClaims) produced the id —
+// the only fields either path contributes are the user id and email.
+async function resolvePortalSession(userId: string, userEmail: string): Promise<PortalSession> {
+  const user = { id: userId, email: userEmail };
   const admin: any = createAdminClient();
   if (!admin) {
     // Supabase unconfigured (local preview): treat the session as pending.
@@ -117,4 +160,4 @@ export const getPortalUser = cache(async (): Promise<PortalSession> => {
     series_id: active.series_id,
     memberships,
   };
-});
+}
