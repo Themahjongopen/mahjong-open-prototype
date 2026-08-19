@@ -91,7 +91,7 @@ export default async function DirectoryPage() {
                 <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
                   <Avatar src={member.avatar_url} size={44} alt={member.full_name ?? "Member"} />
                   <div style={{ minWidth: 0 }}>
-                    <Link href={`/portal/profile/${member.profile_id}`} style={{ textDecoration: "none", color: "inherit" }}>
+                    <Link href={`/portal/profile/${member.profile_id}`} prefetch={false} style={{ textDecoration: "none", color: "inherit" }}>
                       <p style={{ fontSize: 15, fontWeight: 600, color: "var(--ink-900)", marginBottom: 6 }}>
                         {member.full_name ?? "Member"}
                         {isYou ? <span style={{ fontSize: 12, fontWeight: 500, color: "var(--ink-400)", marginLeft: 8 }}>You</span> : null}

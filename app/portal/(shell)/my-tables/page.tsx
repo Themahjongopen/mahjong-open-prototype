@@ -30,7 +30,7 @@ export default async function MyTablesPage() {
   function TableRow({ seat }: { seat: MyTableSeat }) {
     const table = seat.table;
     return (
-      <Link href={`/portal/tables/${table.id}`} style={{ textDecoration: "none" }}>
+      <Link href={`/portal/tables/${table.id}`} prefetch={false} style={{ textDecoration: "none" }}>
         <div style={{
           background: "#fff", border: "1px solid var(--hair-200)", borderRadius: "var(--radius-lg)",
           padding: "14px 16px", boxShadow: "var(--shadow-xs)",
