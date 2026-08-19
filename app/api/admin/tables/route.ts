@@ -29,7 +29,7 @@ export async function GET() {
   const rows = await fetchAllRows((from: number, to: number) =>
     admin
       .from("league_tables")
-      .select("id, week_number, table_date, table_time, location_name, status, creator_id, cities(id, name), series(id, name), profiles(full_name), table_seats(id, seat_number, user_id, canceled_at, profiles(full_name))")
+      .select("id, week_number, table_date, table_time, location_name, status, creator_id, cities(id, name), series(id, name), profiles(full_name), table_seats(id, seat_number, user_id, canceled_at, profiles(full_name)), score_submissions(id, score_submission_players(id))")
       .order("table_date", { ascending: false })
       .order("id", { ascending: true })
       .range(from, to)
@@ -51,6 +51,10 @@ export async function GET() {
       series_name: series?.name ?? null,
       creator_name: one<any>(t.profiles)?.full_name ?? null,
       active_seats: ((t.table_seats ?? []) as any[]).filter((s) => !s.canceled_at).length,
+      // Submitted-score count (0 or 4), so the revert confirmation can distinguish
+      // discarding a real scored round from reverting an empty mark-as-played.
+      // score_submissions is to-one (UNIQUE table_id); its players are the rows.
+      score_count: ((one<any>(t.score_submissions)?.score_submission_players ?? []) as any[]).length,
       // Active (non-canceled) seat holders, host-first by seat_number, each flagged
       // if they're the table's creator — feeds the row's seated-player sub-list,
       // the player-name search, and the per-player Remove action.

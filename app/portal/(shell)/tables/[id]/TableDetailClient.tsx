@@ -55,6 +55,7 @@ export default function TableDetailClient({
   const router = useRouter();
   const [loading, setLoading] = useState<Action>(null);
   const joinInFlight = useRef(false);
+  const markPlayedInFlight = useRef(false);
   const [editing, setEditing] = useState(false);
   const [inviting, setInviting] = useState(false);
   const [pickingHost, setPickingHost] = useState(false);
@@ -245,19 +246,31 @@ export default function TableDetailClient({
     }
   }
 
+  // Confirm names the specific table (a wrong-row tap on a busy My Tables list is
+  // exactly how the Dorian incident happened) and warns that it isn't easily
+  // undone. Same synchronous reentrancy guard as handleJoin: the ref flips before
+  // the confirm await, so a tap replayed while the modal is open — the Kate
+  // failure mode — is dropped rather than queuing a second "complete" call.
   async function handleMarkPlayed() {
-    const ok = await confirm({
-      title: "Mark as played?",
-      message: "You'll then enter the round's scores for each player.",
-      confirmLabel: "Mark as played",
-    });
-    if (!ok) return;
-    run(
-      "complete",
-      `/api/tables/${table.id}`,
-      { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "complete" }) },
-      "Table marked as played."
-    );
+    if (markPlayedInFlight.current) return;
+    markPlayedInFlight.current = true;
+    try {
+      const dateLabel = new Date(`${table.table_date}T12:00:00`).toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
+      const ok = await confirm({
+        title: "Mark as played?",
+        message: `${dateLabel} at ${formatTableTime(table.table_time)}\n${table.location_name}\n\nThis marks the round played so you can enter scores. It isn't easily undone — a commissioner has to revert it.`,
+        confirmLabel: "Mark as played",
+      });
+      if (!ok) return;
+      await run(
+        "complete",
+        `/api/tables/${table.id}`,
+        { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "complete" }) },
+        "Table marked as played."
+      );
+    } finally {
+      markPlayedInFlight.current = false;
+    }
   }
 
   // Surface partial invite results honestly — "Invited 2 players. 1 was already

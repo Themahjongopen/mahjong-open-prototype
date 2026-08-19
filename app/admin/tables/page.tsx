@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { formatTableTime } from "@/lib/format/time";
 import AdminCancelTableButton from "@/components/admin/AdminCancelTableButton";
 import AdminRemovePlayerButton from "@/components/admin/AdminRemovePlayerButton";
+import AdminRevertTableButton from "@/components/admin/AdminRevertTableButton";
 
 const STATUS_BADGE: Record<string, string> = { open: "badge-lime", full: "badge-peri", completed: "badge-mute", canceled: "badge-mute" };
 
@@ -29,6 +30,7 @@ type TableRow = {
   series_name: string | null;
   creator_name: string | null;
   active_seats: number;
+  score_count: number;
   players: { seat_id: string; user_id: string; full_name: string | null; is_host: boolean }[];
 };
 
@@ -203,13 +205,27 @@ export default function AdminTablesPage() {
                 </div>
                 <div>
                   <span className="admin-mobile-label">Actions</span>
-                  <AdminCancelTableButton
-                    tableId={t.id}
-                    status={t.status}
-                    locationName={t.location_name}
-                    dateLabel={new Date(`${t.table_date}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                    onCanceled={() => void load()}
-                  />
+                  {/* Revert and Cancel are mutually exclusive by status: a completed
+                      table can only be reverted (to unlock cancel), everything else
+                      offers Cancel (which itself shows "—" on non-cancellable rows). */}
+                  {t.status === "completed" ? (
+                    <AdminRevertTableButton
+                      tableId={t.id}
+                      status={t.status}
+                      locationName={t.location_name}
+                      dateLabel={new Date(`${t.table_date}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                      scoreCount={t.score_count}
+                      onReverted={() => void load()}
+                    />
+                  ) : (
+                    <AdminCancelTableButton
+                      tableId={t.id}
+                      status={t.status}
+                      locationName={t.location_name}
+                      dateLabel={new Date(`${t.table_date}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                      onCanceled={() => void load()}
+                    />
+                  )}
                 </div>
               </div>
             ))
