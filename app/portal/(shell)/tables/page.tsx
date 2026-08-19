@@ -4,6 +4,7 @@ import { getPortalClaims } from "@/lib/portal/session";
 import { withAdminCity } from "@/lib/portal/adminCity";
 import { getOpenTables, getAllTables, getCityName, type LeagueTable } from "@/lib/portal/tables";
 import TablesFilterList from "@/components/portal/TablesFilterList";
+import TablesRefreshBar from "@/components/portal/TablesRefreshBar";
 
 export default async function TablesPage({ searchParams }: { searchParams: Promise<{ view?: string }> }) {
   const { view } = await searchParams;
@@ -15,6 +16,13 @@ export default async function TablesPage({ searchParams }: { searchParams: Promi
   const [tables, cityName] = member
     ? await Promise.all([showAll ? getAllTables(member) : getOpenTables(member), getCityName(member.city_id)])
     : [[] as LeagueTable[], null];
+
+  // Timestamp of this server render, handed to the client refresh bar for its
+  // "Updated X ago" label. The page is dynamic (reads cookies), so it re-renders
+  // per request — including on router.refresh() — giving a fresh value each time.
+  // Epoch ms is timezone-independent, so the client's delta is correct regardless
+  // of the server/viewer clock offset.
+  const loadedAt = Date.now();
 
   // Open/All view toggle. Server-side URL param (no client state) so the page
   // stays a server component. Default (no param) is "Open" — byte-identical to
@@ -38,10 +46,15 @@ export default async function TablesPage({ searchParams }: { searchParams: Promi
         </Link>
       </div>
 
-      <div style={{ display: "flex", gap: 4, padding: 4, background: "var(--hair-200)", borderRadius: "999px", marginBottom: 24 }}>
+      <div style={{ display: "flex", gap: 4, padding: 4, background: "var(--hair-200)", borderRadius: "999px", marginBottom: 16 }}>
         <Link href="/portal/tables" style={showAll ? inactiveStyle : activeStyle}>Open</Link>
         <Link href="/portal/tables?view=all" style={showAll ? activeStyle : inactiveStyle}>All</Link>
       </div>
+
+      {/* Manual refresh + "Updated X ago". Renders in both the list and the
+          empty-state cases (a player waiting for the first table of the night is
+          exactly who needs it), so it sits above the zero-tables branch. */}
+      <TablesRefreshBar loadedAt={loadedAt} />
 
       {tables.length === 0 && (
         <div style={{ textAlign: "center", padding: "48px 24px", color: "var(--ink-500)" }}>
