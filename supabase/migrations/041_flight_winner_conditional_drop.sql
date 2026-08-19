@@ -148,6 +148,6 @@ FROM agg;
 REVOKE ALL ON public.member_series_standings FROM anon, authenticated;
 
 COMMENT ON VIEW public.member_series_standings IS
-  'Per series+city standings, v3 (migration 030) + skill_level (032) + Flight Winner conditional drop (034): Ace Award (highest single round_score, no minimum, no tiebreaker), Champion Award (sum of ALL 8 weekly-highest-round values minus no-show penalties, tiebreak = total_score), and Flight Winner (combined points/rounds ratio; the single worst week is dropped ONLY once a player has all 8 weeks — at 7 or fewer weeks every week counts; 5-round series-wide minimum, tiebreak = rounds_played then total_score) — all scoped per city. Carries full_name, skill_level, avatar_url for display. Computed on read; service-role only.';
+  'Per series+city standings, v3 (migration 030) + skill_level (032) + Flight Winner conditional drop (041): Ace Award (highest single round_score, no minimum, no tiebreaker), Champion Award (sum of ALL 8 weekly-highest-round values minus no-show penalties, tiebreak = total_score), and Flight Winner (combined points/rounds ratio; the single worst week is dropped ONLY once a player has all 8 weeks — at 7 or fewer weeks every week counts; 5-round series-wide minimum, tiebreak = rounds_played then total_score) — all scoped per city. Carries full_name, skill_level, avatar_url for display. Computed on read; service-role only.';
 
 COMMIT;
