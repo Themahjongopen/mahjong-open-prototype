@@ -5,6 +5,7 @@
 // everything here so existing "@/lib/portal/tables" imports keep working.
 
 import { zonedTimeToUtc } from "@/lib/format/zonedTime";
+import { isHoldActive, type HoldInvite, type HoldTableStart } from "@/lib/portal/holdExpiry";
 
 // Fallback venue timezone (majority zone) when a city has no timezone set —
 // e.g. an old/demo row not yet backfilled by migration 024.
@@ -63,4 +64,36 @@ export function scoringSeats(table: Pick<LeagueTable, "table_date" | "table_time
     if (new Date(seat.canceled_at!).getTime() >= cutoff) lateCancellations.push(seat);
   }
   return { active, lateCancellations };
+}
+
+// ---- Held-seat capacity (migration 044) ------------------------------------
+// A held seat is a 'pending' table_invites row, NOT a table_seats row — so it
+// never reaches activeSeats/scoringSeats above and can never be counted as a
+// player in no-show or score entry. These helpers derive capacity as
+// "active seats + unexpired holds" for the join gate, the open-seat count, and
+// the "N seated · M held" display. Pure (no server imports) so client components
+// and API routes share one definition.
+
+// The subset of a table_invites row capacity math reads.
+export type HoldRow = HoldInvite & { invited_profile_id: string };
+
+// Holds that currently count toward capacity: still pending and not past the TTL.
+export function activeHolds(holds: HoldRow[], now: number = Date.now(), table?: HoldTableStart): HoldRow[] {
+  return holds.filter((h) => isHoldActive(h, now, table));
+}
+
+// Seats filled for capacity purposes: real active seats PLUS unexpired holds,
+// with a hold for someone already seated dropped so accepting an invite (which
+// creates a real seat while their own hold may briefly linger) never
+// double-counts one person.
+export function capacityFilled(
+  seats: SeatRow[],
+  holds: HoldRow[],
+  now: number = Date.now(),
+  table?: HoldTableStart
+): number {
+  const seated = activeSeats(seats);
+  const seatedIds = new Set(seated.map((s) => s.user_id));
+  const heldCounted = activeHolds(holds, now, table).filter((h) => !seatedIds.has(h.invited_profile_id));
+  return seated.length + heldCounted.length;
 }
