@@ -1,7 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/server";
 import type { Membership } from "@/lib/portal/playerCity";
 
-export type EligibleCity = { id: string; name: string; state: string | null };
+export type EligibleCity = { id: string; name: string; state: string | null; split_commission: boolean };
 export type ActiveSeries = { id: string; name: string; registration_closes_at: string | null };
 
 export type RegisterCityOptions = {
@@ -21,7 +21,7 @@ export async function getRegisterCityOptions(memberships: Membership[]): Promise
 
   const [{ data: seriesRows }, { data: cityRows }] = await Promise.all([
     admin.from("series").select("id, name, registration_closes_at").eq("is_active", true).order("starts_at", { ascending: true }).limit(1),
-    admin.from("cities").select("id, name, state").eq("is_active", true).order("name", { ascending: true }),
+    admin.from("cities").select("id, name, state, split_commission").eq("is_active", true).order("name", { ascending: true }),
   ]);
 
   const series = (seriesRows?.[0] ?? null) as ActiveSeries | null;

@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { groupCitiesByState } from "@/lib/cities/groupByState";
 
-type EligibleCity = { id: string; name: string; state: string | null };
+type EligibleCity = { id: string; name: string; state: string | null; split_commission: boolean };
+type Commissioner = { profile_id: string; full_name: string };
 type ProfileFields = {
   full_name: string;
   email: string;
@@ -28,8 +29,38 @@ export default function RegisterCityForm({
 }) {
   const [cityId, setCityId] = useState("");
   const [skill, setSkill] = useState<ProfileFields["skill_level"]>(profile.skill_level || "");
+  const [heardAbout, setHeardAbout] = useState("");
+  const [commissioners, setCommissioners] = useState<Commissioner[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  // A split-commission city needs the same "How did you hear about us?" credit
+  // choice the marketing RegisterModal collects — there's no referral link in the
+  // portal second-city flow, so the dropdown always applies for a split city.
+  const selectedCity = eligibleCities.find((c) => c.id === cityId) ?? null;
+  const showDropdown = selectedCity?.split_commission === true;
+
+  // Load the split city's active commissioners for the dropdown. Non-split cities
+  // (the common case) clear the list and make no request.
+  useEffect(() => {
+    if (!showDropdown) {
+      setCommissioners([]);
+      return;
+    }
+    let active = true;
+    (async () => {
+      try {
+        const res = await fetch(`/api/commissioners?city_id=${encodeURIComponent(cityId)}`);
+        const payload = await res.json().catch(() => ({}));
+        if (active) setCommissioners((payload.commissioners ?? []) as Commissioner[]);
+      } catch {
+        if (active) setCommissioners([]);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [showDropdown, cityId]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -40,6 +71,12 @@ export default function RegisterCityForm({
     }
     if (!skill) {
       setError("Please choose a skill level.");
+      return;
+    }
+    // Split-city credit selection is required (mirrors RegisterModal). Recomputed
+    // from cityId here; never trusted from render state alone.
+    if (showDropdown && !heardAbout) {
+      setError("Please let us know how you heard about us.");
       return;
     }
 
@@ -56,6 +93,9 @@ export default function RegisterCityForm({
           series_id: seriesId,
           skill_level: skill,
           avatar_url: profile.avatar_url,
+          // Only sent for a split city; omitted otherwise, so a normal second-city
+          // payload is unchanged.
+          heard_about: showDropdown ? heardAbout : undefined,
         }),
       });
       if (!res.ok) {
@@ -79,7 +119,7 @@ export default function RegisterCityForm({
     <form onSubmit={handleSubmit} noValidate style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         <label style={{ fontSize: 13, fontWeight: 600, color: "var(--ink-800)" }}>City</label>
-        <select className="input-mo" value={cityId} onChange={(e) => setCityId(e.target.value)}>
+        <select className="input-mo" value={cityId} onChange={(e) => { setCityId(e.target.value); setHeardAbout(""); }}>
           <option value="">Select a city</option>
           {groupCitiesByState(eligibleCities).map((group) => (
             <optgroup key={group.stateLabel} label={group.stateLabel}>
@@ -92,6 +132,21 @@ export default function RegisterCityForm({
           ))}
         </select>
       </div>
+
+      {/* Split-commission city only: which commissioner to credit (or "on my own").
+          Nothing renders for the common non-split city. */}
+      {showDropdown ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          <label style={{ fontSize: 13, fontWeight: 600, color: "var(--ink-800)" }}>How did you hear about us?</label>
+          <select className="input-mo" value={heardAbout} onChange={(e) => setHeardAbout(e.target.value)}>
+            <option value="">Select an option</option>
+            {commissioners.map((c) => (
+              <option key={c.profile_id} value={c.profile_id}>{c.full_name}</option>
+            ))}
+            <option value="organic">I found it on my own</option>
+          </select>
+        </div>
+      ) : null}
 
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         <label style={{ fontSize: 13, fontWeight: 600, color: "var(--ink-800)" }}>Skill level</label>

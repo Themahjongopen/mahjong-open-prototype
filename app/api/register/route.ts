@@ -49,6 +49,22 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Registration for this league has closed." }, { status: 400 });
     }
 
+    // Attribution guard for split-commission cities. Both registration forms
+    // require a credit choice client-side (RegisterModal + RegisterCityForm), but
+    // that's bypassable by posting here directly — enforce it server-side so the
+    // even-split fallback in computeAttributionRows is never reached silently. A
+    // referral link already fixes attribution, so it lifts the requirement (a
+    // referral registration never sends heard_about). Rejected before any row or
+    // Stripe session is created, so no orphaned pending registration is left.
+    const { data: cityRow } = await supabase
+      .from("cities")
+      .select("split_commission")
+      .eq("id", city_id)
+      .maybeSingle();
+    if (cityRow?.split_commission === true && !referral_code && !heard_about) {
+      return NextResponse.json({ error: "Please let us know how you heard about us." }, { status: 400 });
+    }
+
     // If this email already has a portal account (a profile row), attach it to
     // this registration immediately. Without this, profile_id is only ever set
     // by handle_new_user() — a trigger that fires ONCE, at first Auth-account
