@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { getPortalUser } from "@/lib/portal/session";
 import { createAdminClient } from "@/lib/supabase/server";
-import { activeSeats } from "@/lib/portal/seats";
+import { activeSeats, activeHolds, capacityFilled, type HoldRow } from "@/lib/portal/seats";
+import { holdCutoffIso } from "@/lib/portal/holdExpiry";
 import { sendTableInviteEmail } from "@/lib/email/tableInviteEmail";
 
 export const runtime = "nodejs";
@@ -77,6 +78,18 @@ async function loadTable(admin: any, id: string) {
   return data;
 }
 
+// Live holds on a table: the 'pending' table_invites rows. Capacity readers narrow
+// these to the still-unexpired ones (activeHolds); a declined/expired/lapsed row is
+// not returned as a hold, freeing the seat and letting that person be re-invited.
+async function loadHolds(admin: any, tableId: string): Promise<HoldRow[]> {
+  const { data } = await admin
+    .from("table_invites")
+    .select("invited_profile_id, status, created_at")
+    .eq("table_id", tableId)
+    .eq("status", "pending");
+  return (data ?? []) as HoldRow[];
+}
+
 function callerIsSeated(table: any, userId: string): boolean {
   return activeSeats(table.table_seats ?? []).some((s: any) => s.user_id === userId);
 }
@@ -104,16 +117,17 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
     return NextResponse.json({ error: "Only a seated player can invite others to this table." }, { status: 403 });
   }
 
-  const openSeats = Math.max(0, TABLE_SEATS - activeSeats(table.table_seats ?? []).length);
+  // Open seats now nets out unexpired holds too, so a held seat is not offered as
+  // available. capacityFilled = active seats + live holds (a hold for someone
+  // already seated is not double-counted).
+  const holds = await loadHolds(admin, id);
+  const openSeats = Math.max(0, TABLE_SEATS - capacityFilled(table.table_seats ?? [], holds));
 
   const eligible = await loadEligible(admin, table);
 
-  // Which of the eligible are already invited to this table.
-  const { data: invites } = await admin
-    .from("table_invites")
-    .select("invited_profile_id")
-    .eq("table_id", id);
-  const invitedIds = new Set((invites ?? []).map((r: any) => r.invited_profile_id));
+  // Already-invited = holds a LIVE seat here (pending + unexpired). Flagged (not
+  // hidden) so the modal disables them; a lapsed/declined invite is re-invitable.
+  const invitedIds = new Set(activeHolds(holds).map((h) => h.invited_profile_id));
 
   const candidates: Candidate[] = [...eligible.values()]
     .map((c) => ({ ...c, already_invited: invitedIds.has(c.profile_id) }))
@@ -163,8 +177,11 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   }
 
   // Recompute open seats INSIDE the handler — never trust the count the client
-  // got from GET; seats can fill between opening the modal and hitting send.
-  const openSeats = Math.max(0, TABLE_SEATS - activeSeats(table.table_seats ?? []).length);
+  // got from GET; seats can fill (or be held) between opening the modal and
+  // hitting send. Nets out live holds too, so the cap is now cumulative: you can't
+  // reserve more seats than the table has left once holds are outstanding.
+  const holds = await loadHolds(admin, id);
+  const openSeats = Math.max(0, TABLE_SEATS - capacityFilled(table.table_seats ?? [], holds));
   if (openSeats === 0) {
     return NextResponse.json({ error: "This table is full." }, { status: 409 });
   }
@@ -192,20 +209,28 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   let failed = 0;
   const failedNames: string[] = []; // names of players whose email couldn't be sent
 
+  // Server clock, computed here — NEVER from the request body — so a client can't
+  // shift the hold window (single source of the TTL is lib/portal/holdExpiry.ts).
+  const cutoff = holdCutoffIso();
+
   // Sequential (not Promise.all) to avoid bursting Resend's rate limit, matching
   // /api/admin/registrations/resend-bulk.
   for (const pid of profileIds) {
     const cand = eligible.get(pid)!;
-    // Insert the invite row. A unique-violation (23505) means someone else
-    // invited this player a moment earlier — count as skipped, not failed, and
-    // send no email (the first inviter's email already went out).
-    const { data: inserted, error: insErr } = await admin
-      .from("table_invites")
-      .insert({ table_id: id, invited_profile_id: pid, invited_by_profile_id: session.id })
-      .select("id")
-      .single();
-    if (insErr) {
-      if (insErr.code === "23505") {
+    // Place the hold atomically: create_hold takes the table's advisory lock and
+    // re-checks active seats + live holds <= 4 before inserting the pending row.
+    //   skipped=true  → a live hold already exists for this person (was invited a
+    //                   moment earlier, or already holds a live seat) — no email.
+    //   error='full'  → capacity filled between the cap check and here (a
+    //                   concurrent join): this player wasn't held; report it.
+    const { data: hold, error: rpcErr } = await admin.rpc("create_hold", {
+      p_table_id: id,
+      p_invited_profile_id: pid,
+      p_invited_by: session.id,
+      p_hold_cutoff: cutoff,
+    });
+    if (rpcErr || !hold?.ok) {
+      if (hold?.skipped) {
         skipped += 1;
       } else {
         failed += 1;
@@ -214,13 +239,11 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       continue;
     }
 
-    // The email IS the invite — a row with no delivered notice invites no one. So
-    // if the send fails (bounce, transient Resend outage, missing address), DELETE
-    // the row we just wrote so "email failed" means "not invited" and a retry
-    // works. Otherwise the once-per-table unique constraint would silently and
-    // permanently lock this player out of ever being invited to this table. A
-    // failure is surfaced (failedNames) so the host can reach them another way.
-    const undo = () => admin.from("table_invites").delete().eq("id", inserted.id);
+    // The email IS the invite — a hold with no delivered notice invites no one. So
+    // if the send fails (bounce, transient Resend outage, missing address), RELEASE
+    // the hold we just placed so "email failed" means "seat genuinely open" and a
+    // retry works, and nudge the league_tables subscription that the seat reopened.
+    // A failure is surfaced (failedNames) so the host can reach them another way.
     let ok = false;
     if (cand.email) {
       try {
@@ -248,7 +271,8 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     if (ok) {
       sent += 1;
     } else {
-      await undo(); // roll the invite back so the player isn't permanently locked out
+      await admin.from("table_invites").delete().eq("id", hold.invite_id);
+      await admin.from("league_tables").update({ updated_at: new Date().toISOString() }).eq("id", id);
       failed += 1;
       failedNames.push(cand.full_name ?? "a player");
     }
