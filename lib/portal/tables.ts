@@ -1,6 +1,33 @@
 import { createAdminClient } from "@/lib/supabase/server";
 import type { PortalMember } from "@/lib/portal/session";
-import { activeSeats, scoringSeats, type SeatRow, type LeagueTable } from "./seats";
+import { activeSeats, scoringSeats, type SeatRow, type LeagueTable, type HoldDisplayRow } from "./seats";
+
+// Attach live invitation holds (pending table_invites rows) to a set of tables in
+// ONE batched query keyed on their ids — never a per-table lookup, so the list
+// stays flat as cities grow. table_invites is server-only (RLS, no policies), so
+// this read goes through the service-role client like every other table read.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function attachHolds(admin: any, tables: LeagueTable[]): Promise<LeagueTable[]> {
+  if (tables.length === 0) return tables;
+  const ids = tables.map((t) => t.id);
+  const { data } = await admin
+    .from("table_invites")
+    // table_invites has TWO FKs to profiles (invited_profile_id + invited_by_
+    // profile_id), so the embed MUST name the column or PostgREST 300s on ambiguity.
+    .select("table_id, invited_profile_id, status, created_at, profiles!invited_profile_id(full_name)")
+    .in("table_id", ids)
+    .eq("status", "pending");
+  const byTable = new Map<string, HoldDisplayRow[]>();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  for (const r of (data ?? []) as any[]) {
+    const prof = Array.isArray(r.profiles) ? r.profiles[0] : r.profiles;
+    const list = byTable.get(r.table_id) ?? [];
+    list.push({ invited_profile_id: r.invited_profile_id, status: r.status, created_at: r.created_at, full_name: prof?.full_name ?? null });
+    byTable.set(r.table_id, list);
+  }
+  for (const t of tables) t.holds = byTable.get(t.id) ?? [];
+  return tables;
+}
 
 // Server-only read helpers for the portal tables/seats feature. Reads go through
 // the service-role client so seat rows can embed profile names (profiles is
@@ -84,7 +111,7 @@ export async function getOpenTables(member: PortalMember): Promise<LeagueTable[]
   if (!admin || !member.series_id || !member.city_id) return [];
 
   const { data } = await tablesInCohortQuery(admin, member, true);
-  return (data ?? []) as LeagueTable[];
+  return attachHolds(admin, (data ?? []) as LeagueTable[]);
 }
 
 // Every table in the member's city+series from today forward, regardless of
@@ -96,7 +123,7 @@ export async function getAllTables(member: PortalMember): Promise<LeagueTable[]>
   if (!admin || !member.series_id || !member.city_id) return [];
 
   const { data } = await tablesInCohortQuery(admin, member, false);
-  return (data ?? []) as LeagueTable[];
+  return attachHolds(admin, (data ?? []) as LeagueTable[]);
 }
 
 // One table with seat occupants' names. Returns null if not found or the caller
@@ -116,7 +143,9 @@ export async function getTableDetail(id: string, member: PortalMember): Promise<
   // Flatten the joined city timezone onto the table (venue-local time for the
   // calendar exports + the 24h no-show cutoff).
   const city = Array.isArray(data.cities) ? data.cities[0] : data.cities;
-  return { ...data, timezone: city?.timezone ?? null } as LeagueTable;
+  const table = { ...data, timezone: city?.timezone ?? null } as LeagueTable;
+  const [withHolds] = await attachHolds(admin, [table]);
+  return withHolds;
 }
 
 // Tables the member is actively seated in (creators keep seat 1). Returned

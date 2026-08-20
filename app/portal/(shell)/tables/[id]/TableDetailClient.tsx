@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CalendarDays, MapPin, Clock } from "lucide-react";
 import { useToast } from "@/components/portal/PortalShellClient";
@@ -8,7 +8,8 @@ import { useConfirm } from "@/components/ConfirmProvider";
 import Avatar from "@/components/portal/Avatar";
 import InvitePlayersModal from "@/components/portal/InvitePlayersModal";
 import AreaCombobox from "@/components/portal/AreaCombobox";
-import { scoringSeats, type LeagueTable, type SeatRow } from "@/lib/portal/seats";
+import { scoringSeats, activeHolds, type LeagueTable, type SeatRow, type HoldDisplayRow } from "@/lib/portal/seats";
+import { holdExpiresAt } from "@/lib/portal/holdExpiry";
 import type { TableSubmission } from "@/lib/portal/scores";
 import { formatTableTime } from "@/lib/format/time";
 import { zonedTimeToUtc } from "@/lib/format/zonedTime";
@@ -105,18 +106,34 @@ export default function TableDetailClient({
   const lateCancelSeatNumbers = new Set(lateCancellations.map((s) => s.seat_number));
   const myActiveSeat = active.find((s) => s.user_id === currentUserId);
   const isCreator = table.creator_id === currentUserId;
+  // Live invitation holds (migration 044). A hold for someone already seated is
+  // dropped so it never double-counts. Each empty, non-late-cancel seat row shows
+  // the next hold in order as "Held for {name} · until {time}".
+  const seatedIds = new Set(active.map((s) => s.user_id));
+  const liveHolds = activeHolds(table.holds ?? []).filter((h) => !seatedIds.has(h.invited_profile_id)) as HoldDisplayRow[];
+  const heldCount = liveHolds.length;
+  const viewerHasHold = liveHolds.some((h) => h.invited_profile_id === currentUserId);
+  const emptySeatNums = [1, 2, 3, 4].filter((n) => !active.some((s) => s.seat_number === n) && !lateCancelSeatNumbers.has(n));
+  const holdBySeatNum = new Map<number, HoldDisplayRow>();
+  liveHolds.forEach((h, i) => {
+    const n = emptySeatNums[i];
+    if (n !== undefined) holdBySeatNum.set(n, h);
+  });
   // Host may self-correct scores only within 24h of submitting, and never on a
   // voided submission. Past the window the card just stays read-only (no error).
   const canEditScores =
     isCreator && !!submission && submission.status !== "voided" &&
     Date.now() - new Date(submission.created_at).getTime() <= 24 * 60 * 60 * 1000;
   const seatsFilled = active.length;
+  // Capacity a would-be joiner faces = seated + live holds, but the viewer's OWN
+  // hold doesn't block them (they'd be accepting it) — mirrors claim_seat.
+  const openForViewer = 4 - seatsFilled - heldCount + (viewerHasHold ? 1 : 0);
   // Seats that count toward the 4 needed to play: real people seated + any seat
   // whose most recent occupant cancelled within 24h and was never re-claimed
   // (forced no-show at score time). Join eligibility and the Players header keep
   // using the real active count so an open seat can still be backfilled.
   const scoringFilled = active.length + lateCancellations.length;
-  const canJoin = !myActiveSeat && seatsFilled < 4 && table.status === "open" && !isCreator;
+  const canJoin = !myActiveSeat && openForViewer > 0 && table.status === "open" && !isCreator;
   const canLeave = !!myActiveSeat && !isCreator && (table.status === "open" || table.status === "full");
   const canCancelTable = isCreator && (table.status === "open" || table.status === "full");
   // Admin is an alternate to the host for mark-played and score entry — the API
@@ -133,7 +150,9 @@ export default function TableDetailClient({
   // while the table is open with a real open seat. Deliberately NOT gated on the
   // 24h cutoff (unlike edit) — needing a fourth the night before is exactly when
   // a host reaches for it. Non-seated admins don't see it (myActiveSeat is null).
-  const openSeats = 4 - seatsFilled;
+  // Truly-open seats (nets out live holds) — the invite modal's cap and the
+  // "can I invite?" gate both use this, so you can't reserve past capacity.
+  const openSeats = Math.max(0, 4 - seatsFilled - heldCount);
   const canInvite = !!myActiveSeat && table.status === "open" && openSeats > 0;
   // Hand off hosting: the creator OR an admin (admin = rescue a silent host) may
   // reassign the host to any OTHER active-seated player, while the table is still
@@ -141,6 +160,50 @@ export default function TableDetailClient({
   // seated player to hand to.
   const handoffCandidates = active.filter((s) => s.user_id !== table.creator_id);
   const canHandoff = (isCreator || isAdmin) && (table.status === "open" || table.status === "full") && handoffCandidates.length > 0;
+
+  // Release a held seat: the invitee declines their own, or the host/inviter/admin
+  // withdraws it. Hits the same endpoint (release_hold) as the commit-3 flow.
+  async function handleRelease(profileId: string, isSelf: boolean) {
+    if (loading) return;
+    const ok = await confirm({
+      title: isSelf ? "Decline this invitation?" : "Release this held seat?",
+      message: isSelf ? "The seat opens up for someone else." : "The seat opens up and the invitation is withdrawn.",
+      confirmLabel: isSelf ? "Decline" : "Release",
+      danger: true,
+    });
+    if (!ok) return;
+    setLoading("leave");
+    try {
+      const res = await fetch(`/api/tables/${table.id}/invites/${profileId}`, { method: "DELETE" });
+      if (!res.ok) {
+        const p = await res.json().catch(() => ({}));
+        showToast(p.error || "Couldn't release the seat.");
+        return;
+      }
+      showToast(isSelf ? "Invitation declined." : "Held seat released.");
+      router.refresh();
+    } finally {
+      setLoading(null);
+    }
+  }
+
+  // Read-derived expiry writes nothing, so no Realtime event fires when a hold
+  // lapses. Schedule a refetch at the soonest hold's expiry so the reopened seat
+  // shows without a manual refresh. Keyed on the holds' timestamps so it reschedules
+  // whenever the hold set changes.
+  const holdSignature = liveHolds.map((h) => h.created_at).join(",");
+  useEffect(() => {
+    if (liveHolds.length === 0) return;
+    const soonest = Math.min(...liveHolds.map((h) => holdExpiresAt(h).getTime()));
+    const delay = soonest - Date.now();
+    if (delay <= 0) {
+      router.refresh();
+      return;
+    }
+    const timer = setTimeout(() => router.refresh(), delay + 500); // small cushion past the boundary
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [holdSignature, router]);
 
   // Resolve the venue-local start time to a real UTC instant so the 24h warning
   // (and the calendar links below) are correct regardless of the viewer's phone
@@ -444,13 +507,18 @@ export default function TableDetailClient({
       {/* Seats */}
       <div style={{ background: "#fff", border: "1px solid var(--hair-200)", borderRadius: "var(--radius-lg)", overflow: "hidden", marginBottom: 20, boxShadow: "var(--shadow-xs)" }}>
         <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--hair-200)" }}>
-          <p style={{ fontSize: 13, fontWeight: 600, color: "var(--ink-800)" }}>Players ({seatsFilled}/4)</p>
+          <p style={{ fontSize: 13, fontWeight: 600, color: "var(--ink-800)" }}>
+            Players ({seatsFilled}/4){heldCount > 0 ? ` · ${heldCount} held` : ""}
+          </p>
         </div>
         {[1, 2, 3, 4].map((seatNum) => {
           const seat = active.find((s) => s.seat_number === seatNum);
           const isLateCancel = !seat && lateCancelSeatNumbers.has(seatNum);
+          const hold = !seat && !isLateCancel ? holdBySeatNum.get(seatNum) : undefined;
           const isMe = seat?.user_id === currentUserId;
           const isTableCreator = seat?.user_id === table.creator_id;
+          const holdIsMine = hold?.invited_profile_id === currentUserId;
+          const canReleaseHold = !!hold && (isCreator || isAdmin || holdIsMine);
           return (
             <div
               key={seatNum}
@@ -466,13 +534,19 @@ export default function TableDetailClient({
               {seat ? (
                 <Avatar src={seat.profiles?.avatar_url} size={32} alt={seat.profiles?.full_name ?? "Player"} />
               ) : (
-                <div style={{ width: 32, height: 32, borderRadius: "50%", background: "var(--hair-200)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, color: "var(--mute-400)", flexShrink: 0 }}>
+                <div style={{ width: 32, height: 32, borderRadius: "50%", background: hold ? "var(--pink-50)" : "var(--hair-200)", border: hold ? "2px solid var(--pink-200)" : "none", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, color: hold ? "var(--pink-400)" : "var(--mute-400)", flexShrink: 0 }}>
                   {seatNum}
                 </div>
               )}
               <div style={{ flex: 1 }}>
-                <p style={{ fontSize: 14, fontWeight: seat ? 500 : 400, color: seat ? "var(--ink-900)" : "var(--ink-500)" }}>
-                  {seat ? (seat.profiles?.full_name ?? "Player") : isLateCancel ? "Seat open — a late cancellation. Join to take it." : "Open spot"}
+                <p style={{ fontSize: 14, fontWeight: seat ? 500 : 400, color: seat ? "var(--ink-900)" : hold ? "var(--ink-700)" : "var(--ink-500)" }}>
+                  {seat
+                    ? (seat.profiles?.full_name ?? "Player")
+                    : hold
+                      ? `Held for ${hold.full_name ?? "a player"}`
+                      : isLateCancel
+                        ? "Seat open — a late cancellation. Join to take it."
+                        : "Open spot"}
                   {seat?.profiles?.skill_level && (
                     <span className={`badge ${SKILL_COLORS[seat.profiles.skill_level] ?? "badge-mute"}`} style={{ fontSize: 10, marginLeft: 6 }}>
                       {seat.profiles.skill_level}
@@ -480,8 +554,23 @@ export default function TableDetailClient({
                   )}
                 </p>
                 {isTableCreator && seat && <p style={{ fontSize: 11, color: "var(--lime-600)", fontWeight: 600 }}>Table creator</p>}
+                {hold && (
+                  <p style={{ fontSize: 11, color: "var(--ink-500)" }}>
+                    Held until {holdExpiresAt(hold).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
+                  </p>
+                )}
               </div>
               {isMe && <span className="badge badge-pink">You</span>}
+              {canReleaseHold && (
+                <button
+                  type="button"
+                  onClick={() => handleRelease(hold!.invited_profile_id, holdIsMine)}
+                  disabled={!!loading}
+                  style={{ fontSize: 12, color: "var(--danger)", background: "none", border: "1px solid rgba(200,16,46,0.3)", borderRadius: 6, padding: "4px 10px", cursor: loading ? "default" : "pointer", flexShrink: 0 }}
+                >
+                  {holdIsMine ? "Decline" : "Release"}
+                </button>
+              )}
             </div>
           );
         })}

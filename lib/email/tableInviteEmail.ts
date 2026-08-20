@@ -27,10 +27,10 @@ function formatDate(value: string): string {
  * transactional, and there's no per-player "table invites" toggle by design.
  * Same posture as the unconditional tableUpdatedEmail. Do not add a prefs gate.
  *
- * HONEST ABOUT THE RACE: because any seated player can invite, more people may be
- * invited than there are open seats. The copy says seats are first come, first
- * served — it never claims a seat is being held. The recipient still taps the
- * real "Join this table" button; this email seats no one.
+ * HELD SEAT (migration 044): sending this invite reserves the recipient's seat for
+ * one hour, so the copy tells them a seat is held and to claim it before it opens
+ * back up. The recipient still taps the real "Join this table" button; this email
+ * seats no one — it converts the hold to a real seat when they join.
  *
  * Time is rendered with formatTableTime() (12-hour AM/PM) — never by slicing the
  * raw Postgres time string. Best-effort: the caller has already written the
@@ -59,13 +59,12 @@ export async function sendTableInviteEmail(
   const dateLabel = formatDate(invite.tableDate);
   const timeLabel = formatTableTime(invite.tableTime);
   const url = `${SITE_URL}/portal/tables/${invite.tableId}`;
-  const seatLabel = invite.openSeats === 1 ? "1 open seat" : `${invite.openSeats} open seats`;
 
   const detailRows = [
     `<strong>When:</strong> ${dateLabel}${timeLabel ? ` at ${timeLabel}` : ""}`,
     `<strong>Where:</strong> ${invite.locationName}${invite.cityName ? ` — ${invite.cityName}` : ""}`,
     `<strong>Week:</strong> Week ${invite.weekNumber}${invite.roundType ? ` · ${invite.roundType}` : ""}`,
-    `<strong>Seats:</strong> ${seatLabel} right now`,
+    `<strong>Your seat:</strong> held for one hour`,
   ];
   const detailsHtml = detailRows
     .map((r) => `<p style="margin:0 0 8px 0;font-size:15px;line-height:1.6;color:#3a4a4f;">${r}</p>`)
@@ -82,7 +81,7 @@ export async function sendTableInviteEmail(
         </td>
       </tr>
     </table>
-    <p style="margin:0;font-size:13px;line-height:1.6;color:#8a9499;">Seats are first come, first served — tap above to grab yours. You&rsquo;re only seated once you join on the table page.</p>
+    <p style="margin:0;font-size:13px;line-height:1.6;color:#8a9499;">Your seat is held for one hour — tap above to claim it before it opens back up. You&rsquo;re only seated once you join on the table page.</p>
   `;
 
   try {

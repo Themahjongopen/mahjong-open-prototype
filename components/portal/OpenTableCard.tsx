@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { MapPin, Clock, Users } from "lucide-react";
 // activeSeats + the LeagueTable type come from the pure ./seats module (not
 // ./tables) so this client component doesn't pull server-only code into the bundle.
-import { activeSeats, type LeagueTable } from "@/lib/portal/seats";
+import { activeSeats, activeHolds, type LeagueTable } from "@/lib/portal/seats";
 import { useToast } from "@/components/portal/PortalShellClient";
 import { useConfirm } from "@/components/ConfirmProvider";
 import { formatTableTime } from "@/lib/format/time";
@@ -41,8 +41,13 @@ export default function OpenTableCard({ table, currentUserId }: { table: LeagueT
   const inFlight = useRef(false);
 
   const active = activeSeats(table.table_seats);
-  const filled = active.length;
-  const seatsLeft = 4 - filled;
+  const activeCount = active.length;
+  const seatedIds = new Set(active.map((s) => s.user_id));
+  // Live holds count toward capacity (a held seat isn't publicly joinable), but a
+  // hold for someone already seated is never double-counted.
+  const heldCount = activeHolds(table.holds ?? []).filter((h) => !seatedIds.has(h.invited_profile_id)).length;
+  const filled = activeCount + heldCount;
+  const seatsLeft = Math.max(0, 4 - filled);
   const isSeated = active.some((s) => s.user_id === currentUserId);
   const isCreator = table.creator_id === currentUserId;
   const canJoin = !isSeated && !isCreator && seatsLeft > 0 && table.status === "open";
@@ -146,15 +151,24 @@ export default function OpenTableCard({ table, currentUserId }: { table: LeagueT
         <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
           <Users size={13} color="var(--ink-500)" />
           <div style={{ display: "flex", gap: 4 }}>
-            {[1, 2, 3, 4].map((n) => (
-              <div
-                key={n}
-                style={{ width: 22, height: 22, borderRadius: "50%", background: n <= filled ? "var(--pink-400)" : "var(--hair-200)", border: "2px solid #fff" }}
-              />
-            ))}
+            {[1, 2, 3, 4].map((n) => {
+              const seated = n <= activeCount;
+              const held = !seated && n <= activeCount + heldCount;
+              // Seated = solid; held = outline (reserved, not taken); open = grey.
+              return (
+                <div
+                  key={n}
+                  style={{ width: 22, height: 22, borderRadius: "50%", background: seated ? "var(--pink-400)" : held ? "#fff" : "var(--hair-200)", border: held ? "2px solid var(--pink-300)" : "2px solid #fff" }}
+                />
+              );
+            })}
           </div>
           <span style={{ color: seatsLeft === 0 ? "var(--danger)" : "var(--ink-500)" }}>
-            {seatsLeft === 0 ? "Full" : `${seatsLeft} spot${seatsLeft !== 1 ? "s" : ""} left`}
+            {heldCount > 0
+              ? `${activeCount} seated · ${heldCount} held${seatsLeft > 0 ? ` · ${seatsLeft} open` : ""}`
+              : seatsLeft === 0
+                ? "Full"
+                : `${seatsLeft} spot${seatsLeft !== 1 ? "s" : ""} left`}
           </span>
         </div>
         {canJoin && (

@@ -3,6 +3,7 @@ import { Plus } from "lucide-react";
 import { getPortalClaims } from "@/lib/portal/session";
 import { withAdminCity } from "@/lib/portal/adminCity";
 import { getOpenTables, getAllTables, getCityName, type LeagueTable } from "@/lib/portal/tables";
+import { HOLD_TTL_MS } from "@/lib/portal/holdExpiry";
 import TablesFilterList from "@/components/portal/TablesFilterList";
 import TablesRefreshBar from "@/components/portal/TablesRefreshBar";
 
@@ -23,6 +24,13 @@ export default async function TablesPage({ searchParams }: { searchParams: Promi
   // Epoch ms is timezone-independent, so the client's delta is correct regardless
   // of the server/viewer clock offset.
   const loadedAt = Date.now();
+
+  // Soonest live-hold expiry across the shown tables — the refresh bar schedules a
+  // refetch at that instant, since a lapsing hold emits no Realtime event.
+  const holdExpiries = tables
+    .flatMap((t) => (t.holds ?? []).filter((h) => h.status === "pending").map((h) => new Date(h.created_at).getTime() + HOLD_TTL_MS))
+    .filter((ms) => ms > loadedAt);
+  const nextHoldExpiry = holdExpiries.length ? Math.min(...holdExpiries) : null;
 
   // Open/All view toggle. Server-side URL param (no client state) so the page
   // stays a server component. Default (no param) is "Open" — byte-identical to
@@ -54,7 +62,7 @@ export default async function TablesPage({ searchParams }: { searchParams: Promi
       {/* Manual refresh + "Updated X ago". Renders in both the list and the
           empty-state cases (a player waiting for the first table of the night is
           exactly who needs it), so it sits above the zero-tables branch. */}
-      <TablesRefreshBar loadedAt={loadedAt} cityId={member?.city_id ?? null} tableIds={tables.map((t) => t.id)} />
+      <TablesRefreshBar loadedAt={loadedAt} cityId={member?.city_id ?? null} tableIds={tables.map((t) => t.id)} nextHoldExpiry={nextHoldExpiry} />
 
       {tables.length === 0 && (
         <div style={{ textAlign: "center", padding: "48px 24px", color: "var(--ink-500)" }}>

@@ -39,12 +39,29 @@ export default function TablesRefreshBar({
   loadedAt,
   cityId,
   tableIds,
+  nextHoldExpiry = null,
 }: {
   loadedAt: number;
   cityId: string | null;
   tableIds: string[];
+  // Epoch ms of the soonest live-hold expiry across the shown tables, or null.
+  // A lapsing hold writes nothing (expiry is read-derived), so no Realtime event
+  // fires — this schedules a refetch at that instant so the reopened seat shows
+  // without a manual refresh. Complements, doesn't replace, the manual fallback.
+  nextHoldExpiry?: number | null;
 }) {
   const router = useRouter();
+
+  useEffect(() => {
+    if (nextHoldExpiry == null) return;
+    const delay = nextHoldExpiry - Date.now();
+    if (delay <= 0) {
+      router.refresh();
+      return;
+    }
+    const timer = setTimeout(() => router.refresh(), delay + 500); // small cushion past the boundary
+    return () => clearTimeout(timer);
+  }, [nextHoldExpiry, router]);
   // router.refresh() returns void without awaiting the server refetch, so a
   // transition holds isPending true until the fresh data commits.
   const [isPending, startTransition] = useTransition();

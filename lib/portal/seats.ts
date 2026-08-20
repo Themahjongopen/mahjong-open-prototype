@@ -36,6 +36,10 @@ export type LeagueTable = {
   notes: string | null;
   status: string;
   table_seats: SeatRow[];
+  // Live invitation holds (migration 044). Attached by the tables data layer;
+  // absent (undefined) on shapes that predate holds — readers default to []. Holds
+  // are 'pending' table_invites rows; capacity readers narrow to unexpired ones.
+  holds?: HoldDisplayRow[];
 };
 
 export const activeSeats = (seats: SeatRow[]) => seats.filter((s) => !s.canceled_at);
@@ -76,6 +80,11 @@ export function scoringSeats(table: Pick<LeagueTable, "table_date" | "table_time
 
 // The subset of a table_invites row capacity math reads.
 export type HoldRow = HoldInvite & { invited_profile_id: string };
+
+// A live hold with the invitee's name, for the "N seated · M held" display and
+// the "Held for {name} · until {time}" rows on the table detail page. Superset of
+// HoldRow, so it flows through activeHolds/capacityFilled unchanged.
+export type HoldDisplayRow = HoldRow & { full_name: string | null };
 
 // Holds that currently count toward capacity: still pending and not past the TTL.
 export function activeHolds(holds: HoldRow[], now: number = Date.now(), table?: HoldTableStart): HoldRow[] {
