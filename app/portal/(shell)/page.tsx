@@ -125,7 +125,7 @@ export default async function PortalDashboard() {
           <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--pink-600)", marginBottom: 4 }}>Handbook</p>
           <p style={{ fontSize: 13, color: "var(--ink-700)", margin: 0 }}>Review the latest Mahjong Open rulebook before your next game.</p>
         </div>
-        <a href="/handbook/the-mahjong-open-handbook-2026-2.pdf" target="_blank" rel="noopener noreferrer" className="btn btn-primary" style={{ fontSize: 13, padding: "10px 14px", whiteSpace: "nowrap" }}>
+        <a href="/handbook/the-mahjong-open-handbook-2026-3.pdf" target="_blank" rel="noopener noreferrer" className="btn btn-primary" style={{ fontSize: 13, padding: "10px 14px", whiteSpace: "nowrap" }}>
           Rulebook
         </a>
       </div>
