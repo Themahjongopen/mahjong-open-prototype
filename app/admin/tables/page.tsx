@@ -31,6 +31,7 @@ type TableRow = {
   series_name: string | null;
   creator_name: string | null;
   active_seats: number;
+  held_seats: number;
   score_count: number;
   players: { seat_id: string; user_id: string; full_name: string | null; is_host: boolean }[];
 };
@@ -217,7 +218,10 @@ export default function AdminTablesPage() {
                 </div>
                 <div>
                   <span className="admin-mobile-label">Seats</span>
-                  <p style={{ fontSize: 13, color: "var(--ink-700)" }}>{t.active_seats}/4</p>
+                  <p style={{ fontSize: 13, color: "var(--ink-700)" }}>
+                    {t.active_seats}/4
+                    {t.held_seats > 0 ? <span style={{ color: "var(--ink-500)" }}> · {t.held_seats} held</span> : null}
+                  </p>
                 </div>
                 <div>
                   <span className="admin-mobile-label">Actions</span>

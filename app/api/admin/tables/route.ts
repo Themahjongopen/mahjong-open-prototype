@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { isAdminRequest } from "@/lib/admin/auth";
 import { createAdminClient } from "@/lib/supabase/server";
 import { fetchAllRows } from "@/lib/supabase/paginate";
+import { activeHolds } from "@/lib/portal/seats";
 
 export const runtime = "nodejs";
 
@@ -29,7 +30,7 @@ export async function GET() {
   const rows = await fetchAllRows((from: number, to: number) =>
     admin
       .from("league_tables")
-      .select("id, week_number, table_date, table_time, location_name, status, creator_id, cities(id, name), series(id, name), profiles(full_name), table_seats(id, seat_number, user_id, canceled_at, profiles(full_name)), score_submissions(id, score_submission_players(id))")
+      .select("id, week_number, table_date, table_time, location_name, status, creator_id, cities(id, name), series(id, name), profiles(full_name), table_seats(id, seat_number, user_id, canceled_at, profiles(full_name)), table_invites(invited_profile_id, status, created_at), score_submissions(id, score_submission_players(id))")
       .order("table_date", { ascending: false })
       .order("id", { ascending: true })
       .range(from, to)
@@ -38,6 +39,8 @@ export async function GET() {
   const tables = (rows as any[]).map((t) => {
     const city = one<any>(t.cities);
     const series = one<any>(t.series);
+    const activeSeatRows = ((t.table_seats ?? []) as any[]).filter((s) => !s.canceled_at);
+    const seatedIds = new Set(activeSeatRows.map((s) => s.user_id));
     return {
       id: t.id,
       week_number: t.week_number,
@@ -50,7 +53,12 @@ export async function GET() {
       series_id: series?.id ?? null,
       series_name: series?.name ?? null,
       creator_name: one<any>(t.profiles)?.full_name ?? null,
-      active_seats: ((t.table_seats ?? []) as any[]).filter((s) => !s.canceled_at).length,
+      active_seats: activeSeatRows.length,
+      // Live invitation holds (migration 044), excluding any hold for someone
+      // already seated — same "don't double-count" rule as capacityFilled. Lets an
+      // admin see "2/4 · 1 held" and understand why an open-looking table can't be
+      // joined. Purely informational here; no admin action reads it.
+      held_seats: activeHolds((t.table_invites ?? []) as any[]).filter((h) => !seatedIds.has(h.invited_profile_id)).length,
       // Submitted-score count (0 or 4), so the revert confirmation can distinguish
       // discarding a real scored round from reverting an empty mark-as-played.
       // score_submissions is to-one (UNIQUE table_id); its players are the rows.
