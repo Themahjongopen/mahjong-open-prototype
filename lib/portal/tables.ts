@@ -1,6 +1,51 @@
 import { createAdminClient } from "@/lib/supabase/server";
 import type { PortalMember } from "@/lib/portal/session";
 import { activeSeats, scoringSeats, type SeatRow, type LeagueTable, type HoldDisplayRow } from "./seats";
+import { isHoldActive } from "@/lib/portal/holdExpiry";
+
+// An invitation the member can accept or decline from My Tables: a live (pending +
+// unexpired) hold on a still-open table they aren't already seated at.
+export type MyInvitation = {
+  table: { id: string; week_number: number; table_date: string; table_time: string | null; location_name: string; status: string };
+  holdCreatedAt: string; // for the "Held for you until {time}" label (derived, same as the detail page)
+  inviterName: string | null;
+};
+
+// The member's live invitations. Filters out LAPSED holds here (isHoldActive), so a
+// lapsed invitation is never rendered; the tables data layer is the guarantee, the
+// card's own timer is only cosmetic. Not scoped to the active city — a player sees
+// all their invitations, same as getMyTables returns all their seats.
+export async function getMyInvitations(member: PortalMember): Promise<MyInvitation[]> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const admin: any = createAdminClient();
+  if (!admin) return [];
+
+  const { data } = await admin
+    .from("table_invites")
+    // table_invites has two FKs to profiles — name the inviter one explicitly.
+    .select("created_at, status, invited_by:profiles!invited_by_profile_id(full_name), league_tables(id, week_number, table_date, table_time, location_name, status, table_seats(user_id, canceled_at))")
+    .eq("invited_profile_id", member.id)
+    .eq("status", "pending");
+
+  const now = Date.now();
+  const out: MyInvitation[] = [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  for (const r of (data ?? []) as any[]) {
+    if (!isHoldActive({ status: r.status, created_at: r.created_at }, now)) continue; // lapsed → never shown
+    const lt = Array.isArray(r.league_tables) ? r.league_tables[0] : r.league_tables;
+    if (!lt || lt.status !== "open") continue; // only a table they can still accept
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const alreadySeated = ((lt.table_seats ?? []) as any[]).some((s) => !s.canceled_at && s.user_id === member.id);
+    if (alreadySeated) continue; // defensive — they've already joined
+    const inviter = Array.isArray(r.invited_by) ? r.invited_by[0] : r.invited_by;
+    out.push({
+      table: { id: lt.id, week_number: lt.week_number, table_date: lt.table_date, table_time: lt.table_time, location_name: lt.location_name, status: lt.status },
+      holdCreatedAt: r.created_at,
+      inviterName: inviter?.full_name ?? null,
+    });
+  }
+  return out;
+}
 
 // Attach live invitation holds (pending table_invites rows) to a set of tables in
 // ONE batched query keyed on their ids — never a per-table lookup, so the list

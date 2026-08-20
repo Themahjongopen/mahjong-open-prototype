@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { CalendarDays, MapPin } from "lucide-react";
 import { getPortalUser } from "@/lib/portal/session";
-import { getMyTables, type MyTableSeat } from "@/lib/portal/tables";
+import { getMyTables, getMyInvitations, type MyTableSeat } from "@/lib/portal/tables";
 import { formatTableTime } from "@/lib/format/time";
+import MyInvitationCard from "@/components/portal/MyInvitationCard";
 
 const STATUS_COLORS: Record<string, string> = {
   open: "badge-lime", full: "badge-peri", completed: "badge-mute", canceled: "badge-mute",
@@ -11,7 +12,9 @@ const STATUS_COLORS: Record<string, string> = {
 export default async function MyTablesPage() {
   const session = await getPortalUser();
   const member = session && session.status === "active" ? session : null;
-  const seats = member ? await getMyTables(member) : [];
+  const [seats, invitations] = member
+    ? await Promise.all([getMyTables(member), getMyInvitations(member)])
+    : [[] as MyTableSeat[], []];
   const today = new Date().toISOString().slice(0, 10);
 
   // Sort each bucket independently: Upcoming soonest-first (date ascending), Past
@@ -68,12 +71,35 @@ export default async function MyTablesPage() {
         My Tables
       </h2>
 
-      {seats.length === 0 && (
+      {seats.length === 0 && invitations.length === 0 && (
         <div style={{ textAlign: "center", padding: "48px 24px", color: "var(--ink-500)" }}>
           <p style={{ marginBottom: 16 }}>You haven&rsquo;t joined any tables yet.</p>
           <Link href="/portal/tables" className="btn btn-primary" style={{ fontSize: 14, display: "inline-flex" }}>
             Browse open tables →
           </Link>
+        </div>
+      )}
+
+      {invitations.length > 0 && (
+        <div style={{ marginBottom: 28 }}>
+          <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--pink-600)", marginBottom: 4 }}>
+            Invitations
+          </p>
+          <p style={{ fontSize: 12, color: "var(--ink-500)", marginBottom: 12 }}>
+            A seat is held for you — accept to take it, or decline to free it up.
+          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {invitations.map((inv) => (
+              <MyInvitationCard
+                key={inv.table.id}
+                tableId={inv.table.id}
+                currentUserId={member!.id}
+                holdCreatedAt={inv.holdCreatedAt}
+                inviterName={inv.inviterName}
+                table={{ week_number: inv.table.week_number, table_date: inv.table.table_date, table_time: inv.table.table_time, location_name: inv.table.location_name }}
+              />
+            ))}
+          </div>
         </div>
       )}
 
