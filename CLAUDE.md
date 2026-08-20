@@ -24,3 +24,13 @@ Known instance: a Flight Winner fix was numbered 034 because 032 was
 the last migration to touch member_series_standings, colliding with
 the already-applied 034_table_invites. Production was at 040; the
 correct number was 041.
+
+# Capacity math
+
+Table capacity (active seats + live holds) is computed in `claim_seat`
+(044), `TableDetailClient`, `OpenTableCard`, and `/api/admin/tables`.
+If the rule changes, all four must change together. In particular, the
+viewer's own hold must be excluded when deciding whether *that viewer*
+can join — `claim_seat` and `TableDetailClient` do this; `OpenTableCard`
+did not, which made held tables unjoinable for the exact person they
+were held for.

@@ -45,12 +45,21 @@ export default function OpenTableCard({ table, currentUserId }: { table: LeagueT
   const seatedIds = new Set(active.map((s) => s.user_id));
   // Live holds count toward capacity (a held seat isn't publicly joinable), but a
   // hold for someone already seated is never double-counted.
-  const heldCount = activeHolds(table.holds ?? []).filter((h) => !seatedIds.has(h.invited_profile_id)).length;
+  const liveHolds = activeHolds(table.holds ?? []).filter((h) => !seatedIds.has(h.invited_profile_id));
+  const heldCount = liveHolds.length;
   const filled = activeCount + heldCount;
+  // Public open-seat count, used for the DISPLAY ("N seated · M held · K open") —
+  // the viewer's own hold still shows as held here, which is truthful.
   const seatsLeft = Math.max(0, 4 - filled);
   const isSeated = active.some((s) => s.user_id === currentUserId);
   const isCreator = table.creator_id === currentUserId;
-  const canJoin = !isSeated && !isCreator && seatsLeft > 0 && table.status === "open";
+  // The viewer can take the seat that is held FOR THEM, so their own hold must not
+  // count against them in the join gate — mirrors claim_seat and TableDetailClient
+  // (see CLAUDE.md "Capacity math"). Without this, a held-full table was unjoinable
+  // for the exact person it was held for.
+  const viewerHasHold = liveHolds.some((h) => h.invited_profile_id === currentUserId);
+  const openForViewer = seatsLeft + (viewerHasHold ? 1 : 0);
+  const canJoin = !isSeated && !isCreator && openForViewer > 0 && table.status === "open";
 
   async function handleJoin(e: React.MouseEvent) {
     e.stopPropagation(); // don't also trigger the card's navigate
