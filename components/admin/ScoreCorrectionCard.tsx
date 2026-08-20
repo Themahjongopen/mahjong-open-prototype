@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useConfirm } from "@/components/ConfirmProvider";
+import { formatTableTime } from "@/lib/format/time";
 import type { AdminScoreSubmission } from "@/lib/admin/scores";
 
 const STATUS_COLORS: Record<string, string> = {
@@ -22,8 +23,13 @@ export default function ScoreCorrectionCard({ submission }: { submission: AdminS
   const [error, setError] = useState<string | null>(null);
 
   const isVoided = submission.status === "voided";
+  // Date + time — matches the admin Tables page ("Aug 19 · 6:00 PM"). The time is
+  // what tells apart two tables at the same venue on the same date (Fort Wayne,
+  // Two Bamboo, two 6:00 PM tables — the case that surfaced this gap; here it's the
+  // time that disambiguates, so an untimed table simply shows the date).
   const dateLabel = submission.table_date
-    ? new Date(`${submission.table_date}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+    ? new Date(`${submission.table_date}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" }) +
+      (submission.table_time ? ` · ${formatTableTime(submission.table_time)}` : "")
     : "";
 
   async function save() {
