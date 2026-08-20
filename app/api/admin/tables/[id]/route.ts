@@ -2,12 +2,15 @@ import { NextResponse } from "next/server";
 import { isAdminRequest } from "@/lib/admin/auth";
 import { createAdminClient } from "@/lib/supabase/server";
 import { cancelSeatsAndNotify } from "@/lib/portal/cancelSeatsAndNotify";
+import { getSeriesStartDate } from "@/lib/portal/tables";
+import { seriesWeekForDate } from "@/lib/portal/seriesWeek";
 
 export const runtime = "nodejs";
 
 // Admin-only table actions:
 //   action: "remove_seat"      → remove ONE seated player without canceling the table
 //   action: "revert_completed" → undo an accidental mark-as-played (see below)
+//   action: "set_week"         → correct a table's week_number (see below)
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
   if (!(await isAdminRequest())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -23,6 +26,9 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
 
   if (body?.action === "revert_completed") {
     return revertCompleted(admin, id);
+  }
+  if (body?.action === "set_week") {
+    return setWeek(admin, id, body);
   }
   if (body?.action !== "remove_seat" || typeof body?.seatId !== "string") {
     return NextResponse.json({ error: "Nothing to update." }, { status: 400 });
@@ -118,4 +124,51 @@ async function revertCompleted(admin: any, id: string) {
   }
 
   return NextResponse.json({ ok: true, status: nextStatus });
+}
+
+// Correct a table's week_number. Mislabeled weeks (a table whose week_number
+// doesn't match the week its date falls in) silently over-count the Champion
+// award, and until now there was no UI to fix one — it required direct DB access.
+// Admin-only (gated in PATCH). The date-derived week is allowed freely; any other
+// value (a deliberate exception, e.g. a make-up round) requires confirm:true, so
+// a mislabel can't be re-introduced by accident. Standings are computed on read
+// from league_tables.week_number, so the change propagates immediately — no
+// recompute, and this is safe on a completed table with scores (only the week
+// label moves; no score row is touched).
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function setWeek(admin: any, id: string, body: any) {
+  const week = Number.parseInt(body?.week?.toString() ?? "", 10);
+  if (!Number.isInteger(week) || week < 1 || week > 8) {
+    return NextResponse.json({ error: "Choose a week between 1 and 8." }, { status: 400 });
+  }
+
+  const { data: table } = await admin
+    .from("league_tables")
+    .select("id, table_date, series_id, week_number")
+    .eq("id", id)
+    .maybeSingle();
+  if (!table) {
+    return NextResponse.json({ error: "That table no longer exists." }, { status: 404 });
+  }
+
+  // The week the date actually falls in. A different value needs explicit
+  // confirmation; the client re-sends with confirm:true after the admin agrees.
+  const seriesStart = await getSeriesStartDate(table.series_id);
+  const derivedWeek = seriesStart ? seriesWeekForDate(seriesStart, table.table_date) : null;
+  if (derivedWeek !== null && week !== derivedWeek && body?.confirm !== true) {
+    return NextResponse.json(
+      { error: `Week ${week} doesn't match this table's date, which falls in Week ${derivedWeek}.`, needsConfirm: true, derivedWeek },
+      { status: 409 }
+    );
+  }
+
+  if (table.week_number === week) {
+    return NextResponse.json({ ok: true, week }); // already correct — idempotent no-op
+  }
+
+  const { error } = await admin.from("league_tables").update({ week_number: week }).eq("id", id);
+  if (error) {
+    return NextResponse.json({ error: "The week couldn't be updated. Please try again." }, { status: 500 });
+  }
+  return NextResponse.json({ ok: true, week });
 }

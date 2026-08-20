@@ -74,6 +74,18 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "That date is outside the current league window." }, { status: 400 });
   }
 
+  // week_number is server-authoritative. A client value is NOT trusted: a
+  // self-serve host could override the auto-filled week to any value, which
+  // silently mislabeled tables and made the Champion award (sum of per-week
+  // bests) over-count across weeks that were really one calendar week. Non-admins
+  // ALWAYS get the date-derived week. An admin may deliberately override (e.g. a
+  // make-up round counting toward a different week) — that's a commissioner
+  // decision, gated to admins. Falls back to the submitted value only if the
+  // series start is unavailable (misconfigured series), matching the window
+  // checks above which also skip gracefully in that case.
+  const derivedWeek = seriesStart ? seriesWeekForDate(seriesStart, tableDate) : null;
+  const storedWeek = session.isAdmin ? weekNumber : (derivedWeek ?? weekNumber);
+
   const admin: any = createAdminClient();
   if (!admin) {
     return NextResponse.json({ error: "Tables are unavailable right now." }, { status: 503 });
@@ -85,7 +97,7 @@ export async function POST(request: Request) {
       city_id: cityId,
       series_id: seriesId,
       creator_id: session.id,
-      week_number: weekNumber,
+      week_number: storedWeek,
       table_date: tableDate,
       table_time: tableTime,
       location_name: locationName,

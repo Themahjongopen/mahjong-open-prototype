@@ -5,6 +5,7 @@ import { formatTableTime } from "@/lib/format/time";
 import AdminCancelTableButton from "@/components/admin/AdminCancelTableButton";
 import AdminRemovePlayerButton from "@/components/admin/AdminRemovePlayerButton";
 import AdminRevertTableButton from "@/components/admin/AdminRevertTableButton";
+import AdminSetWeekButton from "@/components/admin/AdminSetWeekButton";
 
 const STATUS_BADGE: Record<string, string> = { open: "badge-lime", full: "badge-peri", completed: "badge-mute", canceled: "badge-mute" };
 
@@ -163,7 +164,7 @@ export default function AdminTablesPage() {
           ) : (
             filteredRows.map((t) => (
               <div key={t.id} className="admin-tables-row">
-                <p style={{ fontSize: 13, fontWeight: 600, color: "var(--ink-500)" }}>W{t.week_number}</p>
+                <div><span className="admin-mobile-label">Week</span><AdminSetWeekButton tableId={t.id} weekNumber={t.week_number} onUpdated={() => void load()} /></div>
                 <div>
                   <span className="admin-mobile-label">Table</span>
                   {/* The table name opens the portal table detail page — where

@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Info } from "lucide-react";
 import { enumerateSeriesWeeks } from "@/lib/portal/seriesWeek";
+import { useConfirm } from "@/components/ConfirmProvider";
 import AreaCombobox from "@/components/portal/AreaCombobox";
 
 const ROUND_TYPE_INFO: { name: string; desc: string }[] = [
@@ -92,8 +93,9 @@ function localTodayString(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-export default function CreateTableForm({ cityId, cityName, seriesStartDate, seriesEndDate }: { cityId: string | null; cityName: string | null; seriesStartDate: string | null; seriesEndDate: string | null }) {
+export default function CreateTableForm({ cityId, cityName, seriesStartDate, seriesEndDate, isAdmin = false }: { cityId: string | null; cityName: string | null; seriesStartDate: string | null; seriesEndDate: string | null; isAdmin?: boolean }) {
   const router = useRouter();
+  const confirm = useConfirm();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [form, setForm] = useState({
@@ -123,12 +125,32 @@ export default function CreateTableForm({ cityId, cityName, seriesStartDate, ser
       .filter((r) => r.dates.length > 0);
   }, [seriesWeeks]);
 
+  // The week the selected date falls in — the value the server will store for a
+  // non-admin regardless of what's posted. Non-admins see it read-only; admins may
+  // override (with a confirm) for a deliberate exception like a make-up round.
+  const derivedWeek = useMemo(
+    () => (form.table_date ? visibleWeeks.find((r) => r.dates.includes(form.table_date))?.week ?? null : null),
+    [visibleWeeks, form.table_date],
+  );
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
     if (!form.week_number || !form.table_date || !form.table_time || !form.location_name || !form.round_type || !form.area.trim()) {
       setError("Please fill in all required fields.");
       return;
+    }
+    // An admin deliberately setting a week that disagrees with the date confirms
+    // it first — this is the only way to intentionally label a table off its date,
+    // and it must never happen silently (that was the bug).
+    if (isAdmin && derivedWeek !== null && Number(form.week_number) !== derivedWeek) {
+      const ok = await confirm({
+        title: "Week doesn't match the date",
+        message: `This date falls in Week ${derivedWeek}, but you set Week ${form.week_number}. Create it with Week ${form.week_number} anyway?`,
+        confirmLabel: `Use Week ${form.week_number}`,
+        danger: true,
+      });
+      if (!ok) return;
     }
     setLoading(true);
 
@@ -203,13 +225,30 @@ export default function CreateTableForm({ cityId, cityName, seriesStartDate, ser
           )
         )}
         {field("Week (1–8)", true,
-          <>
-            <select className="input-mo" value={form.week_number} onChange={(e) => setForm((f) => ({ ...f, week_number: e.target.value }))}>
-              <option value="">Select week</option>
-              {[1, 2, 3, 4, 5, 6, 7, 8].map((w) => <option key={w} value={w}>Week {w}</option>)}
-            </select>
-            <p style={{ fontSize: 12, color: "var(--ink-500)", margin: "2px 0 0" }}>Auto-filled from the date above — change it if this isn&rsquo;t right.</p>
-          </>
+          // Non-admin hosts see the derived week READ-ONLY — the week is fixed by
+          // the date, and the server ignores any posted value for them, so an
+          // editable control would only invite the mislabel this whole change
+          // fixes. Admins keep the dropdown (and the native-date fallback, which
+          // can't auto-fill, needs manual entry) — a mismatch is confirmed on
+          // submit.
+          isAdmin || !hasDynamicDates ? (
+            <>
+              <select className="input-mo" value={form.week_number} onChange={(e) => setForm((f) => ({ ...f, week_number: e.target.value }))}>
+                <option value="">Select week</option>
+                {[1, 2, 3, 4, 5, 6, 7, 8].map((w) => <option key={w} value={w}>Week {w}</option>)}
+              </select>
+              <p style={{ fontSize: 12, color: "var(--ink-500)", margin: "2px 0 0" }}>
+                {isAdmin ? "Auto-filled from the date. As an admin you can override it — you’ll be asked to confirm." : "Auto-filled from the date above — change it if this isn’t right."}
+              </p>
+            </>
+          ) : (
+            <>
+              <div className="input-mo" style={{ display: "flex", alignItems: "center", background: "var(--paper-50)", color: form.week_number ? "var(--ink-800)" : "var(--ink-400)" }}>
+                {form.week_number ? `Week ${form.week_number}` : "Choose a date above first"}
+              </div>
+              <p style={{ fontSize: 12, color: "var(--ink-500)", margin: "2px 0 0" }}>Set automatically from the date you pick above.</p>
+            </>
+          )
         )}
         {field("Time", true,
           <input className="input-mo" type="time" value={form.table_time} onChange={(e) => setForm((f) => ({ ...f, table_time: e.target.value }))} />

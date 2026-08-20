@@ -11,5 +11,5 @@ export default async function CreateTablePage() {
     ? await Promise.all([getCityName(member.city_id), getSeriesStartDate(member.series_id), getSeriesEndDate(member.series_id)])
     : [null, null, null];
 
-  return <CreateTableForm cityId={member?.city_id ?? null} cityName={cityName} seriesStartDate={seriesStartDate} seriesEndDate={seriesEndDate} />;
+  return <CreateTableForm cityId={member?.city_id ?? null} cityName={cityName} seriesStartDate={seriesStartDate} seriesEndDate={seriesEndDate} isAdmin={member?.isAdmin ?? false} />;
 }
