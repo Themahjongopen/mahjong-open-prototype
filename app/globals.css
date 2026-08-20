@@ -438,8 +438,8 @@ body.admin-drawer-open {
 .commissioner-players-table {
   display: grid;
   width: 100%;
-  /* Name · Hometown · Email · Phone · Level · Payment · Registered */
-  grid-template-columns: 1.2fr 1fr 1.5fr 0.9fr 0.8fr 0.8fr 0.9fr;
+  /* Name · Hometown · Email · Phone · Level · Payment · Registered · Credited to */
+  grid-template-columns: 1.2fr 1fr 1.5fr 0.9fr 0.8fr 0.8fr 0.9fr 1.1fr;
 }
 
 .admin-players-table-header,
