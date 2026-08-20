@@ -169,7 +169,7 @@ export default function ScoreEntryForm({ tables, initialTableId }: { tables: Sco
 
           {anyNoShow && (
             <div style={{ marginTop: 12, background: "var(--warning-bg, #fff7ed)", border: "1px solid var(--crimson-100)", borderRadius: "var(--radius-md)", padding: "10px 14px", fontSize: 13, color: "var(--ink-700)", lineHeight: 1.6 }}>
-              No-show round: each absent player takes a −25 weekly penalty and everyone who stayed gets +25. Individual round scores aren&rsquo;t entered, and the round doesn&rsquo;t count toward averages.
+              No-show round: each absent player takes a −20 weekly penalty; the players who stayed aren&rsquo;t penalized. Individual round scores aren&rsquo;t entered, and the round doesn&rsquo;t count toward averages.
             </div>
           )}
         </div>

@@ -26,8 +26,8 @@ export type ProfileStats = {
 
 type ScoreRow = { round_score: number; is_no_show: boolean; is_no_show_bonus: boolean };
 
-// Scores for rounds the player actually played (excludes no-shows and the +25
-// stay-bonus rows, which don't count as rounds played).
+// Scores for rounds the player actually played (excludes no-shows and the
+// stay-bonus rows — now 0 — which don't count as rounds played).
 function playedScores(rows: unknown): number[] {
   return ((rows ?? []) as ScoreRow[])
     .filter((r) => !r.is_no_show && !r.is_no_show_bonus)

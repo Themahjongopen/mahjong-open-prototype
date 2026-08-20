@@ -6,16 +6,19 @@ import { sendScorePostedEmail } from "@/lib/email/scorePostedEmail";
 import { scoringSeats } from "@/lib/portal/tables";
 import { hasSubmission } from "@/lib/portal/scores";
 
-const NO_SHOW_STAY_BONUS = 25;
+// Stay bonus: 0 as of the Aug 2026 rules change (was +25). The is_no_show_bonus
+// row is still written (at 0) so the record of who stayed — and its exclusion from
+// averages/rounds/Flight, which is keyed on the flag not the value — is preserved.
+const NO_SHOW_STAY_BONUS = 0;
 
 type InputPlayer = { user_id: string; round_score?: number; is_no_show?: boolean };
 
 // Host submits a round's scores. Posts immediately (no approval gate).
 // Normal round: store each player's round_score. No-show round (any player
 // marked absent): the absent players get is_no_show (round_score 0) and every
-// remaining seated player gets a +25 is_no_show_bonus row — no real scores are
-// recorded, since a short-handed round doesn't count as a played round. The
-// −25 penalty is derived on read by the standings views, never stored here.
+// remaining seated player gets a 0-valued is_no_show_bonus row — no real scores
+// are recorded, since a short-handed round doesn't count as a played round. The
+// −20 penalty is derived on read by the standings views, never stored here.
 export async function POST(request: Request) {
   const session = await getPortalUser();
   if (!session || session.status !== "active") {

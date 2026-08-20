@@ -10,7 +10,7 @@ import { zonedTimeToUtc } from "@/lib/format/zonedTime";
 //   * a 4→3 drop (a full table losing a player — the long-standing default), OR
 //   * ANY active-seat decrease when the table starts within the next 24h
 //     (a late drop is urgent whether the table was at 4 or 3, and notifying can
-//     prevent the −25 no-show that stands only when the open seat is never
+//     prevent the −20 no-show that stands only when the open seat is never
 //     re-filled).
 // Suppressed when: the table already started (hoursUntil ≤ 0), it's completed or
 // canceled, no one is left to notify, or the cancel didn't actually reduce the

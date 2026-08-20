@@ -59,7 +59,7 @@ export async function sendAdminAddedToTableEmail(
         </td>
       </tr>
     </table>
-    <p style="margin:0;font-size:13px;line-height:1.6;color:#8a9499;">If this isn&rsquo;t right, cancel your spot on the table page. Heads up: leaving within 24 hours of game time counts as a no-show (&minus;25).</p>
+    <p style="margin:0;font-size:13px;line-height:1.6;color:#8a9499;">If this isn&rsquo;t right, cancel your spot on the table page. Heads up: leaving within 24 hours of game time counts as a no-show (&minus;20).</p>
   `;
 
   try {

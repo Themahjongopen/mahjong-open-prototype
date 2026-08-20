@@ -40,7 +40,7 @@ export async function sendScoreCorrectedEmail(
   if (result.isNoShow) {
     resultLine = `The scores for the round at ${location} on ${dateLabel} were corrected. This round is recorded with a no-show — see the table page for details.`;
   } else if (result.isNoShowBonus) {
-    resultLine = `The scores for the round at ${location} on ${dateLabel} were corrected. You stayed and everyone who did received a +25 bonus for this round.`;
+    resultLine = `The scores for the round at ${location} on ${dateLabel} were corrected. It was recorded as a no-show round — you stayed, so no penalty applies. See the table page for details.`;
   } else {
     resultLine = `A correction was made to your score for the ${dateLabel} round at ${location}: <strong>${result.roundScore}</strong>.`;
   }

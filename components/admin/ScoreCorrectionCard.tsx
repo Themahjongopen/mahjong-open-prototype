@@ -90,7 +90,7 @@ export default function ScoreCorrectionCard({ submission }: { submission: AdminS
             <div>
               <span style={{ fontSize: 14, color: "var(--ink-800)" }}>{p.full_name ?? "Player"}</span>
               {p.is_no_show ? <span style={{ fontSize: 12, color: "var(--danger)", marginLeft: 8 }}>no-show</span> : null}
-              {p.is_no_show_bonus ? <span style={{ fontSize: 12, color: "var(--ink-500)", marginLeft: 8 }}>+25 stayed</span> : null}
+              {p.is_no_show_bonus ? <span style={{ fontSize: 12, color: "var(--ink-500)", marginLeft: 8 }}>stayed</span> : null}
             </div>
             {editing && !isVoided ? (
               <input

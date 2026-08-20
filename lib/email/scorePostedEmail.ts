@@ -38,7 +38,7 @@ export async function sendScorePostedEmail(
   if (result.isNoShow) {
     resultLine = `The round at ${location} on ${dateLabel} is scored. This round was recorded with a no-show — see the table page for details.`;
   } else if (result.isNoShowBonus) {
-    resultLine = `The round at ${location} on ${dateLabel} is scored. You stayed and everyone who did received a +25 bonus for this round.`;
+    resultLine = `The round at ${location} on ${dateLabel} is scored. It was recorded as a no-show round — you stayed, so no penalty applies. See the table page for details.`;
   } else {
     resultLine = `Your score for the ${dateLabel} round at ${location}: <strong>${result.roundScore}</strong>.`;
   }

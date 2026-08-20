@@ -254,7 +254,7 @@ export default function TableDetailClient({
       withinCutoff
         ? {
             title: "Leave within 24 hours?",
-            message: "This is within 24 hours of the table, so it counts as a no-show (−25 points) unless another player takes your spot before the table plays. Let your table know so someone can fill in.",
+            message: "This is within 24 hours of the table, so it counts as a no-show (−20 points) unless another player takes your spot before the table plays. Let your table know so someone can fill in.",
             confirmLabel: "Leave anyway",
             danger: true,
           }
@@ -590,7 +590,7 @@ export default function TableDetailClient({
         )}
         {canLeave && withinCutoff && (
           <div style={{ fontSize: 13, color: "var(--ink-500)", textAlign: "center", padding: "0 8px" }}>
-            Within 24 hours of game time — it counts as a no-show (−25) unless another player takes your spot first. Let your table know so someone can fill in.
+            Within 24 hours of game time — it counts as a no-show (−20) unless another player takes your spot first. Let your table know so someone can fill in.
           </div>
         )}
 
@@ -651,7 +651,7 @@ export default function TableDetailClient({
                 <span style={{ color: "var(--ink-800)" }}>
                   {p.full_name ?? "Player"}
                   {p.is_no_show ? <span style={{ fontSize: 12, color: "var(--danger)", marginLeft: 8 }}>no-show</span> : null}
-                  {p.is_no_show_bonus ? <span style={{ fontSize: 12, color: "var(--ink-500)", marginLeft: 8 }}>+25 stayed</span> : null}
+                  {p.is_no_show_bonus ? <span style={{ fontSize: 12, color: "var(--ink-500)", marginLeft: 8 }}>stayed</span> : null}
                 </span>
                 {scoreEditing ? (
                   <input
@@ -665,7 +665,7 @@ export default function TableDetailClient({
                   />
                 ) : (
                   <span style={{ color: p.is_no_show ? "var(--danger)" : "var(--ink-900)", fontWeight: 600 }}>
-                    {p.is_no_show ? "No-show" : p.is_no_show_bonus ? "+25 (stayed)" : p.round_score}
+                    {p.is_no_show ? "No-show" : p.is_no_show_bonus ? "stayed" : p.round_score}
                   </span>
                 )}
               </div>

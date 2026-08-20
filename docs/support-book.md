@@ -109,7 +109,7 @@ Once all 4 seats are filled, the host sees a Mark as played button on the table.
 
 After marking it played, tap Enter round scores (or go to the Scores tab in the bottom nav and pick the table from the dropdown if you host more than one).
 
-For each seated player, enter their round score, or check No-show if they didn't show up. Note: if you mark anyone as a no-show, the whole round is scored differently — no individual scores are entered for that round. Instead, every no-show player takes a −25 penalty for the week, and everyone who stayed gets a +25 bonus. That round doesn't count toward anyone's rounds-played average.
+For each seated player, enter their round score, or check No-show if they didn't show up. Note: if you mark anyone as a no-show, the whole round is scored differently — no individual scores are entered for that round. Instead, every no-show player takes a −20 penalty for the week; the players who stayed aren't penalized. That round doesn't count toward anyone's rounds-played average.
 
 Once scores are posted, everyone at the table can see them on the table's detail page, and standings update right away.
 
