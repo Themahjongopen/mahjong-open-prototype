@@ -3,6 +3,7 @@ import { getPortalUser } from "@/lib/portal/session";
 import { createAdminClient } from "@/lib/supabase/server";
 import { resolvePrefs } from "@/lib/portal/notificationPrefs";
 import { sendTableFilledEmail } from "@/lib/email/tableFilledEmail";
+import { holdCutoffIso } from "@/lib/portal/holdExpiry";
 
 // Claim an open seat at a table in the member's series.
 export async function POST(_request: Request, context: { params: Promise<{ id: string }> }) {
@@ -33,64 +34,46 @@ export async function POST(_request: Request, context: { params: Promise<{ id: s
     return NextResponse.json({ error: "This table isn't open for new players." }, { status: 409 });
   }
 
-  const active = (table.table_seats ?? []).filter((s: any) => !s.canceled_at);
-  // Idempotent: if this player already holds an active seat here, return it
-  // instead of erroring or inserting a second row. Hardens the join against a
-  // replayed tap or a racing double-POST (the Kate Gundling incident) — the
-  // second request must not create a second seat or spuriously report "full".
-  const existingSeat = active.find((s: any) => s.user_id === session.id);
-  if (existingSeat) {
-    return NextResponse.json({ ok: true, seat_number: existingSeat.seat_number, seatId: existingSeat.id });
-  }
-  if (active.length >= 4) {
-    return NextResponse.json({ error: "This table is full." }, { status: 409 });
-  }
+  // Claim atomically: claim_seat takes the table's advisory lock, re-checks
+  // active seats + live holds — EXCLUDING this user's own hold, so an invitee can
+  // accept the very seat held for them — is < 4, picks the lowest free seat
+  // number, inserts, and converts this user's own pending hold to 'accepted'. It
+  // is idempotent (an already-seated user gets their existing seat back, never a
+  // second row), replacing the old read-then-insert + 23505 dance. The partial
+  // unique indexes uq_table_seats_active_seat/_user remain the DB backstop. The
+  // cutoff is holdCutoffIso() (server clock) — never from the request body.
+  const { data: claim, error: claimError } = await admin.rpc("claim_seat", {
+    p_table_id: id,
+    p_user_id: session.id,
+    p_hold_cutoff: holdCutoffIso(),
+  });
 
-  const taken = new Set(active.map((s: any) => s.seat_number));
-  const seatNumber = [1, 2, 3, 4].find((n) => !taken.has(n));
-  if (!seatNumber) {
-    return NextResponse.json({ error: "This table is full." }, { status: 409 });
-  }
-
-  const { error: insertError } = await admin
-    .from("table_seats")
-    .insert({ table_id: id, user_id: session.id, seat_number: seatNumber });
-
-  if (insertError) {
-    // Unique-violation = a race between our read and write. Two cases:
-    //   * uq_table_seats_active_user — a concurrent request from THIS user already
-    //     seated them (a replayed/double tap). Return that seat, idempotent (200),
-    //     not an error — the DB partial-unique index is the real guarantee here.
-    //   * uq_table_seats_active_seat — a DIFFERENT player grabbed the seat number
-    //     first; tell this player to retry.
-    if (insertError.code === "23505") {
-      const { data: mine } = await admin
-        .from("table_seats")
-        .select("id, seat_number")
-        .eq("table_id", id)
-        .eq("user_id", session.id)
-        .is("canceled_at", null)
-        .maybeSingle();
-      if (mine) {
-        return NextResponse.json({ ok: true, seat_number: mine.seat_number, seatId: mine.id });
-      }
-      return NextResponse.json({ error: "That spot was just taken — try again." }, { status: 409 });
-    }
+  if (claimError) {
     return NextResponse.json({ error: "You couldn't be seated. Please try again." }, { status: 500 });
   }
+  if (!claim?.ok) {
+    return NextResponse.json({ error: "This table is full." }, { status: 409 });
+  }
+  if (claim.already) {
+    return NextResponse.json({ ok: true, seat_number: claim.seat_number, seatId: claim.seat_id });
+  }
 
-  // Fourth seat closes the table.
-  if (active.length + 1 >= 4) {
+  // Fourth REAL seat closes the table. now_full is active-seats-based (holds never
+  // flip status), so status='full' still means four actual players.
+  if (claim.now_full) {
     await admin.from("league_tables").update({ status: "full" }).eq("id", id);
-    // Notify ALL FOUR now-seated players: the three already seated (`active`,
-    // read before the insert) PLUS the joiner (session.id) who just took the 4th
-    // seat. The joiner gets the "you completed this table" variant; the other
-    // three get the standard "your table is now full". Pref-gated equally for all
-    // — the joiner is NOT a special case on preferences. Deduped so nobody gets
-    // two. Best-effort with per-recipient try/catch — the join has already
-    // committed and must never be blocked or rolled back by a send.
+    // Notify the four now-seated players (joiner gets the "you completed this
+    // table" variant; the others the standard "now full"). Re-read the seated set
+    // rather than a pre-insert snapshot so a concurrent fill can't skew the list.
+    // Pref-gated equally; deduped; best-effort per-recipient — the join has
+    // already committed and must never be blocked or rolled back by a send.
     try {
-      const uniqueIds = [...new Set([...active.map((s: any) => s.user_id).filter(Boolean), session.id])];
+      const { data: seatedNow } = await admin
+        .from("table_seats")
+        .select("user_id")
+        .eq("table_id", id)
+        .is("canceled_at", null);
+      const uniqueIds = [...new Set((seatedNow ?? []).map((s: any) => s.user_id).filter(Boolean))];
       if (uniqueIds.length) {
         const { data: profiles } = await admin
           .from("profiles")
@@ -123,5 +106,5 @@ export async function POST(_request: Request, context: { params: Promise<{ id: s
     }
   }
 
-  return NextResponse.json({ ok: true, seat_number: seatNumber });
+  return NextResponse.json({ ok: true, seat_number: claim.seat_number, seatId: claim.seat_id });
 }
