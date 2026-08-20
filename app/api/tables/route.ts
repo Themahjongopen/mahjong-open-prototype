@@ -7,6 +7,8 @@ import { seriesWeekForDate } from "@/lib/portal/seriesWeek";
 import { resolvePrefs } from "@/lib/portal/notificationPrefs";
 import { normalizeArea } from "@/lib/portal/area";
 import { sendNewTableEmail } from "@/lib/email/newTableEmail";
+import { sendTableInviteEmail } from "@/lib/email/tableInviteEmail";
+import { loadCohortCandidates, type InviteCandidate } from "@/lib/portal/inviteCandidates";
 
 const ROUND_TYPES = new Set(["casual", "mindful", "lightning"]);
 
@@ -91,47 +93,93 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Tables are unavailable right now." }, { status: 503 });
   }
 
-  const { data: table, error: tableError } = await admin
-    .from("league_tables")
-    .insert({
-      city_id: cityId,
-      series_id: seriesId,
-      creator_id: session.id,
-      week_number: storedWeek,
-      table_date: tableDate,
-      table_time: tableTime,
-      location_name: locationName,
-      location_address: locationAddress,
-      area,
-      round_type: roundType,
-      notes,
-      status: "open",
-    })
-    .select("id")
-    .single();
-
-  if (tableError || !table) {
-    return NextResponse.json({ error: "Your table could not be created." }, { status: 500 });
+  // Invitees to hold seats for at creation (optional; the creator takes seat 1, so
+  // at most 3). Validated against the SAME cohort eligibility as the post-creation
+  // invite route — a tampered / out-of-cohort id is rejected here, never held.
+  const inviteeIds: string[] = Array.isArray(body?.invitee_ids)
+    ? [...new Set((body.invitee_ids as unknown[]).map((v) => String(v)).filter(Boolean))]
+    : [];
+  if (inviteeIds.length > 3) {
+    return NextResponse.json({ error: "You can invite at most 3 players when creating a table." }, { status: 400 });
+  }
+  let candidates = new Map<string, InviteCandidate>();
+  if (inviteeIds.length > 0) {
+    candidates = await loadCohortCandidates(admin, cityId, seriesId, new Set([session.id]));
+    const invalid = inviteeIds.filter((pid) => !candidates.has(pid));
+    if (invalid.length > 0) {
+      return NextResponse.json({ error: "One or more selected players can't be invited to this table." }, { status: 400 });
+    }
   }
 
-  const { error: seatError } = await admin
-    .from("table_seats")
-    .insert({ table_id: table.id, user_id: session.id, seat_number: 1 });
-
-  if (seatError) {
-    // Roll back the table so we don't leave a creator-less table behind.
-    await admin.from("league_tables").delete().eq("id", table.id);
+  // Create the table, seat the creator, and place the holds ATOMICALLY — the whole
+  // operation is one transaction inside the RPC, so the table never exists with
+  // seats open and its intended holds unplaced, and nothing can join it mid-flight
+  // (it has no id until this commits). week_number is already server-authoritative
+  // (storedWeek); the RPC only stores it.
+  const { data: created, error: createError } = await admin.rpc("create_table_with_holds", {
+    p_city_id: cityId,
+    p_series_id: seriesId,
+    p_creator_id: session.id,
+    p_week_number: storedWeek,
+    p_table_date: tableDate,
+    p_table_time: tableTime,
+    p_location_name: locationName,
+    p_location_address: locationAddress,
+    p_area: area,
+    p_round_type: roundType,
+    p_notes: notes,
+    p_invitee_ids: inviteeIds,
+  });
+  if (createError || !created?.ok) {
+    if (created?.error === "too_many_invitees") {
+      return NextResponse.json({ error: "You can invite at most 3 players when creating a table." }, { status: 400 });
+    }
     return NextResponse.json({ error: "Your table could not be created." }, { status: 500 });
+  }
+  const tableId: string = created.table_id;
+  const heldInvites: { invited_profile_id: string; invite_id: string }[] = created.holds ?? [];
+
+  // City name for the invite + new-table emails (fetched once, reused below).
+  const { data: cityRow } = await admin.from("cities").select("name").eq("id", cityId).maybeSingle();
+  const cityName = cityRow?.name ?? "your city";
+
+  // Person-to-person invite email per held invitee. Best-effort and consistent
+  // with the post-creation route: a failed send RELEASES that hold (the seat
+  // genuinely reopens) and the host is told which via the response. Sequential to
+  // respect Resend's rate limit.
+  const openSeatsAtCreate = Math.max(0, 4 - 1 - heldInvites.length);
+  let invitesSent = 0;
+  const inviteFailedNames: string[] = [];
+  for (const held of heldInvites) {
+    const cand = candidates.get(held.invited_profile_id);
+    let ok = false;
+    if (cand?.email) {
+      try {
+        const res = await sendTableInviteEmail(
+          { email: cand.email, fullName: cand.full_name },
+          { tableId, inviterName: session.full_name, cityName, weekNumber: storedWeek, tableDate, tableTime, locationName, roundType, openSeats: openSeatsAtCreate }
+        );
+        ok = res.ok;
+        if (!ok) console.error("tableInviteEmail not sent (create)", cand.email, res.error);
+      } catch (err) {
+        console.error("tableInviteEmail send failed (create)", cand.email, err);
+      }
+    }
+    if (ok) {
+      invitesSent += 1;
+    } else {
+      await admin.from("table_invites").delete().eq("id", held.invite_id);
+      inviteFailedNames.push(cand?.full_name ?? "a player");
+    }
   }
 
   // Notify opted-in paid players in this city+series that a new table opened —
-  // gated on the email_new_tables preference (opt-in), excluding the creator.
-  // City+series-scoped, so the recipient set is small. Best-effort with a
-  // per-recipient try/catch (same shape as tableUnderfilled/tableUpdated) — the
-  // table is already created and a send failure must not surface to the host.
+  // gated on the email_new_tables preference (opt-in), excluding the creator AND
+  // anyone we just sent a personal invite to (they don't need both). City+series-
+  // scoped, so the recipient set is small. Best-effort with a per-recipient
+  // try/catch — the table is already created and a send failure must not surface.
+  const invitedSet = new Set(inviteeIds);
   try {
-    const { data: cityRow } = await admin.from("cities").select("name").eq("id", cityId).maybeSingle();
-    const cityName = cityRow?.name ?? "your city";
     const { data: regs } = await admin
       .from("registrations")
       .select("profile_id, profiles!inner(id, email, full_name, notification_preferences)")
@@ -140,12 +188,12 @@ export async function POST(request: Request) {
       .eq("series_id", seriesId);
     for (const r of (regs ?? []) as any[]) {
       const p = Array.isArray(r.profiles) ? r.profiles[0] : r.profiles;
-      if (!p || p.id === session.id || !p.email) continue; // skip the creator + any no-email row
+      if (!p || p.id === session.id || invitedSet.has(p.id) || !p.email) continue; // skip creator, invitees, no-email
       if (!resolvePrefs(p.notification_preferences).email_new_tables) continue; // opt-in
       try {
         const res = await sendNewTableEmail(
           { email: p.email, fullName: p.full_name },
-          { tableId: table.id, cityName, tableDate, tableTime, locationName, locationAddress, roundType }
+          { tableId, cityName, tableDate, tableTime, locationName, locationAddress, roundType }
         );
         if (!res.ok) console.error("newTableEmail not sent", p.email, res.error);
       } catch (err) {
@@ -156,5 +204,8 @@ export async function POST(request: Request) {
     console.error("newTableEmail batch failed", err);
   }
 
-  return NextResponse.json({ id: table.id });
+  return NextResponse.json({
+    id: tableId,
+    invites: { sent: invitesSent, failed: inviteFailedNames.length, failedNames: inviteFailedNames },
+  });
 }

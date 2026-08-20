@@ -108,6 +108,12 @@ export default function CreateTableForm({ cityId, cityName, seriesStartDate, ser
     round_type: "",
     notes: "",
   });
+  // Optional create-time invitations. Each selected player's seat is held for an
+  // hour (up to 3, since the creator takes seat 1) so it isn't taken before they
+  // join — the whole reason for the feature.
+  const MAX_INVITES = 3;
+  const [candidates, setCandidates] = useState<{ profile_id: string; full_name: string | null; skill_level: string | null }[]>([]);
+  const [selectedInvitees, setSelectedInvitees] = useState<Set<string>>(new Set());
 
   const seriesWeeks = useMemo(() => enumerateSeriesWeeks(seriesStartDate, seriesEndDate), [seriesStartDate, seriesEndDate]);
   const hasDynamicDates = seriesWeeks.length > 0;
@@ -133,6 +139,34 @@ export default function CreateTableForm({ cityId, cityName, seriesStartDate, ser
     [visibleWeeks, form.table_date],
   );
 
+  // Eligible invitees (paid players in this cohort, minus the creator). Fetched
+  // once — the active city+series is fixed for this page.
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const res = await fetch("/api/tables/candidates", { credentials: "include" });
+        const payload = await res.json().catch(() => ({}));
+        if (active) setCandidates(payload.candidates ?? []);
+      } catch {
+        if (active) setCandidates([]);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const atInviteCap = selectedInvitees.size >= MAX_INVITES;
+  function toggleInvitee(pid: string) {
+    setSelectedInvitees((prev) => {
+      const next = new Set(prev);
+      if (next.has(pid)) next.delete(pid);
+      else if (next.size < MAX_INVITES) next.add(pid);
+      return next;
+    });
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
@@ -157,7 +191,7 @@ export default function CreateTableForm({ cityId, cityName, seriesStartDate, ser
     const res = await fetch("/api/tables", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
+      body: JSON.stringify({ ...form, invitee_ids: [...selectedInvitees] }),
     });
     const payload = await res.json().catch(() => ({}));
 
@@ -165,6 +199,17 @@ export default function CreateTableForm({ cityId, cityName, seriesStartDate, ser
       setError(payload.error || "Your table could not be created.");
       setLoading(false);
       return;
+    }
+
+    // Tell the host if any invitation email couldn't be sent — that seat is open
+    // again (the hold was released), not silently missing.
+    const failedNames: string[] = payload.invites?.failedNames ?? [];
+    if (failedNames.length > 0) {
+      await confirm({
+        title: "Table created",
+        message: `We couldn't send an invitation to ${failedNames.join(", ")}. That seat is open again — you can invite them from the table page.`,
+        confirmLabel: "Got it",
+      });
     }
 
     router.push(`/portal/tables/${payload.id}`);
@@ -285,6 +330,35 @@ export default function CreateTableForm({ cityId, cityName, seriesStartDate, ser
         )}
         {field("Notes", false,
           <textarea className="input-mo" rows={3} placeholder="Anything players should know" value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} style={{ resize: "vertical" }} />
+        )}
+
+        {/* Optional invitees — their seats are HELD for an hour so a remote player
+            can't take a spot meant for them. Capped at 3 (the creator is seat 1).
+            Only shown when there are eligible players in the cohort. */}
+        {candidates.length > 0 && field(`Invite players (optional, up to ${MAX_INVITES})`, false,
+          <>
+            <div style={{ border: "1px solid var(--hair-200)", borderRadius: "var(--radius-md)", maxHeight: 200, overflowY: "auto" }}>
+              {candidates.map((c) => {
+                const checked = selectedInvitees.has(c.profile_id);
+                const disabled = !checked && atInviteCap;
+                return (
+                  <button
+                    key={c.profile_id}
+                    type="button"
+                    onClick={() => toggleInvitee(c.profile_id)}
+                    disabled={disabled}
+                    style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", textAlign: "left", padding: "9px 12px", background: checked ? "var(--lime-50)" : "#fff", border: "none", borderBottom: "1px solid var(--hair-100)", cursor: disabled ? "default" : "pointer", opacity: disabled ? 0.45 : 1 }}
+                  >
+                    <span aria-hidden style={{ width: 18, height: 18, borderRadius: 4, border: `1.5px solid ${checked ? "var(--lime-600)" : "var(--hair-300)"}`, background: checked ? "var(--lime-600)" : "#fff", color: "#fff", fontSize: 12, lineHeight: "16px", textAlign: "center", flexShrink: 0 }}>{checked ? "✓" : ""}</span>
+                    <span style={{ fontSize: 14, color: "var(--ink-800)" }}>{c.full_name ?? "Player"}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <p style={{ fontSize: 12, color: "var(--ink-500)", margin: "4px 0 0" }}>
+              {selectedInvitees.size} of {MAX_INVITES} selected — each seat is held for one hour so it isn&rsquo;t taken before they join.
+            </p>
+          </>
         )}
 
         <div style={{ background: "var(--lime-50)", border: "1px solid var(--lime-100)", borderRadius: "var(--radius-sm)", padding: "10px 14px", fontSize: 13, color: "var(--lime-700)" }}>
