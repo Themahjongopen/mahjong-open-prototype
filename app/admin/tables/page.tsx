@@ -166,7 +166,22 @@ export default function AdminTablesPage() {
                 <p style={{ fontSize: 13, fontWeight: 600, color: "var(--ink-500)" }}>W{t.week_number}</p>
                 <div>
                   <span className="admin-mobile-label">Table</span>
-                  <p style={{ fontSize: 14, fontWeight: 500, color: "var(--ink-900)" }}>{t.location_name}</p>
+                  {/* The table name opens the portal table detail page — where
+                      Mark-as-played, score submission, and host handoff live (the
+                      admin row itself only offers Cancel/Remove/Revert). Opens in a
+                      new tab so the admin keeps their filter/search/scroll state.
+                      Admins can view any table cross-city (getTableDetail bypasses
+                      series scope for isAdmin). */}
+                  <p style={{ fontSize: 14, margin: 0 }}>
+                    <a
+                      href={`/portal/tables/${t.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ color: "var(--pink-600)", fontWeight: 600, textDecoration: "none" }}
+                    >
+                      {t.location_name}
+                    </a>
+                  </p>
                   <p style={{ fontSize: 12, color: "var(--ink-500)" }}>
                     {new Date(`${t.table_date}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                     {t.table_time ? ` · ${formatTableTime(t.table_time)}` : ""}
