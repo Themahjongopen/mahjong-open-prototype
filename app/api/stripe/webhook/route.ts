@@ -6,6 +6,7 @@ import { buildNewRegistrationCommissionerEmail } from "@/lib/email/newRegistrati
 import { sendRegistrationReminderEmail } from "@/lib/email/registrationReminderEmail";
 import { sendPortalInvite } from "@/lib/email/portalInvite";
 import { ensureAttributionOnPaid } from "@/lib/registration/attribution";
+import { formatCreditedTo } from "@/lib/registration/creditLabel";
 import { createAdminClient, listAuthUsersByEmail } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
@@ -362,12 +363,26 @@ export async function POST(request: Request) {
           )
         );
         if (recipients.length > 0) {
+          // Who this registration is credited to — read the attribution rows
+          // ensureAttributionOnPaid already settled above, and format them the
+          // same way the commissioner roster does. The registration is paid here,
+          // so an empty set reads as "Unattributed", never "Pending".
+          const { data: attrRows } = await supabase
+            .from("registration_attributions")
+            .select("commissioner_profile_id, profiles(full_name)")
+            .eq("registration_id", registrationData.id);
+          const creditedNames = ((attrRows ?? []) as { commissioner_profile_id: string | null; profiles: { full_name: string | null } | { full_name: string | null }[] | null }[])
+            .filter((a) => a.commissioner_profile_id)
+            .map((a) => (Array.isArray(a.profiles) ? a.profiles[0] : a.profiles)?.full_name ?? null);
+          const creditedTo = formatCreditedTo(creditedNames, "paid");
+
           const { subject, html } = buildNewRegistrationCommissionerEmail({
             playerName: registrationData.full_name,
             email: registrationData.email,
             phone: registrationData.phone,
             cityName,
             registeredAt,
+            creditedTo,
           });
           const resend = new Resend(resendApiKey);
           for (const to of recipients) {

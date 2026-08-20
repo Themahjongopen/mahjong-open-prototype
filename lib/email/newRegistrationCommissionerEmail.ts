@@ -11,8 +11,13 @@ export function buildNewRegistrationCommissionerEmail(params: {
   phone: string | null | undefined;
   cityName: string;
   registeredAt: string;
+  // Who this registration is credited to, already formatted (e.g. "Sandy Faulkner",
+  // "Sandy Faulkner & Vicki Campbell", or "Unattributed"). A shared credit reads as
+  // a full name each — a commissioner should never have to wonder whether it means
+  // half or full.
+  creditedTo: string;
 }): { subject: string; html: string } {
-  const { playerName, email, phone, cityName, registeredAt } = params;
+  const { playerName, email, phone, cityName, registeredAt, creditedTo } = params;
 
   const rowLabel = "font-size:11px;letter-spacing:1px;color:#8a9a93;text-transform:uppercase;margin:0 0 2px 0;";
   const rowValue = "font-size:16px;color:#142f34;margin:0 0 16px 0;font-weight:bold;";
@@ -35,6 +40,8 @@ export function buildNewRegistrationCommissionerEmail(params: {
           ${phoneRow}
           <p style="${rowLabel}">City</p>
           <p style="${rowValue}">${cityName}</p>
+          <p style="${rowLabel}">Credited to</p>
+          <p style="${rowValue}">${creditedTo}</p>
           <p style="${rowLabel}">Registered</p>
           <p style="font-size:15px;color:#142f34;margin:0;">${registeredAt}</p>
         </td>
