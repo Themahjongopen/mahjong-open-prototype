@@ -6,6 +6,7 @@ import AdminCancelTableButton from "@/components/admin/AdminCancelTableButton";
 import AdminRemovePlayerButton from "@/components/admin/AdminRemovePlayerButton";
 import AdminRevertTableButton from "@/components/admin/AdminRevertTableButton";
 import AdminSetWeekButton from "@/components/admin/AdminSetWeekButton";
+import AdminAddPlayerButton from "@/components/admin/AdminAddPlayerButton";
 
 const STATUS_BADGE: Record<string, string> = { open: "badge-lime", full: "badge-peri", completed: "badge-mute", canceled: "badge-mute" };
 
@@ -244,6 +245,15 @@ export default function AdminTablesPage() {
                       locationName={t.location_name}
                       dateLabel={new Date(`${t.table_date}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                       onCanceled={() => void load()}
+                    />
+                  )}
+                  {/* Seat a player from the console — only while the table can take
+                      one (open/full); the server re-enforces status + capacity. */}
+                  {(t.status === "open" || t.status === "full") && (
+                    <AdminAddPlayerButton
+                      tableId={t.id}
+                      tableLabel={`${t.location_name} · ${new Date(`${t.table_date}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" })}${t.table_time ? ` · ${formatTableTime(t.table_time)}` : ""}`}
+                      onAdded={() => void load()}
                     />
                   )}
                 </div>

@@ -13,12 +13,18 @@ export type InviteCandidate = {
   email: string | null;
 };
 
+// includeHidden: when true, players who opted out of the directory
+// (show_in_directory = false) are STILL returned. Used only by the admin
+// add-to-table flow — an admin seating someone to resolve a support case should
+// reach any paid player in the cohort, directory preference notwithstanding. The
+// public invite flows leave it false so opted-out players stay hidden.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function loadCohortCandidates(
   admin: any,
   cityId: string,
   seriesId: string,
-  excludeIds: Set<string>
+  excludeIds: Set<string>,
+  includeHidden = false
 ): Promise<Map<string, InviteCandidate>> {
   const { data } = await admin
     .from("registrations")
@@ -33,7 +39,7 @@ export async function loadCohortCandidates(
   for (const row of (data ?? []) as any[]) {
     const p = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
     if (!p) continue;
-    if (p.show_in_directory === false) continue; // opted out of the directory
+    if (!includeHidden && p.show_in_directory === false) continue; // opted out of the directory
     if (excludeIds.has(p.id)) continue;
     if (map.has(p.id)) continue; // de-dupe (defensive; one paid reg per cohort)
     map.set(p.id, {

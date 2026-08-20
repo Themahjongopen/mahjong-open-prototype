@@ -4,6 +4,12 @@ import { createAdminClient } from "@/lib/supabase/server";
 import { cancelSeatsAndNotify } from "@/lib/portal/cancelSeatsAndNotify";
 import { getSeriesStartDate } from "@/lib/portal/tables";
 import { seriesWeekForDate } from "@/lib/portal/seriesWeek";
+import { activeHolds } from "@/lib/portal/seats";
+import { holdCutoffIso } from "@/lib/portal/holdExpiry";
+import { loadCohortCandidates } from "@/lib/portal/inviteCandidates";
+import { resolvePrefs } from "@/lib/portal/notificationPrefs";
+import { sendTableFilledEmail } from "@/lib/email/tableFilledEmail";
+import { sendAdminAddedToTableEmail } from "@/lib/email/adminAddedToTableEmail";
 
 export const runtime = "nodejs";
 
@@ -30,11 +36,167 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
   if (body?.action === "set_week") {
     return setWeek(admin, id, body);
   }
+  if (body?.action === "add_seat") {
+    return addSeat(admin, id, body);
+  }
   if (body?.action !== "remove_seat" || typeof body?.seatId !== "string") {
     return NextResponse.json({ error: "Nothing to update." }, { status: 400 });
   }
 
   return removeSeat(admin, id, body);
+}
+
+// Add ONE player to a table from the admin console (support case: Meghan, Fort
+// Wayne, Aug 20 — players joined the wrong of two same-venue tables and swapped).
+// Routes the seat insert through claim_seat (migration 044) so the admin add is
+// the SAME capacity-safe, advisory-locked path as a self-serve join — never a
+// bespoke insert that would bypass the lock and reintroduce the two-table race.
+//   * completed/canceled tables are refused (revert to open first);
+//   * an already-seated player resolves idempotently (claim_seat returns their
+//     existing seat) and is surfaced as "already seated", not an error;
+//   * held-full is refused with an ACTIONABLE message naming the held seats — the
+//     admin releases a hold first (they have that control on the detail page). We
+//     never silently destroy a reservation;
+//   * eligibility (paid in this table's city+series) is re-checked server-side,
+//     directory-agnostic, so a tampered/out-of-cohort userId is rejected here;
+//   * the added player is emailed (they didn't choose to join, and the 24h no-show
+//     rule now applies to them). If the add closes the 4th seat, the OTHER three
+//     get the standard "table full" email — the added player is EXCLUDED from that
+//     broadcast so they get exactly one email about the event.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function addSeat(admin: any, id: string, body: any) {
+  const userId = typeof body?.userId === "string" ? body.userId : null;
+  if (!userId) {
+    return NextResponse.json({ error: "Pick a player to add." }, { status: 400 });
+  }
+
+  const { data: table } = await admin
+    .from("league_tables")
+    .select(
+      "id, city_id, series_id, status, table_date, table_time, location_name, location_address, round_type, creator_id, cities(name), table_seats(id, user_id, canceled_at), table_invites(invited_profile_id, status, created_at, profiles!invited_profile_id(full_name))"
+    )
+    .eq("id", id)
+    .maybeSingle();
+  if (!table) {
+    return NextResponse.json({ error: "That table no longer exists." }, { status: 404 });
+  }
+  if (table.status !== "open" && table.status !== "full") {
+    return NextResponse.json(
+      { error: "This table is completed or canceled. Revert it to open first, then add a player." },
+      { status: 409 }
+    );
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const activeSeatRows = ((table.table_seats ?? []) as any[]).filter((s) => !s.canceled_at);
+  const seatedIds = new Set(activeSeatRows.map((s: any) => s.user_id));
+
+  // Already seated → idempotent (claim_seat would return the same), surfaced plainly.
+  if (seatedIds.has(userId)) {
+    return NextResponse.json({ ok: true, already: true, message: "That player is already seated at this table." });
+  }
+
+  // Eligibility: paid in THIS table's city+series (directory-agnostic for admin).
+  // Re-checked here so a tampered userId that never reached the picker is rejected.
+  const eligible = await loadCohortCandidates(admin, table.city_id, table.series_id, new Set(), true);
+  if (!eligible.has(userId)) {
+    return NextResponse.json(
+      { error: "That player isn't a paid member of this table's city and league." },
+      { status: 400 }
+    );
+  }
+
+  const { data: claim, error: claimError } = await admin.rpc("claim_seat", {
+    p_table_id: id,
+    p_user_id: userId,
+    p_hold_cutoff: holdCutoffIso(),
+  });
+  if (claimError) {
+    return NextResponse.json({ error: "That player couldn't be seated. Please try again." }, { status: 500 });
+  }
+  if (!claim?.ok) {
+    // claim_seat only refuses when active seats + live holds >= 4. Distinguish a
+    // genuinely-full table (4 real players) from a held-full one, and for the
+    // latter name the held seats so the admin knows exactly what to release.
+    if (activeSeatRows.length >= 4) {
+      return NextResponse.json({ error: "This table already has four players." }, { status: 409 });
+    }
+    const heldNames = activeHolds((table.table_invites ?? []) as any[])
+      .filter((h: any) => !seatedIds.has(h.invited_profile_id))
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .map((h: any) => (Array.isArray(h.profiles) ? h.profiles[0] : h.profiles)?.full_name)
+      .filter(Boolean) as string[];
+    const nameList =
+      heldNames.length === 0
+        ? "an invited player"
+        : heldNames.length === 1
+          ? heldNames[0]
+          : heldNames.length === 2
+            ? `${heldNames[0]} and ${heldNames[1]}`
+            : `${heldNames.slice(0, -1).join(", ")} and ${heldNames[heldNames.length - 1]}`;
+    return NextResponse.json(
+      {
+        error: `This table's open ${heldNames.length === 1 ? "seat is held" : "seats are held"} for ${nameList}. Release a hold on the table's detail page first, then add.`,
+      },
+      { status: 409 }
+    );
+  }
+  if (claim.already) {
+    return NextResponse.json({ ok: true, already: true, message: "That player is already seated at this table." });
+  }
+
+  // Seated. Fire the side-effect emails best-effort — the seat is committed and a
+  // send must never fail the add.
+  const city = Array.isArray(table.cities) ? table.cities[0] : table.cities;
+  const cityName = city?.name ?? null;
+
+  // 1) The added player — they didn't choose to join, so tell them (+ no-show rule).
+  try {
+    const { data: added } = await admin.from("profiles").select("email, full_name").eq("id", userId).maybeSingle();
+    if (added?.email) {
+      const res = await sendAdminAddedToTableEmail(
+        { email: added.email, fullName: added.full_name },
+        { tableId: id, cityName, tableDate: table.table_date, tableTime: table.table_time, locationName: table.location_name, roundType: table.round_type }
+      );
+      if (!res.ok) console.error("adminAddedToTableEmail not sent", added.email, res.error);
+    }
+  } catch (err) {
+    console.error("adminAddedToTableEmail failed", err);
+  }
+
+  // 2) If this closed the 4th seat, mark the table full and send the standard
+  //    "table full" email to the OTHER three (the added player is excluded — they
+  //    already got the add email, so they get exactly one message about this).
+  if (claim.now_full) {
+    await admin.from("league_tables").update({ status: "full" }).eq("id", id);
+    try {
+      const otherIds = [...new Set(activeSeatRows.map((s: any) => s.user_id).filter(Boolean))].filter((uid) => uid !== userId);
+      if (otherIds.length) {
+        const { data: profiles } = await admin
+          .from("profiles")
+          .select("id, email, full_name, notification_preferences")
+          .in("id", otherIds);
+        for (const p of (profiles ?? []) as any[]) {
+          if (!p.email) continue;
+          if (resolvePrefs(p.notification_preferences).email_table_filled === false) continue;
+          try {
+            const res = await sendTableFilledEmail(
+              { email: p.email, fullName: p.full_name },
+              { tableId: id, tableDate: table.table_date, tableTime: table.table_time, locationName: table.location_name, locationAddress: table.location_address, roundType: table.round_type },
+              { acting: false }
+            );
+            if (!res.ok) console.error("tableFilledEmail not sent (admin add)", p.email, res.error);
+          } catch (err) {
+            console.error("tableFilledEmail send failed (admin add)", p.email, err);
+          }
+        }
+      }
+    } catch (err) {
+      console.error("tableFilledEmail batch failed (admin add)", err);
+    }
+  }
+
+  return NextResponse.json({ ok: true, seat_number: claim.seat_number });
 }
 
 // Remove ONE seated player from a table without canceling the whole table.
