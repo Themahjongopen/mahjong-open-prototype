@@ -7,6 +7,7 @@ import { useToast } from "@/components/portal/PortalShellClient";
 import { useConfirm } from "@/components/ConfirmProvider";
 import Avatar from "@/components/portal/Avatar";
 import InvitePlayersModal from "@/components/portal/InvitePlayersModal";
+import HostNoShowButton from "@/components/portal/HostNoShowButton";
 import AreaCombobox from "@/components/portal/AreaCombobox";
 import { scoringSeats, activeHolds, type LeagueTable, type SeatRow, type HoldDisplayRow } from "@/lib/portal/seats";
 import { holdExpiresAt } from "@/lib/portal/holdExpiry";
@@ -211,6 +212,11 @@ export default function TableDetailClient({
   const tableDateTime = zonedTimeToUtc(table.table_date, table.table_time ?? "12:00:00", table.timezone ?? "America/Chicago");
   const hoursUntil = (tableDateTime.getTime() - Date.now()) / (1000 * 60 * 60);
   const withinCutoff = hoursUntil <= 24;
+  // A seated NON-host may record the host as a no-show, but only AFTER the start
+  // time has passed (never pre-emptively). The server re-enforces every clause.
+  const startPassed = hoursUntil <= 0;
+  const canMarkHostNoShow = !!myActiveSeat && !isCreator && startPassed && (table.status === "open" || table.status === "full");
+  const hostName = active.find((s) => s.user_id === table.creator_id)?.profiles?.full_name ?? "the host";
 
   async function run(action: Exclude<Action, null>, url: string, init: RequestInit, okMsg: string) {
     setLoading(action);
@@ -598,6 +604,15 @@ export default function TableDetailClient({
           <button className="btn btn-ghost" onClick={() => setInviting(true)} style={{ justifyContent: "center", padding: "13px" }}>
             Invite players
           </button>
+        )}
+
+        {canMarkHostNoShow && (
+          <HostNoShowButton
+            tableId={table.id}
+            hostName={hostName}
+            tableLabel={`${table.location_name} on ${new Date(`${table.table_date}T12:00:00`).toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })}`}
+            onDone={() => router.refresh()}
+          />
         )}
 
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
