@@ -52,16 +52,19 @@ function Row({
       }}
     >
       <p style={{ fontSize: 15, fontFamily: "var(--font-display)", color: rank === "1" ? "var(--crimson-500)" : "var(--ink-700)" }}>{rank}</p>
-      {/* overflow:hidden keeps a long name (or the skill badge) from spilling into
-          the score column on a narrow phone; min-width:0 on both the cell AND the
-          name lets the name shrink and ellipsize instead of collapsing to zero. */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0, overflow: "hidden" }}>
+      {/* The player cell is a GRID, not flex: the name lives in a minmax(0, 1fr)
+          track (avatar and badge are auto), so it's given an allocated width and
+          clips with ellipsis — exactly like the column-header cells. This does NOT
+          depend on flex-shrink, which older iOS Safari fails to apply (the name
+          collapsed to zero), whereas grid track sizing works there. overflow:hidden
+          keeps anything from spilling into the score column. */}
+      <div style={{ display: "grid", gridTemplateColumns: row.skill_level ? "auto minmax(0, 1fr) auto" : "auto minmax(0, 1fr)", alignItems: "center", gap: 8, minWidth: 0, overflow: "hidden" }}>
         <Avatar src={row.avatar_url} size={28} alt={name} />
-        <p title={isMe ? undefined : name} style={{ flex: "1 1 0%", minWidth: 0, fontSize: 14, fontWeight: isMe ? 600 : 400, color: "var(--ink-900)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        <p title={isMe ? undefined : name} style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 14, fontWeight: isMe ? 600 : 400, color: "var(--ink-900)" }}>
           {isMe ? "You" : name}
         </p>
         {row.skill_level ? (
-          <span className={`badge mo-skill-badge ${SKILL_COLORS[row.skill_level] ?? "badge-mute"}`} style={{ fontSize: 10, flexShrink: 0 }}>
+          <span className={`badge mo-skill-badge ${SKILL_COLORS[row.skill_level] ?? "badge-mute"}`} style={{ fontSize: 10, maxWidth: 52, overflow: "hidden" }}>
             {SKILL_ABBR[row.skill_level] ?? row.skill_level}
           </span>
         ) : null}
