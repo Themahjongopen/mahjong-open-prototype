@@ -32,6 +32,9 @@ export default function PlayedRoundsList({
   // Top hosts for the selected week, from all loaded rounds (independent of the
   // player search). Ranked by rounds hosted; the top 3, but if the 3rd place is
   // tied, everyone tied at that count is shown rather than truncating to three.
+  // When that tie-extended list would exceed 5, the week has no standout hosts
+  // (e.g. most people hosted once) — the band recognizes no one, so it's hidden
+  // entirely (empty list → not rendered).
   const topHosts = useMemo(() => {
     const byHost = new Map<string, { hostId: string; name: string; count: number }>();
     for (const r of rounds) {
@@ -40,9 +43,8 @@ export default function PlayedRoundsList({
       else byHost.set(r.hostId, { hostId: r.hostId, name: r.hostName ?? "—", count: 1 });
     }
     const sorted = Array.from(byHost.values()).sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
-    if (sorted.length <= 3) return sorted;
-    const thirdCount = sorted[2].count; // include all hosts tied at (or above) the 3rd-place count
-    return sorted.filter((h) => h.count >= thirdCount);
+    const top = sorted.length <= 3 ? sorted : sorted.filter((h) => h.count >= sorted[2].count);
+    return top.length > 5 ? [] : top;
   }, [rounds]);
 
   // A city with no completed rounds at all — nothing to select or search.
