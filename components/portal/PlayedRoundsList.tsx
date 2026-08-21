@@ -29,6 +29,22 @@ export default function PlayedRoundsList({
     return rounds.filter((r) => r.players.some((p) => (p.full_name ?? "").toLowerCase().includes(q)));
   }, [rounds, nameQuery]);
 
+  // Top hosts for the selected week, from all loaded rounds (independent of the
+  // player search). Ranked by rounds hosted; the top 3, but if the 3rd place is
+  // tied, everyone tied at that count is shown rather than truncating to three.
+  const topHosts = useMemo(() => {
+    const byHost = new Map<string, { hostId: string; name: string; count: number }>();
+    for (const r of rounds) {
+      const cur = byHost.get(r.hostId);
+      if (cur) cur.count++;
+      else byHost.set(r.hostId, { hostId: r.hostId, name: r.hostName ?? "—", count: 1 });
+    }
+    const sorted = Array.from(byHost.values()).sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+    if (sorted.length <= 3) return sorted;
+    const thirdCount = sorted[2].count; // include all hosts tied at (or above) the 3rd-place count
+    return sorted.filter((h) => h.count >= thirdCount);
+  }, [rounds]);
+
   // A city with no completed rounds at all — nothing to select or search.
   if (weeks.length === 0) {
     return (
@@ -66,6 +82,22 @@ export default function PlayedRoundsList({
           />
         </div>
       </div>
+
+      {topHosts.length > 0 && (
+        <div style={{ background: "var(--lime-50, #f4f8ee)", border: "1px solid var(--hair-200)", borderRadius: "var(--radius-lg)", padding: "12px 14px", marginBottom: 16 }}>
+          <p style={{ ...legendStyle, color: "var(--lime-700)", marginBottom: 10 }}>Top hosts this week</p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {topHosts.map((h) => (
+              <div key={h.hostId} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                <span style={{ fontSize: 14, color: "var(--ink-800)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{h.name}</span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: "var(--ink-700)", flexShrink: 0 }}>
+                  {h.count} round{h.count === 1 ? "" : "s"}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
         <span style={{ fontSize: 13, color: "var(--ink-500)" }}>

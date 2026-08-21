@@ -32,6 +32,7 @@ export type PlayedRound = {
   table_time: string | null;
   location_name: string;
   round_type: string | null;
+  hostId: string; // creator_id — groups the "top hosts this week" tally by identity, not name
   hostName: string | null;
   players: PlayedPlayer[];
 };
@@ -121,6 +122,7 @@ function toPlayedRound(t: any): PlayedRound {
     table_time: t.table_time,
     location_name: t.location_name,
     round_type: t.round_type,
+    hostId: t.creator_id,
     hostName: nameOf.get(t.creator_id) ?? null,
     players,
   };
