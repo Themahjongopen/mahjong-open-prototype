@@ -2,7 +2,7 @@ import { createAdminClient } from "@/lib/supabase/server";
 
 // The logged-in player's dashboard season stats, read from the service-role-only
 // member_series_standings view. All three award systems (Ace / Champion / Flight
-// Winner) plus games played, for parity with the profile page's "Current season"
+// Winner) plus rounds played, for parity with the profile page's "Current season"
 // section. Extracted so the dashboard Server Component can compute these inline
 // (reusing the request's existing auth) instead of the client re-fetching them
 // through a second function invocation + a second getUser().

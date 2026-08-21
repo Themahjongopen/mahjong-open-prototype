@@ -1,6 +1,6 @@
 import type { MyStats } from "@/lib/portal/myStats";
 
-// The logged-in player's season stats for the home screen: a Games-played tile
+// The logged-in player's season stats for the home screen: a Rounds-played tile
 // plus a card per award system (Ace / Champion / Flight Winner), each with its
 // own score + rank — full parity with the profile page's "Current season"
 // section (same values, same decimal places). Now purely presentational: the
@@ -36,7 +36,7 @@ export default function HomeStats({ stats }: { stats: MyStats }) {
     <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 24 }}>
       <div style={{ ...cardStyle, textAlign: "center" }}>
         <p style={valueStyle}>{stats.rounds}</p>
-        <p style={labelStyle}>Games played</p>
+        <p style={labelStyle}>Rounds played</p>
       </div>
 
       {awards.map((a) => (

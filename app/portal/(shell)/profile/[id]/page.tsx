@@ -39,7 +39,7 @@ function StatGrid({ items }: { items: { label: string; value: string }[] }) {
 
 function coreStats(b: StatBlock) {
   return [
-    { label: "Games played", value: String(b.rounds) },
+    { label: "Rounds played", value: String(b.rounds) },
     { label: "Total score", value: String(b.totalScore) },
     { label: "Points per round", value: b.avgScore.toFixed(1) },
   ];
