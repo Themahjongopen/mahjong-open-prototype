@@ -91,7 +91,7 @@ export default function PlayedRoundsList({
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             {topHosts.map((h) => (
               <div key={h.hostId} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-                <span style={{ fontSize: 14, color: "var(--ink-800)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{h.name}</span>
+                <span style={{ flex: "1 1 auto", minWidth: 0, fontSize: 14, color: "var(--ink-800)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{h.name}</span>
                 <span style={{ fontSize: 13, fontWeight: 700, color: "var(--ink-700)", flexShrink: 0 }}>
                   {h.count} round{h.count === 1 ? "" : "s"}
                 </span>
@@ -153,7 +153,7 @@ function PlayedRoundCard({ round }: { round: PlayedRound }) {
       <div style={{ display: "flex", flexDirection: "column", gap: 6, borderTop: "1px solid var(--hair-200)", paddingTop: 10 }}>
         {round.players.map((p) => (
           <div key={p.user_id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-            <span style={{ fontSize: 14, color: "var(--ink-800)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            <span style={{ flex: "1 1 auto", minWidth: 0, fontSize: 14, color: "var(--ink-800)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {p.full_name ?? "—"}
               {p.isHost && (
                 <span className="badge badge-lime" style={{ marginLeft: 8, fontSize: 10, verticalAlign: "middle" }}>Host</span>

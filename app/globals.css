@@ -992,6 +992,14 @@ body.admin-drawer-open {
 .badge-butter { background: var(--crimson-50); color: var(--crimson-600); }
 .badge-mute   { background: var(--paper-100); color: var(--ink-500); }
 
+/* Standings rows get very tight on a ~320px viewport (an older iPhone, or any
+   iPhone in Display-Zoom "Zoomed" mode): the secondary skill badge would starve
+   the player name. Below 360px, drop the badge so the name stays legible. Plain
+   max-width media query — supported everywhere, including Safari 16. */
+@media (max-width: 359px) {
+  .mo-skill-badge { display: none; }
+}
+
 /* ============================================================
    TOAST
    ============================================================ */

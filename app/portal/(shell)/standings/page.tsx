@@ -3,7 +3,14 @@ import { withAdminCity } from "@/lib/portal/adminCity";
 import { getStandings, getCityStandings, byAceAward, byChampionAward, byFlightWinner, type StandingRow } from "@/lib/portal/standings";
 import Avatar from "@/components/portal/Avatar";
 
-const COLS = "36px 1fr 72px 64px";
+// Rank · Player · Value · Rounds. The Player track is minmax(0, 1fr) — NOT a bare
+// 1fr — so it can shrink below its content's min-content width on every engine
+// (a bare 1fr resolves to minmax(auto, 1fr), and on narrow iPhone widths the
+// nowrap full name refused to shrink, collapsing the name to zero and pushing the
+// skill badge over the score column). The numeric columns are trimmed so even a
+// 320px viewport (an iPhone in Display-Zoom mode) leaves room for the avatar and a
+// legible, ellipsized name. Shared by the header and every row so they stay aligned.
+const COLS = "28px minmax(0, 1fr) 56px 54px";
 
 // Same skill → badge-color map as OpenTableCard / the commissioner roster, with
 // short labels (the stored values are the full words).
@@ -45,13 +52,16 @@ function Row({
       }}
     >
       <p style={{ fontSize: 15, fontFamily: "var(--font-display)", color: rank === "1" ? "var(--crimson-500)" : "var(--ink-700)" }}>{rank}</p>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+      {/* overflow:hidden keeps a long name (or the skill badge) from spilling into
+          the score column on a narrow phone; min-width:0 on both the cell AND the
+          name lets the name shrink and ellipsize instead of collapsing to zero. */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0, overflow: "hidden" }}>
         <Avatar src={row.avatar_url} size={28} alt={name} />
-        <p title={isMe ? undefined : name} style={{ fontSize: 14, fontWeight: isMe ? 600 : 400, color: "var(--ink-900)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        <p title={isMe ? undefined : name} style={{ flex: "1 1 auto", minWidth: 0, fontSize: 14, fontWeight: isMe ? 600 : 400, color: "var(--ink-900)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {isMe ? "You" : name}
         </p>
         {row.skill_level ? (
-          <span className={`badge ${SKILL_COLORS[row.skill_level] ?? "badge-mute"}`} style={{ fontSize: 10, flexShrink: 0 }}>
+          <span className={`badge mo-skill-badge ${SKILL_COLORS[row.skill_level] ?? "badge-mute"}`} style={{ fontSize: 10, flexShrink: 0 }}>
             {SKILL_ABBR[row.skill_level] ?? row.skill_level}
           </span>
         ) : null}
