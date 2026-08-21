@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { getPortalClaims } from "@/lib/portal/session";
 import { withAdminCity } from "@/lib/portal/adminCity";
 import { getStandings, getCityStandings, byAceAward, byChampionAward, byFlightWinner, type StandingRow } from "@/lib/portal/standings";
@@ -119,7 +120,31 @@ function Table({
   );
 }
 
-export default async function StandingsPage() {
+const BOARDS = [
+  { key: "ace", label: "Ace" },
+  { key: "champion", label: "Champion" },
+  { key: "flight", label: "Flight Winner" },
+  { key: "city", label: "City" },
+] as const;
+type BoardKey = (typeof BOARDS)[number]["key"];
+
+// Pills are content-sized and wrap, so a long label ("Flight Winner") and Larger
+// Text (Dynamic Type) never force horizontal overflow — same robustness rule as
+// the boards below them.
+const pillBase: React.CSSProperties = {
+  fontSize: 13, fontWeight: 600, padding: "7px 14px", borderRadius: "999px",
+  textDecoration: "none", border: "1px solid var(--hair-300)", whiteSpace: "nowrap",
+  transition: "background 120ms, color 120ms, border-color 120ms",
+};
+const pillActive: React.CSSProperties = { ...pillBase, background: "var(--pink-500)", color: "#fff", borderColor: "var(--pink-500)" };
+const pillInactive: React.CSSProperties = { ...pillBase, background: "#fff", color: "var(--ink-700)" };
+
+export default async function StandingsPage({ searchParams }: { searchParams: Promise<{ board?: string }> }) {
+  const { board: boardParam } = await searchParams;
+  // One board at a time, selected by a pill; default (no/unknown param) is Ace —
+  // the clean /portal/standings URL. Server-side param keeps this a server component.
+  const board: BoardKey = BOARDS.some((b) => b.key === boardParam) ? (boardParam as BoardKey) : "ace";
+
   // Read-only leaderboards: locally-verified claims are enough (no getUser round-trip).
   const session = await getPortalClaims();
   // Admins have no home city; getStandings reads their active-city selection.
@@ -130,12 +155,21 @@ export default async function StandingsPage() {
 
   return (
     <div style={{ padding: "20px 16px", maxWidth: 480, margin: "0 auto" }}>
-      <div style={{ marginBottom: 24 }}>
+      <div style={{ marginBottom: 20 }}>
         {cityName ? <p className="eyebrow" style={{ marginBottom: 4 }}>{cityName}</p> : null}
         <h2 style={{ fontFamily: "var(--font-display)", fontSize: 22, color: "var(--ink-900)" }}>Standings</h2>
-        <p style={{ fontSize: 13, color: "var(--ink-500)", marginTop: 8 }}>Three leaderboards, updated live after each round is scored.</p>
+        <p style={{ fontSize: 13, color: "var(--ink-500)", marginTop: 8 }}>Updated live after each round is scored.</p>
       </div>
 
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 24 }}>
+        {BOARDS.map((b) => (
+          <Link key={b.key} href={b.key === "ace" ? "/portal/standings" : `/portal/standings?board=${b.key}`} style={board === b.key ? pillActive : pillInactive}>
+            {b.label}
+          </Link>
+        ))}
+      </div>
+
+      {board === "ace" && (
       <Table
         title="Ace Award"
         subtitle="Your single highest round score this league."
@@ -145,7 +179,9 @@ export default async function StandingsPage() {
         rankOf={(r) => String(r.ace_award_rank ?? "—")}
         valueOf={(r) => String(r.ace_award_score)}
       />
+      )}
 
+      {board === "champion" && (
       <Table
         title="Champion Award"
         subtitle="Your single highest round each week, summed across all 8 weeks."
@@ -155,7 +191,9 @@ export default async function StandingsPage() {
         rankOf={(r) => String(r.champion_award_rank ?? "—")}
         valueOf={(r) => r.champion_award_score.toFixed(1)}
       />
+      )}
 
+      {board === "flight" && (
       <Table
         title="Flight Winner"
         subtitle="Total points ÷ total rounds across your best 7 of 8 weeks. Requires 5 rounds played to qualify."
@@ -166,8 +204,9 @@ export default async function StandingsPage() {
         rankOf={(r) => String(r.flight_winner_rank ?? "—")}
         valueOf={(r) => r.flight_winner_score.toFixed(2)}
       />
+      )}
 
-      {cityStandings.length > 0 ? (
+      {board === "city" && (cityStandings.length > 0 ? (
         <section style={{ marginBottom: 28 }}>
           <div style={{ marginBottom: 12 }}>
             <h3 style={{ fontFamily: "var(--font-display)", fontSize: 18, color: "var(--ink-900)", margin: 0 }}>City Leaderboard</h3>
@@ -202,7 +241,11 @@ export default async function StandingsPage() {
             ))}
           </div>
         </section>
-      ) : null}
+      ) : (
+        <div style={{ textAlign: "center", padding: "40px 24px", color: "var(--ink-500)" }}>
+          <p style={{ fontSize: 15 }}>No city leaderboard yet.</p>
+        </div>
+      ))}
     </div>
   );
 }
