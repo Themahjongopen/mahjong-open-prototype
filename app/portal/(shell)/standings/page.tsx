@@ -57,7 +57,7 @@ function Row({
           name lets the name shrink and ellipsize instead of collapsing to zero. */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0, overflow: "hidden" }}>
         <Avatar src={row.avatar_url} size={28} alt={name} />
-        <p title={isMe ? undefined : name} style={{ flex: "1 1 auto", minWidth: 0, fontSize: 14, fontWeight: isMe ? 600 : 400, color: "var(--ink-900)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        <p title={isMe ? undefined : name} style={{ flex: "1 1 0%", minWidth: 0, fontSize: 14, fontWeight: isMe ? 600 : 400, color: "var(--ink-900)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {isMe ? "You" : name}
         </p>
         {row.skill_level ? (
@@ -101,7 +101,7 @@ function Table({
       <div style={{ background: "#fff", border: "1px solid var(--hair-200)", borderRadius: "var(--radius-lg)", overflow: "hidden", boxShadow: "var(--shadow-sm)" }}>
         <div style={{ display: "grid", gridTemplateColumns: COLS, padding: "10px 16px", borderBottom: "1px solid var(--hair-200)", gap: 8 }}>
           {["#", "Player", valueHeader, "Rounds"].map((h) => (
-            <p key={h} style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-500)", letterSpacing: "0.1em", textTransform: "uppercase" }}>{h}</p>
+            <p key={h} style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 11, fontWeight: 700, color: "var(--ink-500)", letterSpacing: "0.1em", textTransform: "uppercase" }}>{h}</p>
           ))}
         </div>
         {rows.length === 0 ? (

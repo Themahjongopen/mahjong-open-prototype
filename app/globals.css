@@ -222,6 +222,14 @@
 
 html {
   scroll-behavior: smooth;
+  /* iOS Mobile Safari auto-inflates small text ("idempotent text autosizing"),
+     independent of the width=device-width viewport and NOT applied by desktop
+     WebKit/emulators — so a fixed-column layout (e.g. the standings table) can
+     render correctly everywhere yet overflow on a real iPhone, where the 11px
+     header labels and 14px names get boosted enough to collide/clip. Pin text to
+     the authored sizes. Supported since iOS 5 / all evergreen browsers. */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 body {
