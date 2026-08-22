@@ -7,6 +7,7 @@ import AdminRemovePlayerButton from "@/components/admin/AdminRemovePlayerButton"
 import AdminRevertTableButton from "@/components/admin/AdminRevertTableButton";
 import AdminSetWeekButton from "@/components/admin/AdminSetWeekButton";
 import AdminAddPlayerButton from "@/components/admin/AdminAddPlayerButton";
+import AdminRecordRoundButton from "@/components/admin/AdminRecordRoundButton";
 
 const STATUS_BADGE: Record<string, string> = { open: "badge-lime", full: "badge-peri", completed: "badge-mute", canceled: "badge-mute" };
 
@@ -106,7 +107,10 @@ export default function AdminTablesPage() {
 
   return (
     <div style={{ maxWidth: 1100 }}>
-      <h1 style={{ fontFamily: "var(--font-display)", fontSize: 26, color: "var(--ink-900)", marginBottom: 8 }}>All Tables</h1>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, flexWrap: "wrap", marginBottom: 8 }}>
+        <h1 style={{ fontFamily: "var(--font-display)", fontSize: 26, color: "var(--ink-900)" }}>All Tables</h1>
+        <AdminRecordRoundButton onRecorded={() => void load()} />
+      </div>
       <p style={{ fontSize: 15, color: "var(--ink-500)", marginBottom: 20 }}>
         {filteredRows.length} table{filteredRows.length !== 1 ? "s" : ""}
         {loading && rows.length > 0 ? <span style={{ marginLeft: 8, fontSize: 12, color: "var(--mute-400)" }}>Refreshing…</span> : null}
