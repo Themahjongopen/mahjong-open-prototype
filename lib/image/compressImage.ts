@@ -1,44 +1,68 @@
-// Client-side image compression for profile photo uploads. Runs a
-// resize-then-reencode pass entirely in the browser before the file reaches
-// Supabase Storage's 3MB `avatars` bucket limit (file_size_limit = 3145728,
-// migration 015) — most phone camera photos are well over that, and this is
-// what fixes the "photo upload failed" friction at registration without
-// asking players to resize their own photos first.
+// Client-side image compression, run as a resize-then-reencode pass entirely in
+// the browser before a file reaches Supabase Storage. Originally built for the
+// 3MB `avatars` bucket (migration 015); now parameterized so the scorecard-photo
+// path can ask for more resolution and a higher quality floor without a second,
+// forkable copy of the constants.
 //
-// Skips files already comfortably under the limit (no benefit to re-encoding
-// a photo that's already small — avoids unnecessary quality loss). Always
-// caps the longest edge at MAX_DIMENSION and iterates JPEG quality downward
-// if a first pass is still over TARGET_BYTES (defensive backstop for
-// unusually detailed source photos).
+// Skips files already comfortably under skipThresholdBytes (no benefit to
+// re-encoding a small photo — avoids unnecessary quality loss). Always caps the
+// longest edge at maxDimension and iterates JPEG quality downward toward
+// minQuality if a first pass is still over targetBytes.
 //
-// createImageBitmap(file, { imageOrientation: "from-image" }) is used
-// specifically (not a plain `new Image()` + drawImage) because it's the
-// approach that reliably respects EXIF orientation across Chrome/Safari/
-// Firefox — otherwise portrait phone photos can come out rotated after
-// re-encoding.
+// createImageBitmap(file, { imageOrientation: "from-image" }) is used specifically
+// (not `new Image()` + drawImage) because it reliably respects EXIF orientation
+// across Chrome/Safari/Firefox — otherwise portrait phone photos (avatars AND
+// scorecards, which people will shoot in portrait) can come out rotated.
 
-const MAX_DIMENSION = 1600;
-const SKIP_THRESHOLD_BYTES = 900_000; // ~900KB — already small enough, skip re-encoding
-const TARGET_BYTES = 2_500_000; // stay comfortably under the 3MB bucket cap
-const INITIAL_QUALITY = 0.85;
-const MIN_QUALITY = 0.5;
-const QUALITY_STEP = 0.15;
+export type CompressOptions = {
+  maxDimension: number; // longest-edge cap in px
+  skipThresholdBytes: number; // files at or under this are returned untouched
+  targetBytes: number; // iterate quality down until under this (or minQuality)
+  initialQuality: number;
+  minQuality: number; // quality floor — never re-encode below this
+  qualityStep: number;
+};
 
-export async function compressImage(file: File): Promise<File> {
-  if (file.size <= SKIP_THRESHOLD_BYTES) return file;
+// Avatar defaults — the original constants verbatim, so existing callers
+// (ProfileEditForm, RegisterModal) that call compressImage(file) with no options
+// behave byte-for-byte as before.
+export const AVATAR_COMPRESSION: CompressOptions = {
+  maxDimension: 1600,
+  skipThresholdBytes: 900_000, // ~900KB — already small enough
+  targetBytes: 2_500_000, // comfortably under the 3MB avatars cap
+  initialQuality: 0.85,
+  minQuality: 0.5,
+  qualityStep: 0.15,
+};
+
+// Scorecard preset — handwritten numbers need more resolution and a higher quality
+// floor than faces: a photo that can't distinguish 45 from 90 is worthless. Larger
+// target, still under the private `scorecards` bucket's 4MB cap.
+export const SCORECARD_COMPRESSION: CompressOptions = {
+  maxDimension: 2400,
+  skipThresholdBytes: 900_000,
+  targetBytes: 3_500_000,
+  initialQuality: 0.85,
+  minQuality: 0.7,
+  qualityStep: 0.1,
+};
+
+export async function compressImage(file: File, options?: Partial<CompressOptions>): Promise<File> {
+  const opts: CompressOptions = { ...AVATAR_COMPRESSION, ...options };
+
+  if (file.size <= opts.skipThresholdBytes) return file;
   if (!file.type.startsWith("image/")) return file; // defensive; <input accept=> already restricts this
 
   let bitmap: ImageBitmap;
   try {
     bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
   } catch {
-    // Decode failed for some reason — fall back to the original file rather
-    // than blocking the upload entirely; the existing 3MB-cap error still
-    // applies downstream if it's actually too large.
+    // Decode failed — fall back to the original rather than blocking the upload;
+    // the bucket's own size cap still applies downstream if it's actually too large.
     return file;
   }
 
-  const scale = Math.min(1, MAX_DIMENSION / Math.max(bitmap.width, bitmap.height));
+  const scale = Math.min(1, opts.maxDimension / Math.max(bitmap.width, bitmap.height));
   const width = Math.round(bitmap.width * scale);
   const height = Math.round(bitmap.height * scale);
 
@@ -50,10 +74,10 @@ export async function compressImage(file: File): Promise<File> {
   ctx.drawImage(bitmap, 0, 0, width, height);
   bitmap.close();
 
-  let quality = INITIAL_QUALITY;
+  let quality = opts.initialQuality;
   let blob = await canvasToBlob(canvas, quality);
-  while (blob && blob.size > TARGET_BYTES && quality > MIN_QUALITY) {
-    quality -= QUALITY_STEP;
+  while (blob && blob.size > opts.targetBytes && quality > opts.minQuality) {
+    quality -= opts.qualityStep;
     blob = await canvasToBlob(canvas, quality);
   }
   if (!blob) return file; // encoding failed — fall back rather than block the upload
